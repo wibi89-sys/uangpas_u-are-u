@@ -410,14 +410,14 @@ namespace UangPasDesktop
             searchTable.Controls.Add(lblSearch, 0, 0);
             searchTable.Controls.Add(txtSearchProduct, 1, 0);
             searchTable.Controls.Add(btnRefresh, 2, 0);
-            leftPanel.Controls.Add(searchTable);
 
-            // Excel-style Products Grid with Alternating Row Colors
+            // Excel-style Products Grid with Modern Flat Table Styling
             gridProducts = new DataGridView {
                 Dock = DockStyle.Fill,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                GridColor = Color.FromArgb(226, 232, 240),
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                GridColor = Color.FromArgb(241, 245, 249),
                 RowHeadersVisible = false,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
@@ -425,16 +425,18 @@ namespace UangPasDesktop
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                EnableHeadersVisualStyles = false
+                EnableHeadersVisualStyles = false,
+                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single
             };
 
-            gridProducts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
-            gridProducts.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(51, 65, 85);
-            gridProducts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-            gridProducts.ColumnHeadersHeight = 36;
             gridProducts.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            gridProducts.ColumnHeadersHeight = 38;
+            gridProducts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
+            gridProducts.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
+            gridProducts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            gridProducts.ColumnHeadersDefaultCellStyle.Padding = new Padding(4, 0, 4, 0);
 
-            // Excel-like Zebra Striping (Alternating row colors)
+            // Alternating Row Colors (Zebra Striping)
             gridProducts.RowsDefaultCellStyle.BackColor = Color.White;
             gridProducts.RowsDefaultCellStyle.Font = new Font("Segoe UI", 9.5f);
             gridProducts.RowsDefaultCellStyle.ForeColor = Color.FromArgb(15, 23, 42);
@@ -444,7 +446,7 @@ namespace UangPasDesktop
             gridProducts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             gridProducts.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(224, 242, 254);
             gridProducts.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(3, 105, 161);
-            gridProducts.RowTemplate.Height = 36;
+            gridProducts.RowTemplate.Height = 38;
 
             gridProducts.Columns.Add("barcode", "Barcode / Kode");
             gridProducts.Columns["barcode"].Width = 130;
@@ -501,8 +503,11 @@ namespace UangPasDesktop
                 }
             };
 
+            // Docking order: add gridProducts then searchTable, then send searchTable back so gridProducts docks below it
             leftPanel.Controls.Add(gridProducts);
-            searchTable.BringToFront();
+            leftPanel.Controls.Add(searchTable);
+            searchTable.SendToBack();
+            gridProducts.BringToFront();
 
             split.Panel1.Controls.Add(leftPanel);
 
@@ -550,16 +555,28 @@ namespace UangPasDesktop
             barcodeTable.Controls.Add(txtBarcode, 1, 0);
             rightPanel.Controls.Add(barcodeTable);
 
-            // Grid Cart
+            // Grid Cart (Modern Flat Table Styling)
             gridCart = new DataGridView {
                 Dock = DockStyle.Fill,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
+                BorderStyle = BorderStyle.FixedSingle,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                GridColor = Color.FromArgb(241, 245, 249),
                 RowHeadersVisible = false,
                 AllowUserToAddRows = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                EnableHeadersVisualStyles = false,
+                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single
             };
+            gridCart.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            gridCart.ColumnHeadersHeight = 38;
+            gridCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
+            gridCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
+            gridCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            gridCart.RowTemplate.Height = 36;
+            gridCart.RowsDefaultCellStyle.Font = new Font("Segoe UI", 9.5f);
+            gridCart.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             gridCart.Columns.Add("nama", "Barang");
             gridCart.Columns.Add("harga", "Harga");
             gridCart.Columns.Add("qty", "Qty");
@@ -567,6 +584,11 @@ namespace UangPasDesktop
             gridCart.Columns["harga"].Width = 90;
             gridCart.Columns["qty"].Width = 60;
             gridCart.Columns["subtotal"].Width = 100;
+            gridCart.Columns["harga"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            gridCart.Columns["qty"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            gridCart.Columns["subtotal"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            gridCart.Columns["subtotal"].DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            gridCart.Columns["subtotal"].DefaultCellStyle.ForeColor = Color.FromArgb(2, 132, 199);
             gridCart.CellValueChanged += (s, e) => RecalculateCart();
             rightPanel.Controls.Add(gridCart);
 
