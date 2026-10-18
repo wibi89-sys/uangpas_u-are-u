@@ -12,21 +12,51 @@ use App\Http\Controllers\Api\PaymentGatewayController;
 
 Route::get('/', [AdminController::class, 'index'])->name('admin.dashboard');
 
-// Warga Binaan
+// Warga Binaan (Full CRUD, Sanksi Register F, Pembebasan, ID Card)
 Route::get('/inmates', [AdminController::class, 'inmates'])->name('admin.inmates');
 Route::get('/inmates/{id}', [AdminController::class, 'inmateDetail'])->name('admin.inmates.detail');
+Route::get('/inmates/{id}/card', [AdminController::class, 'inmateCard'])->name('admin.inmates.card');
 Route::post('/inmates', [AdminController::class, 'storeInmate'])->name('admin.inmates.store');
+Route::put('/inmates/{id}', [AdminController::class, 'updateInmate'])->name('admin.inmates.update');
+Route::post('/inmates/{id}/status', [AdminController::class, 'updateStatusInmate'])->name('admin.inmates.status');
+Route::post('/inmates/{id}/release', [AdminController::class, 'releaseInmate'])->name('admin.inmates.release');
+Route::post('/inmates/{id}/reset-fingerprint', [AdminController::class, 'resetFingerprint'])->name('admin.inmates.reset_fingerprint');
 Route::post('/inmates/transfer', [AdminController::class, 'transferInmate'])->name('admin.inmates.transfer');
+Route::delete('/inmates/{id}', [AdminController::class, 'destroyInmate'])->name('admin.inmates.destroy');
+
+// Manajemen Petugas & Hak Akses (RBAC Kanwil, Kalapas, Kasir, dsb)
+use App\Http\Controllers\Web\UserController;
+Route::get('/users', [UserController::class, 'index'])->name('admin.users');
+Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
+Route::put('/users/{id}', [UserController::class, 'update'])->name('admin.users.update');
+Route::post('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.users.toggle_status');
+Route::post('/users/switch-role', [UserController::class, 'switchRole'])->name('admin.users.switch_role');
 
 // Loket Top Up & Simulasi Bank
 Route::get('/topup', [AdminController::class, 'topup'])->name('admin.topup');
 Route::post('/topup', [AdminController::class, 'storeTopup'])->name('admin.topup.store');
 Route::post('/topup/simulate-gateway', [PaymentGatewayController::class, 'handleWebhook'])->name('admin.topup.gateway');
 
-// Barang Koperasi
-Route::get('/products', [AdminController::class, 'products'])->name('admin.products');
-Route::post('/products', [AdminController::class, 'storeProduct'])->name('admin.products.store');
-Route::put('/products/{id}', [AdminController::class, 'updateProduct'])->name('admin.products.update');
+// Manajemen Inventori & Retail Koperasi
+use App\Http\Controllers\Web\InventoryController;
+Route::get('/products', [InventoryController::class, 'products'])->name('admin.products');
+Route::post('/products', [InventoryController::class, 'storeProduct'])->name('admin.products.store');
+Route::put('/products/{id}', [InventoryController::class, 'updateProduct'])->name('admin.products.update');
+Route::get('/products/{id}/mutations', [InventoryController::class, 'mutations'])->name('admin.products.mutations');
+
+// Restock / Faktur Barang Masuk
+Route::get('/inventory/restock', [InventoryController::class, 'restockIndex'])->name('admin.inventory.restock');
+Route::post('/inventory/restock', [InventoryController::class, 'storeRestock'])->name('admin.inventory.restock.store');
+
+// Stock Opname (Audit Fisik vs Sistem)
+Route::get('/inventory/opname', [InventoryController::class, 'opnameIndex'])->name('admin.inventory.opname');
+Route::post('/inventory/opname', [InventoryController::class, 'storeOpname'])->name('admin.inventory.opname.store');
+Route::get('/inventory/opname/{id}', [InventoryController::class, 'opnameDetail'])->name('admin.inventory.opname.detail');
+
+// Data Supplier / Distributor Rekanan
+Route::get('/inventory/suppliers', [InventoryController::class, 'suppliers'])->name('admin.inventory.suppliers');
+Route::post('/inventory/suppliers', [InventoryController::class, 'storeSupplier'])->name('admin.inventory.suppliers.store');
+Route::put('/inventory/suppliers/{id}', [InventoryController::class, 'updateSupplier'])->name('admin.inventory.suppliers.update');
 
 // Laporan Transaksi Kasir
 Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
@@ -38,7 +68,8 @@ Route::post('/sync/backup', [SyncController::class, 'triggerBackup'])->name('adm
 Route::post('/sync/pull-mutasi', [SyncController::class, 'pullMutation'])->name('admin.sync.pull');
 Route::post('/sync/settings', [SyncController::class, 'updateSettings'])->name('admin.sync.settings');
 
-// Terminal Kasir POS dialihkan sepenuhnya ke Desktop Application (UangPasDesktop.exe)
-// Fitur Web difokuskan untuk Portal Admin & Manajemen Koperasi (tanpa perangkat transaksi)
-Route::redirect('/pos', '/')->name('pos.index');
+// Terminal Kasir Mobile & Tablet POS (Petugas Keliling Blok / Sel Kamar)
+Route::get('/mobile-pos', [InventoryController::class, 'mobilePos'])->name('mobile.pos');
+Route::post('/mobile-pos/checkout', [InventoryController::class, 'mobileCheckout'])->name('mobile.checkout');
+Route::redirect('/pos', '/mobile-pos')->name('pos.index');
 

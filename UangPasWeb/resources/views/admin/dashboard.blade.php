@@ -5,6 +5,59 @@
 @section('page_desc', 'Monitoring Saldo Terhimpun, Transaksi Koperasi, dan Mutasi Narapidana')
 
 @section('content')
+@if(session('user_role') === 'kanwil_admin')
+<!-- Kanwil Regional Multi-UPT Monitoring Banner -->
+<div class="card" style="margin-bottom: 24px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; padding: 22px 28px; border: 1px solid #334155;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 48px; height: 48px; background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                🏢
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="pill" style="background: #0284c7; color: #fff; font-size: 11px;">SERVER PUSAT KANWIL</span>
+                    <span style="font-size: 12px; color: #38bdf8;">• Kantor Wilayah Kementerian Hukum dan HAM</span>
+                </div>
+                <h2 style="font-size: 19px; font-weight: 800; margin-top: 4px; color: #f8fafc;">Dashboard Pengawasan Koperasi Terpadu Seluruh UPT</h2>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ route('admin.sync') }}" class="btn" style="background: #0284c7; color: #fff; font-size: 12.5px;">
+                <span>🔄</span> Status Sinkronisasi UPT
+            </a>
+        </div>
+    </div>
+
+    <!-- Kanwil Metric Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+        <div style="background: rgba(255,255,255,0.06); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">UPT Terintegrasi</div>
+            <div style="font-size: 20px; font-weight: 800; color: #38bdf8; margin-top: 4px;">4 Lapas / Rutan</div>
+            <div style="font-size: 11px; color: #10b981; margin-top: 2px;">● Semua Edge Server Terhubung</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.06); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Total WBP se-Wilayah</div>
+            <div style="font-size: 20px; font-weight: 800; color: #fff; margin-top: 4px;">1.842 Orang</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Terdata Biometrik Terpusat</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.06); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Total Titipan Dana WBP</div>
+            <div style="font-size: 20px; font-weight: 800; color: #10b981; margin-top: 4px;">Rp 482.150.000</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Akumulasi Seluruh Rekening VA</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.06); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Omset Koperasi Wilayah (Bulan Ini)</div>
+            <div style="font-size: 20px; font-weight: 800; color: #f59e0b; margin-top: 4px;">Rp 128.450.000</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Dari 3.412 Transaksi POS</div>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- Stat Cards -->
 <div class="grid-4">
     <div class="card stat-card">
@@ -81,7 +134,7 @@
                             @endif
                             
                             @if($trx->payment_method == 'fingerprint')
-                                <span class="pill pill-success" title="Otorisasi Sidik Jari U.are.U">👆 Sidik Jari</span>
+                                <span class="pill pill-success" title="Otorisasi Sidik Jari">👆 Sidik Jari</span>
                             @elseif($trx->payment_method == 'bank_va')
                                 <span class="pill pill-primary">Bank VA</span>
                             @else

@@ -17,14 +17,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Admin User
-        User::updateOrCreate(
-            ['email' => 'admin@lapas.go.id'],
-            [
-                'name' => 'Petugas Koperasi Lapas',
-                'password' => Hash::make('password123'),
-            ]
-        );
+        // 1. Roles & Multi-Level Users (Kanwil, Kalapas, Gudang, Loket, Kasir, Auditor)
+        $this->call(UserRoleSeeder::class);
 
         // 2. Sample Inmates / WBP
         $inmates = [
@@ -184,7 +178,7 @@ class DatabaseSeeder extends Seeder
                 'payment_method' => 'fingerprint',
                 'status' => 'success',
                 'cashier_name' => 'Kasir Koperasi 1',
-                'notes' => 'Otorisasi Sidik Jari U.are.U 4500 (Score: 0)',
+                'notes' => 'Otorisasi Sidik Jari (Score: 0)',
                 'created_at' => now()->subHour(),
             ]);
 

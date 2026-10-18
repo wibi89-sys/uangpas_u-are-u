@@ -535,11 +535,27 @@
                 <span class="nav-icon">💳</span>
                 <span>Loket Top-Up & Bank VA</span>
             </a>
+            <a href="{{ route('admin.users') }}" class="nav-item {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
+                <span class="nav-icon">🛡️</span>
+                <span>Petugas & Hak Akses</span>
+            </a>
 
-            <div class="nav-label">Koperasi & Kasir</div>
+            <div class="nav-label">Koperasi & Inventori</div>
             <a href="{{ route('admin.products') }}" class="nav-item {{ request()->routeIs('admin.products*') ? 'active' : '' }}">
-                <span class="nav-icon">🛒</span>
-                <span>Katalog Barang & Stok</span>
+                <span class="nav-icon">📦</span>
+                <span>Katalog & Kartu Stok</span>
+            </a>
+            <a href="{{ route('admin.inventory.restock') }}" class="nav-item {{ request()->routeIs('admin.inventory.restock*') ? 'active' : '' }}">
+                <span class="nav-icon">📥</span>
+                <span>Restock / Barang Masuk</span>
+            </a>
+            <a href="{{ route('admin.inventory.opname') }}" class="nav-item {{ request()->routeIs('admin.inventory.opname*') ? 'active' : '' }}">
+                <span class="nav-icon">📋</span>
+                <span>Stock Opname (Audit)</span>
+            </a>
+            <a href="{{ route('admin.inventory.suppliers') }}" class="nav-item {{ request()->routeIs('admin.inventory.suppliers*') ? 'active' : '' }}">
+                <span class="nav-icon">🏭</span>
+                <span>Supplier Rekanan</span>
             </a>
             <a href="{{ route('admin.transactions') }}" class="nav-item {{ request()->routeIs('admin.transactions*') ? 'active' : '' }}">
                 <span class="nav-icon">📑</span>
@@ -549,8 +565,12 @@
                 <div style="font-weight: 700; display: flex; align-items: center; gap: 5px; margin-bottom: 2px;">
                     <span>🖥️</span> Terminal Kasir Lapas
                 </div>
-                Transaksi & sensor biometrik U.are.U 4500 aktif di <b>UangPasDesktop.exe</b>
+                Transaksi & sensor sidik jari aktif di <b>UangPasDesktop.exe</b>
             </div>
+            <a href="{{ route('mobile.pos') }}" target="_blank" class="nav-item" style="color: #0369a1; background: #e0f2fe; margin: 4px 12px; border-radius: 8px;">
+                <span class="nav-icon">📱</span>
+                <span style="font-weight: 700;">Mobile POS (Tablet/HP) ↗</span>
+            </a>
 
             <div class="nav-label">Jaringan & Sinkronisasi</div>
             <a href="{{ route('admin.sync') }}" class="nav-item {{ request()->routeIs('admin.sync*') ? 'active' : '' }}">
@@ -566,12 +586,16 @@
                 </span>
             </div>
             <p>Database: <strong>Hosting Terpusat</strong></p>
-            <p style="font-size: 11px; margin-top: 4px;">U.are.U 4500 POS Ready</p>
+            <p style="font-size: 11px; margin-top: 4px;">Biometrik POS Ready</p>
         </div>
     </aside>
 
     <!-- Main Content -->
     <main>
+        @php
+            $activeUser = \App\Models\User::find(session('simulated_user_id', 1)) ?? \App\Models\User::first();
+            $allUsers = \App\Models\User::where('is_active', true)->get();
+        @endphp
         <header>
             <div style="display: flex; align-items: center; gap: 14px;">
                 <button type="button" id="btnToggleSidebar" class="btn-toggle-sidebar" title="Ciutkan / Lebarkan Menu Sidebar">
@@ -583,8 +607,21 @@
                 </div>
             </div>
             <div class="header-actions">
+                <!-- User Profile & Quick Role Switcher -->
+                <form action="{{ route('admin.users.switch_role') }}" method="POST" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                    @csrf
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Peran:</span>
+                    <select name="user_id" onchange="this.form.submit()" style="padding: 6px 10px; font-size: 12px; border-radius: 8px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; cursor: pointer; color: #0f172a; max-width: 260px;">
+                        @foreach($allUsers as $u)
+                            <option value="{{ $u->id }}" {{ $activeUser && $activeUser->id == $u->id ? 'selected' : '' }}>
+                                [{{ strtoupper(str_replace('_', ' ', $u->role)) }}] {{ $u->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+
                 <div class="badge-live">
-                    <span>🏛️</span> Lapas Kelas I &bull; Koperasi WBP
+                    <span>🏛️</span> {{ $activeUser->upt_code ?? 'LPS-01' }}
                 </div>
             </div>
         </header>

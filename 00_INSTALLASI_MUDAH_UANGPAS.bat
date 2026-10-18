@@ -5,14 +5,14 @@ color 0B
 
 echo ===============================================================================
 echo                SISTEM INSTALASI OTOMATIS (EASY INSTALL)                       
-echo              UANGPAS LAPAS - KASIR POS & BIOMETRIK U.ARE.U 4500                
+echo              UANGPAS LAPAS - KASIR POS & BIOMETRIK SIDIK JARI                  
 echo ===============================================================================
 echo.
 echo  Selamat datang di wizard instalasi UangPas Dompet Digital Lapas.
 echo  Skrip ini akan memeriksa dan menyiapkan seluruh komponen sistem secara otomatis:
 echo    [1] Database MySQL lokal (uangpas_lapas)
 echo    [2] Konfigurasi Backend Laravel & Migrasi Tabel
-echo    [3] Driver Hardware Fingerprint Scanner U.are.U 4500
+echo    [3] Driver Hardware Fingerprint Scanner (Biometrik USB)
 echo    [4] Kompilasi Aplikasi Kasir Desktop & Hardware Bridge
 echo    [5] Pembuatan Launcher Cepat (Web POS Modern & Desktop)
 echo.

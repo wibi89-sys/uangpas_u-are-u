@@ -1,0 +1,4 @@
+# Ensure bash scripts keep LF line endings on Linux
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

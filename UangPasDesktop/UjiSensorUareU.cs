@@ -56,7 +56,7 @@ namespace UangPasDesktop
 
         public DiagnosticForm()
         {
-            this.Text = "UangPas - Alat Uji Hardware Fingerprint U.are.U 4500 (Diagnostic & Test Tool)";
+            this.Text = "UangPas - Alat Uji Hardware Fingerprint (Diagnostic & Test Tool)";
             this.Size = new Size(1060, 740);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.MinimumSize = new Size(900, 600);
@@ -89,7 +89,7 @@ namespace UangPasDesktop
             };
 
             Label lblTitle = new Label {
-                Text = "🔬 Uji Hardware & Diagnostik Scanner U.are.U 4500",
+                Text = "🔬 Uji Hardware & Diagnostik Scanner",
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 13f, FontStyle.Bold),
                 AutoSize = true,
@@ -338,7 +338,7 @@ namespace UangPasDesktop
 
             // Bottom Buttons
             btnOpenOfficialSample = new Button {
-                Text = "🛠️ Buka Tool Resmi DigitalPersona SDK",
+                Text = "🛠️ Buka Diagnostic Tool Resmi SDK",
                 Location = new Point(16, 518),
                 Width = 320,
                 Height = 38,
@@ -382,14 +382,14 @@ namespace UangPasDesktop
             try
             {
                 StopCaptureInternal();
-                Log("Mendeteksi scanner DigitalPersona U.are.U 4500...");
+                Log("Mendeteksi scanner sidik jari...");
                 readers = ReaderCollection.GetReaders();
 
                 if (readers == null || readers.Count == 0)
                 {
                     lblStatusBadge.Text = "⚠️ SCANNER TIDAK TERDETEKSI";
                     lblStatusBadge.ForeColor = Color.FromArgb(239, 68, 68);
-                    lblDeviceDetails.Text = "Pastikan kabel USB U.are.U terpasang di komputer!";
+                    lblDeviceDetails.Text = "Pastikan kabel USB scanner terpasang di komputer!";
                     
                     lblDeviceName.Text = "Nama Perangkat : Tidak ada perangkat terdeteksi";
                     lblSerial.Text = "Nomor Seri : -";
@@ -398,7 +398,7 @@ namespace UangPasDesktop
                     lblInstruction.Text = "Kabel USB belum terdeteksi. Hubungkan alat ke port USB.";
                     lblInstruction.ForeColor = Color.FromArgb(239, 68, 68);
                     btnStartStop.Enabled = false;
-                    Log("ERROR: Tidak ada scanner U.are.U terdeteksi.");
+                    Log("ERROR: Tidak ada scanner sidik jari terdeteksi.");
                     return;
                 }
 

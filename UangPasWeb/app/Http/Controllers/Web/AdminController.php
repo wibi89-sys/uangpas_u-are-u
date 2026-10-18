@@ -187,6 +187,148 @@ class AdminController extends Controller
     }
 
     /**
+     * Update Data Warga Binaan
+     */
+    public function updateInmate(Request $request, $id)
+    {
+        $inmate = Inmate::findOrFail($id);
+
+        $request->validate([
+            'nama' => 'required|string|max:255',
+            'no_registrasi' => 'required|string|unique:inmates,no_registrasi,' . $inmate->id,
+            'nik' => 'nullable|string|max:20',
+            'blok_kamar' => 'required|string',
+            'lapas_asal' => 'required|string',
+            'limit_harian' => 'required|numeric|min:0',
+            'kontak_keluarga' => 'nullable|string',
+            'tanggal_masuk' => 'nullable|date',
+            'tanggal_ekspirasi' => 'nullable|date',
+        ]);
+
+        $inmate->update([
+            'nama' => $request->nama,
+            'no_registrasi' => $request->no_registrasi,
+            'nik' => $request->nik,
+            'blok_kamar' => $request->blok_kamar,
+            'lapas_asal' => $request->lapas_asal,
+            'limit_harian' => $request->limit_harian,
+            'kontak_keluarga' => $request->kontak_keluarga,
+            'tanggal_masuk' => $request->tanggal_masuk,
+            'tanggal_ekspirasi' => $request->tanggal_ekspirasi,
+        ]);
+
+        return back()->with('success', 'Data Warga Binaan ' . $inmate->nama . ' berhasil diperbarui.');
+    }
+
+    /**
+     * Ubah Status WBP (Aktif / Isolasi Register F / Mutasi / Bebas)
+     */
+    public function updateStatusInmate(Request $request, $id)
+    {
+        $inmate = Inmate::findOrFail($id);
+
+        $request->validate([
+            'status' => 'required|in:aktif,isolasi,mutasi,bebas',
+            'alasan_status' => 'nullable|string',
+        ]);
+
+        $inmate->status = $request->status;
+        $inmate->alasan_status = $request->alasan_status;
+        $inmate->save();
+
+        $msg = match ($request->status) {
+            'isolasi' => "WBP {$inmate->nama} dimasukkan ke status ISOLASI (Register F). Transaksi belanja di kasir otomatis DIBLOKIR sementara.",
+            'aktif' => "Status WBP {$inmate->nama} telah dikembalikan ke AKTIF. Izin belanja dibuka kembali.",
+            default => "Status WBP {$inmate->nama} diperbarui menjadi " . strtoupper($request->status) . "."
+        };
+
+        return back()->with('success', $msg);
+    }
+
+    /**
+     * Proses Pembebasan WBP & Pencairan Sisa Saldo (Cash Out)
+     */
+    public function releaseInmate(Request $request, $id)
+    {
+        $inmate = Inmate::findOrFail($id);
+
+        if ($inmate->status === 'bebas') {
+            return back()->with('error', 'WBP ini sudah berstatus Bebas.');
+        }
+
+        $sisaSaldo = (float)$inmate->saldo;
+        $officer = $request->petugas_bebas ?? 'Petugas Registrasi Lapas';
+
+        DB::transaction(function () use ($inmate, $sisaSaldo, $officer, $request) {
+            $inmate->status = 'bebas';
+            $inmate->alasan_status = 'Bebas Murni / PB / CB / Asimilasi. ' . ($request->catatan_bebas ?? '');
+            $inmate->payout_at = now();
+            $inmate->payout_amount = $sisaSaldo;
+            $inmate->payout_officer = $officer;
+            $inmate->saldo = 0;
+            $inmate->save();
+
+            if ($sisaSaldo > 0) {
+                Transaction::create([
+                    'invoice_no' => 'PAYOUT-BEBAS-' . date('YmdHis') . '-' . strtoupper(Str::random(4)),
+                    'inmate_id' => $inmate->id,
+                    'type' => 'transfer_out',
+                    'amount' => $sisaSaldo,
+                    'balance_before' => $sisaSaldo,
+                    'balance_after' => 0,
+                    'payment_method' => 'cash_counter',
+                    'reference_id' => 'PAYOUT-CASH',
+                    'status' => 'success',
+                    'cashier_name' => $officer,
+                    'notes' => 'Pencairan sisa saldo tunai saat pembebasan narapidana. Diserahkan kepada WBP bersangkutan.',
+                ]);
+            }
+        });
+
+        return back()->with('success', "Warga Binaan {$inmate->nama} berhasil diproses BEBAS. Sisa saldo Rp " . number_format($sisaSaldo, 0, ',', '.') . " telah dicairkan tunai dan akun ditutup.");
+    }
+
+    /**
+     * Reset Biometrik Sidik Jari WBP
+     */
+    public function resetFingerprint($id)
+    {
+        $inmate = Inmate::findOrFail($id);
+        $inmate->fingerprint_template = null;
+        $inmate->fingerprint_image = null;
+        $inmate->save();
+
+        return back()->with('success', "Template sidik jari WBP {$inmate->nama} berhasil direset. Silakan rekam ulang jari pada aplikasi Desktop.");
+    }
+
+    /**
+     * Halaman Cetak Kartu Anggota WBP (Barcode ID Card)
+     */
+    public function inmateCard($id)
+    {
+        $inmate = Inmate::findOrFail($id);
+        $setting = \App\Models\UptSetting::current();
+        return view('admin.inmate_card', compact('inmate', 'setting'));
+    }
+
+    /**
+     * Hapus / Nonaktifkan Data WBP
+     */
+    public function destroyInmate($id)
+    {
+        $inmate = Inmate::findOrFail($id);
+
+        if ($inmate->transactions()->exists()) {
+            return back()->with('error', 'WBP ini memiliki riwayat transaksi, tidak dapat dihapus permanen demi audit keuangan. Anda dapat mengubah statusnya menjadi Bebas.');
+        }
+
+        $nama = $inmate->nama;
+        $inmate->delete();
+
+        return back()->with('success', "Data WBP {$nama} berhasil dihapus.");
+    }
+
+    /**
      * Loket Top Up Saldo & Bank Gateway Simulator
      */
     public function topup(Request $request)

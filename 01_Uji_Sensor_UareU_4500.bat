@@ -1,7 +1,7 @@
 @echo off
-title UangPas - Uji Sensor U.are.U 4500
+title UangPas - Uji Sensor Sidik Jari
 echo ========================================================
-echo   UANGPAS LAPAS - PENGUJIAN SCANNER SIDIK JARI U.ARE.U
+echo   UANGPAS LAPAS - PENGUJIAN SCANNER SIDIK JARI
 echo ========================================================
 echo.
 cd /d "%~dp0UangPasDesktop"

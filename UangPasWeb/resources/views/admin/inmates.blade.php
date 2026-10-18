@@ -2,25 +2,26 @@
 
 @section('title', 'Data Warga Binaan')
 @section('page_title', 'Manajemen Warga Binaan Pemasyarakatan (WBP)')
-@section('page_desc', 'Registrasi Narapidana, Status Biometrik Sidik Jari, & Mutasi Antar Lapas')
+@section('page_desc', 'Registrasi Narapidana, Status Siklus (Aktif / Register F / Bebas / Mutasi), & ID Card')
 
 @section('content')
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
     <!-- Search & Filter Form -->
-    <form method="GET" action="{{ route('admin.inmates') }}" style="display: flex; gap: 10px; flex-grow: 1; max-width: 600px;">
-        <input type="text" name="search" placeholder="Cari Nama, No. Registrasi, atau No. VA..." value="{{ request('search') }}" style="flex-grow: 1;">
-        <select name="status" style="width: 140px;">
+    <form method="GET" action="{{ route('admin.inmates') }}" style="display: flex; gap: 10px; flex-grow: 1; max-width: 680px; flex-wrap: wrap;">
+        <input type="text" name="search" placeholder="Cari Nama, No. Registrasi, atau No. VA..." value="{{ request('search') }}" style="flex-grow: 1; min-width: 220px;">
+        <select name="status" style="width: 170px;">
             <option value="">Semua Status</option>
-            <option value="aktif" {{ request('status') == 'aktif' ? 'selected' : '' }}>Aktif</option>
-            <option value="mutasi" {{ request('status') == 'mutasi' ? 'selected' : '' }}>Mutasi</option>
-            <option value="bebas" {{ request('status') == 'bebas' ? 'selected' : '' }}>Bebas</option>
+            <option value="aktif" {{ request('status') == 'aktif' ? 'selected' : '' }}>● Aktif</option>
+            <option value="isolasi" {{ request('status') == 'isolasi' ? 'selected' : '' }}>⛔ Isolasi (Register F)</option>
+            <option value="mutasi" {{ request('status') == 'mutasi' ? 'selected' : '' }}>✈️ Mutasi Antar-Lapas</option>
+            <option value="bebas" {{ request('status') == 'bebas' ? 'selected' : '' }}>🕊️ Bebas</option>
         </select>
         <button type="submit" class="btn btn-outline">Cari</button>
     </form>
 
     <!-- Add WBP Button -->
     <button class="btn btn-primary" onclick="openModal('modalAddWbp')">
-        <span>➕</span> Tambah WBP Baru
+        <span>➕</span> Registrasi WBP Baru
     </button>
 </div>
 
@@ -31,29 +32,47 @@
             <thead>
                 <tr>
                     <th>No. Registrasi / Nama</th>
-                    <th>Penempatan</th>
+                    <th>Penempatan & Status</th>
                     <th>Saldo Dompet</th>
                     <th>Limit Belanja Harian</th>
-                    <th>Virtual Account Keluarga</th>
-                    <th>Biometrik U.are.U</th>
-                    <th>Aksi</th>
+                    <th>VA Transfer Bank</th>
+                    <th>Biometrik</th>
+                    <th style="min-width: 280px;">Aksi & Pengaturan</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($inmates as $wbp)
-                <tr>
+                <tr style="{{ $wbp->status === 'isolasi' ? 'background: rgba(254, 242, 242, 0.4);' : ($wbp->status === 'bebas' ? 'opacity: 0.75;' : '') }}">
                     <td>
-                        <strong style="color: #0f172a; font-size: 14px;">{{ $wbp->nama }}</strong>
-                        <div style="font-size: 11.5px; color: var(--text-muted);">
-                            {{ $wbp->no_registrasi }} &bull; NIK: {{ $wbp->nik ?? '-' }}
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div>
+                                <strong style="color: #0f172a; font-size: 14px;">{{ $wbp->nama }}</strong>
+                                <div style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span style="font-family: monospace; font-weight: 700; color: #0284c7;">{{ $wbp->no_registrasi }}</span> &bull; NIK: {{ $wbp->nik ?? '-' }}
+                                </div>
+                            </div>
                         </div>
                     </td>
                     <td>
                         <span class="pill pill-primary">{{ $wbp->blok_kamar }}</span>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">{{ $wbp->lapas_asal }}</div>
+                        <div style="margin-top: 4px;">
+                            @if($wbp->status === 'aktif')
+                                <span class="pill pill-success">● Aktif</span>
+                            @elseif($wbp->status === 'isolasi')
+                                <span class="pill pill-danger" title="{{ $wbp->alasan_status }}">⛔ Isolasi (Reg. F)</span>
+                            @elseif($wbp->status === 'mutasi')
+                                <span class="pill pill-primary">✈️ Mutasi</span>
+                            @elseif($wbp->status === 'bebas')
+                                <span class="pill" style="background:#e2e8f0; color:#475569;">🕊️ Bebas</span>
+                            @endif
+                        </div>
+                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">{{ $wbp->lapas_asal }}</div>
                     </td>
                     <td>
                         <strong style="color: #10b981; font-size: 15px;">Rp {{ number_format($wbp->saldo, 0, ',', '.') }}</strong>
+                        @if($wbp->status === 'bebas' && $wbp->payout_amount > 0)
+                            <div style="font-size: 10.5px; color: #0369a1;">Dicairkan: Rp {{ number_format($wbp->payout_amount, 0, ',', '.') }}</div>
+                        @endif
                     </td>
                     <td>
                         <span style="font-size: 12.5px; font-weight: 600;">Rp {{ number_format($wbp->limit_harian, 0, ',', '.') }}</span>
@@ -63,23 +82,47 @@
                         <div style="font-family: monospace; font-weight: 700; color: #0284c7; font-size: 13px;">
                             {{ $wbp->va_number ?? '-' }}
                         </div>
-                        <div style="font-size: 10.5px; color: var(--text-muted);">Transfer Bank Keluarga</div>
+                        <div style="font-size: 10.5px; color: var(--text-muted);">Transfer Keluarga</div>
                     </td>
                     <td>
                         @if(!empty($wbp->fingerprint_template))
-                            <span class="pill pill-success">✓ Terdaftar</span>
+                            <span class="pill pill-success" title="Sidik Jari Siap di POS">✓ Terdaftar</span>
                         @else
-                            <span class="pill pill-warning">⚪ Belum Rekam</span>
+                            <span class="pill pill-warning" title="Belum rekam sidik jari di POS">⚪ Belum Rekam</span>
                         @endif
                     </td>
                     <td>
-                        <div style="display: flex; gap: 6px;">
-                            <a href="{{ route('admin.inmates.detail', $wbp->id) }}" class="btn btn-outline" style="padding: 6px 10px; font-size: 11.5px;">
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <a href="{{ route('admin.inmates.detail', $wbp->id) }}" class="btn btn-outline" style="padding: 5px 8px; font-size: 11px;">
                                 Detail
                             </a>
-                            <button class="btn btn-outline" style="padding: 6px 10px; font-size: 11.5px; color: #0284c7;" onclick="openTransferModal({{ $wbp->id }}, '{{ addslashes($wbp->nama) }}', '{{ $wbp->lapas_asal }}', '{{ $wbp->blok_kamar }}')">
-                                Mutasi
+                            <button class="btn btn-outline" style="padding: 5px 8px; font-size: 11px;" onclick="openEditModal({{ json_encode($wbp) }})">
+                                ✏️ Edit
                             </button>
+                            <a href="{{ route('admin.inmates.card', $wbp->id) }}" target="_blank" class="btn btn-outline" style="padding: 5px 8px; font-size: 11px; color: #0284c7;" title="Cetak ID Card Barcode">
+                                🪪 Kartu
+                            </a>
+
+                            @if($wbp->status !== 'bebas')
+                                <button class="btn btn-outline" style="padding: 5px 8px; font-size: 11px; color: {{ $wbp->status === 'isolasi' ? '#10b981' : '#ef4444' }};" onclick="openStatusModal({{ $wbp->id }}, '{{ addslashes($wbp->nama) }}', '{{ $wbp->status }}', '{{ addslashes($wbp->alasan_status ?? '') }}')">
+                                    {{ $wbp->status === 'isolasi' ? 'Buka Isolasi' : '⛔ Sanksi' }}
+                                </button>
+                                <button class="btn btn-outline" style="padding: 5px 8px; font-size: 11px; color: #059669;" onclick="openReleaseModal({{ $wbp->id }}, '{{ addslashes($wbp->nama) }}', {{ $wbp->saldo }})">
+                                    🕊️ Bebaskan
+                                </button>
+                                <button class="btn btn-outline" style="padding: 5px 8px; font-size: 11px; color: #6366f1;" onclick="openTransferModal({{ $wbp->id }}, '{{ addslashes($wbp->nama) }}', '{{ $wbp->lapas_asal }}', '{{ $wbp->blok_kamar }}')">
+                                    ✈️ Mutasi
+                                </button>
+                            @endif
+
+                            @if(!empty($wbp->fingerprint_template))
+                                <form action="{{ route('admin.inmates.reset_fingerprint', $wbp->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Reset sidik jari WBP ini agar dapat direkam ulang?')">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline" style="padding: 5px 8px; font-size: 11px; color: #f59e0b;" title="Reset Biometrik">
+                                        🔄 Reset Jari
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </td>
                 </tr>
@@ -99,11 +142,13 @@
     </div>
 </div>
 
-<!-- Modal Tambah WBP -->
+<!-- ========================================== -->
+<!-- MODAL 1: Tambah WBP Baru                    -->
+<!-- ========================================== -->
 <div id="modalAddWbp" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 20px;">
     <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
-            <h3 style="font-size: 17px; font-weight: 800;">➕ Pendaftaran Warga Binaan Baru</h3>
+            <h3 style="font-size: 17px; font-weight: 800; color: #0f172a;">➕ Registrasi Warga Binaan Baru</h3>
             <button onclick="closeModal('modalAddWbp')" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
         </div>
 
@@ -160,11 +205,166 @@
     </div>
 </div>
 
-<!-- Modal Mutasi WBP -->
+<!-- ========================================== -->
+<!-- MODAL 2: Edit Data WBP                      -->
+<!-- ========================================== -->
+<div id="modalEditWbp" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
+            <h3 style="font-size: 17px; font-weight: 800; color: #0f172a;">✏️ Edit Data Warga Binaan</h3>
+            <button onclick="closeModal('modalEditWbp')" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+
+        <form id="formEditWbp" method="POST">
+            @csrf
+            @method('PUT')
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Nomor Registrasi Lapas *</label>
+                    <input type="text" id="edit_no_registrasi" name="no_registrasi" required>
+                </div>
+                <div class="form-group">
+                    <label>NIK Narapidana</label>
+                    <input type="text" id="edit_nik" name="nik">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Nama Lengkap Warga Binaan *</label>
+                <input type="text" id="edit_nama" name="nama" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Lapas / Rutan *</label>
+                    <input type="text" id="edit_lapas_asal" name="lapas_asal" required>
+                </div>
+                <div class="form-group">
+                    <label>Penempatan Kamar/Blok *</label>
+                    <input type="text" id="edit_blok_kamar" name="blok_kamar" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Batas Limit Belanja Harian (Rp) *</label>
+                    <input type="number" id="edit_limit_harian" name="limit_harian" min="0" step="5000" required>
+                </div>
+                <div class="form-group">
+                    <label>Kontak Keluarga</label>
+                    <input type="text" id="edit_kontak_keluarga" name="kontak_keluarga">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Tanggal Masuk Lapas</label>
+                    <input type="date" id="edit_tanggal_masuk" name="tanggal_masuk">
+                </div>
+                <div class="form-group">
+                    <label>Perkiraan Tanggal Bebas (Ekspirasi)</label>
+                    <input type="date" id="edit_tanggal_ekspirasi" name="tanggal_ekspirasi">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-outline" onclick="closeModal('modalEditWbp')">Batal</button>
+                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 3: Sanksi / Register F / Ubah Status -->
+<!-- ========================================== -->
+<div id="modalStatusWbp" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 500px; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
+            <h3 style="font-size: 17px; font-weight: 800; color: #0f172a;">⚖️ Sanksi Indisipliner (Register F) & Status</h3>
+            <button onclick="closeModal('modalStatusWbp')" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+
+        <form id="formStatusWbp" method="POST">
+            @csrf
+            <div style="background: #f8fafc; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                <div style="font-size: 11.5px; color: var(--text-muted);">Nama Warga Binaan:</div>
+                <div id="statusWbpNama" style="font-size: 15px; font-weight: 800; color: #0f172a;">-</div>
+            </div>
+
+            <div class="form-group">
+                <label>Pilih Status WBP *</label>
+                <select id="statusSelect" name="status" required>
+                    <option value="aktif">● AKTIF (Boleh Belanja di Kasir Koperasi)</option>
+                    <option value="isolasi">⛔ ISOLASI / REGISTER F (Blokir Otomatis Belanja Kasir)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Catatan / Alasan Putusan Sanksi</label>
+                <textarea id="statusAlasan" name="alasan_status" rows="3" placeholder="Contoh: Pelanggaran tata tertib blok, perkelahian, register F nomor 12/2026..."></textarea>
+            </div>
+
+            <p style="font-size: 11.5px; color: #ef4444; background: #fef2f2; padding: 10px; border-radius: 6px; margin-bottom: 16px;">
+                ⚠️ <strong>Penting:</strong> WBP berstatus <strong>Isolasi (Register F)</strong> akan langsung ditolak sistem kasir biometrik desktop bila mencoba berbelanja.
+            </p>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-outline" onclick="closeModal('modalStatusWbp')">Batal</button>
+                <button type="submit" class="btn btn-primary">Simpan Status WBP</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 4: Pembebasan WBP & Pencairan Saldo   -->
+<!-- ========================================== -->
+<div id="modalReleaseWbp" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 520px; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
+            <h3 style="font-size: 17px; font-weight: 800; color: #0f172a;">🕊️ Proses Pembebasan WBP (Cash Out)</h3>
+            <button onclick="closeModal('modalReleaseWbp')" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+
+        <form id="formReleaseWbp" method="POST" onsubmit="return confirm('Konfirmasi pembebasan WBP ini dan pencairan seluruh sisa saldo secara tunai?')">
+            @csrf
+            <div style="background: #f8fafc; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                <div style="font-size: 11.5px; color: var(--text-muted);">Nama Warga Binaan:</div>
+                <div id="releaseWbpNama" style="font-size: 15px; font-weight: 800; color: #0f172a;">-</div>
+            </div>
+
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 18px;">
+                <div style="font-size: 12px; color: #065f46; font-weight: 700; text-transform: uppercase;">Sisa Saldo Yang Wajib Dicairkan Tunai:</div>
+                <div id="releaseWbpSaldo" style="font-size: 26px; font-weight: 800; color: #059669; margin-top: 4px;">Rp 0</div>
+                <div style="font-size: 11px; color: #047857; margin-top: 4px;">Diserahkan tunai kepada WBP saat keluar pintu utama lapas.</div>
+            </div>
+
+            <div class="form-group">
+                <label>Nama Petugas Pengesah / Penyerah Saldo *</label>
+                <input type="text" name="petugas_bebas" value="Petugas Subseksi Registrasi" required>
+            </div>
+
+            <div class="form-group">
+                <label>Dasar Pembebasan & Catatan</label>
+                <textarea name="catatan_bebas" rows="2" placeholder="Contoh: Bebas Murni / PB / CB Surat Keputusan Menkumham No..."></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-outline" onclick="closeModal('modalReleaseWbp')">Batal</button>
+                <button type="submit" class="btn" style="background: #059669; color: #fff;">Sahkan Bebas & Cairkan Saldo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 5: Mutasi WBP Antar-Lapas             -->
+<!-- ========================================== -->
 <div id="modalTransferWbp" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 20px;">
     <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
-            <h3 style="font-size: 17px; font-weight: 800;">🔄 Mutasi Perpindahan WBP</h3>
+            <h3 style="font-size: 17px; font-weight: 800; color: #0f172a;">🔄 Mutasi Perpindahan WBP Antar-Lapas</h3>
             <button onclick="closeModal('modalTransferWbp')" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
         </div>
 
@@ -214,11 +414,44 @@
 @section('scripts')
 <script>
     function openModal(id) {
-        document.getElementById(id).style.display = 'flex';
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'flex';
     }
+
     function closeModal(id) {
-        document.getElementById(id).style.display = 'none';
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
     }
+
+    function openEditModal(wbp) {
+        document.getElementById('formEditWbp').action = "/inmates/" + wbp.id;
+        document.getElementById('edit_no_registrasi').value = wbp.no_registrasi || '';
+        document.getElementById('edit_nik').value = wbp.nik || '';
+        document.getElementById('edit_nama').value = wbp.nama || '';
+        document.getElementById('edit_lapas_asal').value = wbp.lapas_asal || '';
+        document.getElementById('edit_blok_kamar').value = wbp.blok_kamar || '';
+        document.getElementById('edit_limit_harian').value = wbp.limit_harian || 100000;
+        document.getElementById('edit_kontak_keluarga').value = wbp.kontak_keluarga || '';
+        document.getElementById('edit_tanggal_masuk').value = wbp.tanggal_masuk || '';
+        document.getElementById('edit_tanggal_ekspirasi').value = wbp.tanggal_ekspirasi || '';
+        openModal('modalEditWbp');
+    }
+
+    function openStatusModal(id, nama, status, alasan) {
+        document.getElementById('formStatusWbp').action = "/inmates/" + id + "/status";
+        document.getElementById('statusWbpNama').innerText = nama;
+        document.getElementById('statusSelect').value = (status === 'isolasi') ? 'aktif' : 'isolasi';
+        document.getElementById('statusAlasan').value = alasan || '';
+        openModal('modalStatusWbp');
+    }
+
+    function openReleaseModal(id, nama, saldo) {
+        document.getElementById('formReleaseWbp').action = "/inmates/" + id + "/release";
+        document.getElementById('releaseWbpNama').innerText = nama;
+        document.getElementById('releaseWbpSaldo').innerText = "Rp " + Number(saldo).toLocaleString('id-ID');
+        openModal('modalReleaseWbp');
+    }
+
     function openTransferModal(id, nama, lapas, blok) {
         document.getElementById('trfInmateId').value = id;
         document.getElementById('trfWbpNama').innerText = nama;

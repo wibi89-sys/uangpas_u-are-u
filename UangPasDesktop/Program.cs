@@ -17,21 +17,6 @@ using DPUruNet;
 
 namespace UangPasDesktop
 {
-    public class DiscoveredServer
-    {
-        public string Ip { get; set; }
-        public int Port { get; set; }
-        public string Url { get; set; }
-        public string UptName { get; set; }
-        public string UptCode { get; set; }
-        public long LatencyMs { get; set; }
-
-        public override string ToString()
-        {
-            string name = string.IsNullOrEmpty(UptName) ? "Server UangPas" : UptName;
-            return name + " (" + Ip + ":" + Port + ") - " + LatencyMs + " ms";
-        }
-    }
 
     static class Program
     {
@@ -93,30 +78,31 @@ namespace UangPasDesktop
         private Button btnTopEnroll;
         private Button btnTopKiosk;
         private Button btnTopSettings;
-        private Button btnTopUji;
         private Timer timerScannerPoll;
 
         // UI Settings & Splitter Persistence
-        private TextBox txtSettingApiUrl;
         private TabControl tabs;
-        private double savedSplitterRatio = 0.48; // Default 48% left, 52% right (keranjang belanja lebih lega & tidak perlu digeser)
+        private double savedSplitterRatio = 0.75; // Default 75% left (katalog produk), 25% right (keranjang belanja)
         private SplitContainer splitKasir;
         private bool isApplyingSplitter = false;
 
-        // UI Controls - LAN Discovery & Settings Tab
-        private List<DiscoveredServer> lastDiscoveredServers = new List<DiscoveredServer>();
-        private ComboBox cmbDiscoveredServers;
-        private Label lblLanScanStatus;
+        // UI Controls - Settings Tab
+        private TextBox txtServerAddress;
         private Label lblCurrentServerInfo;
-        private Button btnScanLan;
-        private Button btnApplyDiscovered;
-        private TextBox txtManualIp;
-        private TextBox txtManualPort;
         private Label lblSplitterInfo;
+
+        // Retail POS State (Level 3 - Fast Keyboard Shortcuts & Shift/Hold)
+        private List<HeldBill> heldBills = new List<HeldBill>();
+        private Label lblHoldStatus;
+        private DateTime shiftStartTime = DateTime.Now;
+        private string cashierName = "Kasir Koperasi Lapas";
+        private decimal shiftModalAwal = 200000;
+        private int shiftTrxCount = 0;
+        private decimal shiftTotalOmset = 0;
 
         public MainForm()
         {
-            this.Text = "UangPas Lapas - Terminal Kasir POS & Biometrik U.are.U 4500";
+            this.Text = "UangPas Lapas - Terminal Kasir POS & Biometrik";
             this.Size = new Size(1280, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.WindowState = FormWindowState.Maximized;
@@ -124,12 +110,16 @@ namespace UangPasDesktop
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             this.BackColor = Color.FromArgb(248, 250, 252);
+            this.KeyPreview = true;
+            this.KeyDown += MainForm_KeyDown;
 
             LoadLocalSettings();
             InitializeUI();
 
             this.Shown += (s, e) => {
-                ApplySplitterRatio();
+                this.BeginInvoke(new Action(() => {
+                    ApplySplitterRatio();
+                }));
                 InitializeBiometrics();
                 SyncDataFromApi();
             };
@@ -148,43 +138,16 @@ namespace UangPasDesktop
             // Right Status Indicators
             Panel topStatusRight = new Panel {
                 Dock = DockStyle.Right,
-                Width = 440,
+                Width = 240,
                 BackColor = Color.Transparent
             };
-
-            Button btnRefreshScanner = new Button {
-                Text = "🔄 Refresh Finger",
-                Width = 145,
-                Height = 36,
-                BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                Location = new Point(10, 14)
-            };
-            btnRefreshScanner.FlatAppearance.BorderColor = Color.FromArgb(71, 85, 105);
-            btnRefreshScanner.Click += (s, e) => {
-                btnRefreshScanner.Text = "⏳ Mendeteksi...";
-                btnRefreshScanner.Enabled = false;
-                InitializeBiometrics();
-                Timer t = new Timer { Interval = 600 };
-                t.Tick += (ts, te) => {
-                    btnRefreshScanner.Text = "🔄 Refresh Finger";
-                    btnRefreshScanner.Enabled = true;
-                    t.Stop();
-                    t.Dispose();
-                };
-                t.Start();
-            };
-            topStatusRight.Controls.Add(btnRefreshScanner);
 
             lblScannerStatus = new Label {
                 Text = "Scanner: Memeriksa...",
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(165, 14),
+                Location = new Point(12, 14),
                 Cursor = Cursors.Hand
             };
             lblScannerStatus.Click += (s, e) => {
@@ -199,7 +162,7 @@ namespace UangPasDesktop
                 ForeColor = Color.FromArgb(52, 211, 153),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(165, 36)
+                Location = new Point(12, 36)
             };
             topStatusRight.Controls.Add(lblApiStatus);
             topBar.Controls.Add(topStatusRight);
@@ -210,100 +173,90 @@ namespace UangPasDesktop
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 BackColor = Color.Transparent,
-                Padding = new Padding(4, 14, 4, 8),
+                Padding = new Padding(2, 14, 2, 8),
                 AutoScroll = false
             };
 
             Label lblBrand = new Label {
                 Text = "👆 UangPas Lapas",
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
                 AutoSize = true,
-                Margin = new Padding(6, 4, 16, 0)
+                Margin = new Padding(4, 5, 12, 0)
             };
             topFlowLeft.Controls.Add(lblBrand);
 
             // Fast Switch Buttons in Header
             btnTopKasir = new Button {
                 Text = "🛒 Kasir POS",
-                Width = 110,
-                Height = 34,
+                Width = 115,
+                Height = 36,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(3, 0, 4, 0)
+                Margin = new Padding(2, 0, 4, 0)
             };
+            btnTopKasir.FlatAppearance.BorderSize = 0;
             btnTopKasir.Click += (s, e) => SwitchTab(0);
             topFlowLeft.Controls.Add(btnTopKasir);
 
             btnTopEnroll = new Button {
-                Text = "👆 Rekam Sidik Jari WBP",
-                Width = 175,
-                Height = 34,
+                Text = "👆 Rekam Jari",
+                Width = 125,
+                Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.White,
+                ForeColor = Color.FromArgb(203, 213, 225),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(3, 0, 4, 0)
+                Margin = new Padding(2, 0, 4, 0)
             };
+            btnTopEnroll.FlatAppearance.BorderSize = 0;
             btnTopEnroll.Click += (s, e) => SwitchTab(1);
             topFlowLeft.Controls.Add(btnTopEnroll);
 
             btnTopKiosk = new Button {
-                Text = "🔍 Cek Saldo WBP",
-                Width = 140,
-                Height = 34,
+                Text = "🔍 Cek Saldo",
+                Width = 115,
+                Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.White,
+                ForeColor = Color.FromArgb(203, 213, 225),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(3, 0, 4, 0)
+                Margin = new Padding(2, 0, 4, 0)
             };
+            btnTopKiosk.FlatAppearance.BorderSize = 0;
             btnTopKiosk.Click += (s, e) => SwitchTab(2);
             topFlowLeft.Controls.Add(btnTopKiosk);
 
             btnTopSettings = new Button {
-                Text = "⚙️ Pengaturan",
-                Width = 125,
-                Height = 34,
+                Text = "⚙️ Pengaturan & Sensor",
+                Width = 175,
+                Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.White,
+                ForeColor = Color.FromArgb(203, 213, 225),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(3, 0, 4, 0)
+                Margin = new Padding(2, 0, 6, 0)
             };
+            btnTopSettings.FlatAppearance.BorderSize = 0;
             btnTopSettings.Click += (s, e) => SwitchTab(3);
             topFlowLeft.Controls.Add(btnTopSettings);
 
-            btnTopUji = new Button {
-                Text = "🔬 Uji Alat U.are.U",
-                Width = 140,
-                Height = 34,
-                BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                Margin = new Padding(3, 0, 4, 0)
-            };
-            btnTopUji.Click += (s, e) => SwitchTab(4);
-            topFlowLeft.Controls.Add(btnTopUji);
-
             Button btnTopSync = new Button {
-                Text = "🔄 Sinkron Data",
-                Width = 135,
+                Text = "🔄 Sinkron",
+                Width = 100,
                 Height = 34,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(3, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             btnTopSync.Click += (s, e) => {
                 btnTopSync.Text = "⏳ Sinkron...";
@@ -311,7 +264,7 @@ namespace UangPasDesktop
                 SyncDataFromApi();
                 Timer t = new Timer { Interval = 800 };
                 t.Tick += (ts, te) => {
-                    btnTopSync.Text = "🔄 Sinkron Data";
+                    btnTopSync.Text = "🔄 Sinkron";
                     btnTopSync.Enabled = true;
                     t.Stop();
                     t.Dispose();
@@ -321,21 +274,21 @@ namespace UangPasDesktop
             topFlowLeft.Controls.Add(btnTopSync);
 
             Button btnOpenPortalAdmin = new Button {
-                Text = "🏛️ Portal Admin Lapas",
-                Width = 175,
+                Text = "🌐 Portal Admin",
+                Width = 125,
                 Height = 34,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(3, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             btnOpenPortalAdmin.Click += (s, e) => {
                 try {
-                    System.Diagnostics.Process.Start("http://localhost:8000/admin/dashboard");
-                } catch (Exception ex) {
-                    MessageBox.Show("Gagal membuka browser: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    System.Diagnostics.Process.Start("http://uangpas.test");
+                } catch {
+                    try { System.Diagnostics.Process.Start("http://localhost:8000"); } catch { }
                 }
             };
             topFlowLeft.Controls.Add(btnOpenPortalAdmin);
@@ -369,21 +322,15 @@ namespace UangPasDesktop
             BuildKioskTab(tabKiosk);
             tabs.TabPages.Add(tabKiosk);
 
-            // TAB 4: PENGATURAN SERVER
-            TabPage tabSettings = new TabPage("⚙️ Pengaturan Server");
+            // TAB 4: PENGATURAN & SENSOR
+            TabPage tabSettings = new TabPage("⚙️ Pengaturan & Sensor");
             tabSettings.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             BuildSettingsTab(tabSettings);
             tabs.TabPages.Add(tabSettings);
 
-            // TAB 5: UJI HARDWARE SCANNER U.ARE.U
-            TabPage tabDiagnostic = new TabPage("🔬 Uji Alat U.are.U");
-            tabDiagnostic.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
-            BuildDiagnosticTab(tabDiagnostic);
-            tabs.TabPages.Add(tabDiagnostic);
-
             tabs.SelectedIndexChanged += (s, e) => {
                 UpdateNavButtonStyles(tabs.SelectedIndex);
-                if (tabs.SelectedIndex != 4) StopDiagCapture();
+                if (tabs.SelectedIndex != 3) StopDiagCapture();
             };
 
             // IMPORTANT WINFORMS DOCK ORDER: Add tabs first, topBar second, then topBar.SendToBack()
@@ -424,17 +371,38 @@ namespace UangPasDesktop
             {
                 tabs.SelectedIndex = index;
                 UpdateNavButtonStyles(index);
+                if (index == 3 && txtServerAddress != null)
+                {
+                    txtServerAddress.Text = GetDisplayServerAddress(this.apiUrl);
+                }
             }
         }
 
         private void UpdateNavButtonStyles(int selectedIndex)
         {
             Color dark = Color.FromArgb(30, 41, 59);
-            if (btnTopKasir != null) btnTopKasir.BackColor = (selectedIndex == 0) ? Color.FromArgb(16, 185, 129) : dark;
-            if (btnTopEnroll != null) btnTopEnroll.BackColor = (selectedIndex == 1) ? Color.FromArgb(99, 102, 241) : dark;
-            if (btnTopKiosk != null) btnTopKiosk.BackColor = (selectedIndex == 2) ? Color.FromArgb(14, 165, 233) : dark;
-            if (btnTopSettings != null) btnTopSettings.BackColor = (selectedIndex == 3) ? Color.FromArgb(245, 158, 11) : dark;
-            if (btnTopUji != null) btnTopUji.BackColor = (selectedIndex == 4) ? Color.FromArgb(139, 92, 246) : dark;
+            Color textMuted = Color.FromArgb(203, 213, 225);
+
+            if (btnTopKasir != null)
+            {
+                btnTopKasir.BackColor = (selectedIndex == 0) ? Color.FromArgb(16, 185, 129) : dark;
+                btnTopKasir.ForeColor = (selectedIndex == 0) ? Color.White : textMuted;
+            }
+            if (btnTopEnroll != null)
+            {
+                btnTopEnroll.BackColor = (selectedIndex == 1) ? Color.FromArgb(99, 102, 241) : dark;
+                btnTopEnroll.ForeColor = (selectedIndex == 1) ? Color.White : textMuted;
+            }
+            if (btnTopKiosk != null)
+            {
+                btnTopKiosk.BackColor = (selectedIndex == 2) ? Color.FromArgb(14, 165, 233) : dark;
+                btnTopKiosk.ForeColor = (selectedIndex == 2) ? Color.White : textMuted;
+            }
+            if (btnTopSettings != null)
+            {
+                btnTopSettings.BackColor = (selectedIndex == 3) ? Color.FromArgb(245, 158, 11) : dark;
+                btnTopSettings.ForeColor = (selectedIndex == 3) ? Color.White : textMuted;
+            }
         }
 
         #region TAB 1: KASIR POS
@@ -452,16 +420,23 @@ namespace UangPasDesktop
                 if (splitKasir.Width > 0 && !isApplyingSplitter)
                 {
                     double ratio = (double)splitKasir.SplitterDistance / splitKasir.Width;
-                    if (ratio >= 0.25 && ratio <= 0.75)
+                    if (ratio >= 0.40 && ratio <= 0.85)
                     {
                         this.savedSplitterRatio = ratio;
                         SaveLocalSettings();
+                        if (lblSplitterInfo != null)
+                        {
+                            lblSplitterInfo.Text = "Porsi Tampilan Saat Ini: " + (int)((1 - ratio) * 100) + "% Keranjang Belanja, " + (int)(ratio * 100) + "% Katalog Produk.\n(Pemisah juga bisa digeser langsung dengan mouse di Tab Kasir POS).";
+                        }
                     }
                 }
             };
 
             // Handle proportional splitter on resize
             this.Resize += (s, e) => {
+                ApplySplitterRatio();
+            };
+            splitKasir.SizeChanged += (s, e) => {
                 ApplySplitterRatio();
             };
 
@@ -571,23 +546,28 @@ namespace UangPasDesktop
             gridProducts.RowTemplate.Height = 38;
 
             gridProducts.Columns.Add("barcode", "Barcode / Kode");
-            gridProducts.Columns["barcode"].Width = 130;
+            gridProducts.Columns["barcode"].MinimumWidth = 130;
+            gridProducts.Columns["barcode"].FillWeight = 115;
             gridProducts.Columns["barcode"].DefaultCellStyle.Font = new Font("Consolas", 9.5f, FontStyle.Bold);
 
             gridProducts.Columns.Add("nama", "Nama Barang");
-            gridProducts.Columns["nama"].FillWeight = 160;
+            gridProducts.Columns["nama"].MinimumWidth = 240;
+            gridProducts.Columns["nama"].FillWeight = 280;
 
             gridProducts.Columns.Add("kategori", "Kategori");
-            gridProducts.Columns["kategori"].Width = 130;
+            gridProducts.Columns["kategori"].MinimumWidth = 130;
+            gridProducts.Columns["kategori"].FillWeight = 125;
 
             gridProducts.Columns.Add("harga", "Harga Satuan");
-            gridProducts.Columns["harga"].Width = 110;
+            gridProducts.Columns["harga"].MinimumWidth = 115;
+            gridProducts.Columns["harga"].FillWeight = 110;
             gridProducts.Columns["harga"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             gridProducts.Columns["harga"].DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
             gridProducts.Columns["harga"].DefaultCellStyle.ForeColor = Color.FromArgb(2, 132, 199);
 
             gridProducts.Columns.Add("stok", "Sisa Stok");
-            gridProducts.Columns["stok"].Width = 85;
+            gridProducts.Columns["stok"].MinimumWidth = 85;
+            gridProducts.Columns["stok"].FillWeight = 75;
             gridProducts.Columns["stok"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
 
             DataGridViewButtonColumn colBtn = new DataGridViewButtonColumn {
@@ -595,7 +575,8 @@ namespace UangPasDesktop
                 HeaderText = "Aksi",
                 Text = "➕ Tambah",
                 UseColumnTextForButtonValue = true,
-                Width = 90,
+                MinimumWidth = 90,
+                FillWeight = 85,
                 FlatStyle = FlatStyle.Flat
             };
             colBtn.DefaultCellStyle.BackColor = Color.FromArgb(16, 185, 129);
@@ -633,37 +614,51 @@ namespace UangPasDesktop
 
             splitKasir.Panel1.Controls.Add(leftPanel);
 
-            // RIGHT PANEL: Cart & Fingerprint Checkout
-            Panel rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 20, 16, 16), BackColor = Color.White };
+            // RIGHT PANEL: Cart & Fingerprint Checkout (25% screen width)
+            Panel rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10, 14, 10, 12), BackColor = Color.White };
             
+            lblHoldStatus = new Label {
+                Text = "",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(180, 83, 9),
+                BackColor = Color.FromArgb(254, 243, 199),
+                Dock = DockStyle.Top,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Visible = false,
+                Cursor = Cursors.Hand
+            };
+            lblHoldStatus.Click += (s, e) => RecallBill();
+            rightPanel.Controls.Add(lblHoldStatus);
+
             Label lblCartTitle = new Label {
                 Text = "📋 Keranjang Belanja Koperasi",
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 Dock = DockStyle.Top,
-                Height = 36
+                Height = 32
             };
             rightPanel.Controls.Add(lblCartTitle);
 
             // Barcode input box (Responsive Table)
             TableLayoutPanel barcodeTable = new TableLayoutPanel {
                 Dock = DockStyle.Top,
-                Height = 40,
+                Height = 38,
                 RowCount = 1,
                 ColumnCount = 2,
-                Padding = new Padding(0, 0, 0, 6)
+                Padding = new Padding(0, 0, 0, 4)
             };
-            barcodeTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 105f));
+            barcodeTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100f));
             barcodeTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
             Label lblBc = new Label { 
                 Text = "Scan Barcode:", 
                 Dock = DockStyle.Fill, 
                 TextAlign = ContentAlignment.MiddleLeft, 
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) 
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold) 
             };
             txtBarcode = new TextBox { 
                 Dock = DockStyle.Fill, 
-                Font = new Font("Segoe UI", 10.5f) 
+                Font = new Font("Segoe UI", 10f) 
             };
             txtBarcode.KeyDown += (s, e) => {
                 if (e.KeyCode == Keys.Enter)
@@ -692,29 +687,29 @@ namespace UangPasDesktop
                 ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single
             };
             gridCart.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            gridCart.ColumnHeadersHeight = 38;
+            gridCart.ColumnHeadersHeight = 34;
             gridCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
             gridCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
-            gridCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-            gridCart.RowTemplate.Height = 36;
-            gridCart.RowsDefaultCellStyle.Font = new Font("Segoe UI", 9.5f);
+            gridCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+            gridCart.RowTemplate.Height = 34;
+            gridCart.RowsDefaultCellStyle.Font = new Font("Segoe UI", 9f);
             gridCart.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             gridCart.Columns.Add("nama", "Barang");
             gridCart.Columns.Add("harga", "Harga");
             gridCart.Columns.Add("qty", "Qty");
             gridCart.Columns.Add("subtotal", "Subtotal");
-            gridCart.Columns["nama"].FillWeight = 160;
-            gridCart.Columns["nama"].MinimumWidth = 130;
-            gridCart.Columns["harga"].FillWeight = 80;
-            gridCart.Columns["harga"].MinimumWidth = 90;
-            gridCart.Columns["qty"].FillWeight = 50;
-            gridCart.Columns["qty"].MinimumWidth = 55;
-            gridCart.Columns["subtotal"].FillWeight = 90;
-            gridCart.Columns["subtotal"].MinimumWidth = 100;
+            gridCart.Columns["nama"].MinimumWidth = 90;
+            gridCart.Columns["nama"].FillWeight = 135;
+            gridCart.Columns["harga"].MinimumWidth = 65;
+            gridCart.Columns["harga"].FillWeight = 75;
+            gridCart.Columns["qty"].MinimumWidth = 40;
+            gridCart.Columns["qty"].FillWeight = 45;
+            gridCart.Columns["subtotal"].MinimumWidth = 70;
+            gridCart.Columns["subtotal"].FillWeight = 80;
             gridCart.Columns["harga"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             gridCart.Columns["qty"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             gridCart.Columns["subtotal"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-            gridCart.Columns["subtotal"].DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            gridCart.Columns["subtotal"].DefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
             gridCart.Columns["subtotal"].DefaultCellStyle.ForeColor = Color.FromArgb(2, 132, 199);
             gridCart.CellValueChanged += (s, e) => RecalculateCart();
             rightPanel.Controls.Add(gridCart);
@@ -743,18 +738,18 @@ namespace UangPasDesktop
                 ColumnCount = 2,
                 Padding = new Padding(0, 4, 0, 0)
             };
-            btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 52f));
-            btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
-            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110f));
+            btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 50f));
+            btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 38f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 85f));
             btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             
             btnCheckoutFingerprint = new Button {
-                Text = "👆 BAYAR SIDIK JARI WBP (U.ARE.U 4500)",
+                Text = "👆 BAYAR SIDIK JARI WBP",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnCheckoutFingerprint.FlatAppearance.BorderSize = 0;
@@ -768,7 +763,7 @@ namespace UangPasDesktop
                 BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnClear.FlatAppearance.BorderSize = 0;
@@ -776,12 +771,12 @@ namespace UangPasDesktop
             btnTable.Controls.Add(btnClear, 0, 1);
 
             btnCheckoutManual = new Button {
-                Text = "👤 Bayar Manual (Ketik No. Reg / Nama)",
+                Text = "👤 Bayar Manual",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnCheckoutManual.FlatAppearance.BorderSize = 0;
@@ -813,7 +808,7 @@ namespace UangPasDesktop
             panel.Controls.Add(lblTitle);
 
             Label lblSub = new Label {
-                Text = "Pilih WBP yang belum memiliki rekam biometrik, lalu minta WBP menempelkan jari 4x pada sensor U.are.U 4500.",
+                Text = "Pilih WBP yang belum memiliki rekam biometrik, lalu minta WBP menempelkan jari 4x pada sensor sidik jari.",
                 ForeColor = Color.FromArgb(100, 116, 139),
                 AutoSize = true,
                 Location = new Point(32, 56)
@@ -940,22 +935,44 @@ namespace UangPasDesktop
         }
         #endregion
 
-        #region TAB 4: SETTINGS & LAN AUTO-DISCOVERY
+        #region TAB 4: PENGATURAN SISTEM & DIAGNOSTIK SENSOR
+        // Sensor Diagnostic Fields
+        private PictureBox picDiagFinger;
+        private Label lblDiagStatus;
+        private Label lblDiagQuality;
+        private Label lblDiagLatency;
+        private Label lblDiagMatch;
+        private Label lblDiagDevice;
+        private Label lblDiagSerial;
+        private Button btnDiagToggle;
+        private Button btnDiagSaveEnroll;
+        private Button btnDiagCompare;
+        private bool isDiagCapturing = false;
+        private int diagScanCount = 0;
+        private Fmd diagEnrolledFmd = null;
+        private Fmd diagLastFmd = null;
+        private System.Diagnostics.Stopwatch diagSw = new System.Diagnostics.Stopwatch();
+
         private void BuildSettingsTab(TabPage page)
         {
-            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), AutoScroll = true, BackColor = Color.FromArgb(248, 250, 252) };
+            Panel p = new Panel { 
+                Dock = DockStyle.Fill, 
+                Padding = new Padding(24), 
+                AutoScroll = true, 
+                BackColor = Color.FromArgb(248, 250, 252) 
+            };
 
             Label lblTitle = new Label { 
-                Text = "⚙️ Pengaturan Server & Koneksi Jaringan", 
-                Font = new Font("Segoe UI", 14f, FontStyle.Bold), 
+                Text = "⚙️ Pengaturan Sistem & Uji Sensor Biometrik", 
+                Font = new Font("Segoe UI", 15f, FontStyle.Bold), 
                 ForeColor = Color.FromArgb(15, 23, 42),
                 AutoSize = true, 
-                Location = new Point(24, 20) 
+                Location = new Point(24, 18) 
             };
             p.Controls.Add(lblTitle);
 
             Label lblSub = new Label { 
-                Text = "Konfigurasikan koneksi Terminal Kasir POS ke Server Lokal UangPas Lapas (LAN/WiFi).\nGunakan Pencarian Otomatis LAN untuk setup cepat tanpa mengetik.", 
+                Text = "Konfigurasi alamat server UangPas, tata letak keranjang belanja kasir, dan pengujian sensor sidik jari.", 
                 Font = new Font("Segoe UI", 9.5f), 
                 ForeColor = Color.FromArgb(100, 116, 139),
                 AutoSize = true, 
@@ -963,262 +980,467 @@ namespace UangPasDesktop
             };
             p.Controls.Add(lblSub);
 
-            int cardTop = 96;
+            int cardTop = 86;
+            int cardWidth = 860;
 
-            // CARD 1: Status Server Saat Ini
-            GroupBox grpStatus = new GroupBox {
-                Text = " 📡 Status Server Saat Ini ",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            // ==========================================
+            // CARD 1: PENGATURAN ALAMAT SERVER UANGPAS
+            // ==========================================
+            GroupBox grpServer = new GroupBox {
+                Text = " 🌐 Pengaturan Alamat Server UangPas ",
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
                 Location = new Point(24, cardTop),
-                Width = 820,
-                Height = 115,
+                Width = cardWidth,
+                Height = 260,
                 BackColor = Color.White
             };
 
-            lblCurrentServerInfo = new Label {
-                Text = "Alamat Aktif: " + this.apiUrl + "\nStatus: Menunggu pengujian...",
-                Font = new Font("Segoe UI", 9.5f),
-                ForeColor = Color.FromArgb(30, 41, 59),
-                Location = new Point(16, 26),
-                Width = 590,
-                Height = 68
+            Label lblServerDesc = new Label {
+                Text = "Masukkan Alamat IP atau Domain Server UangPas Lapas (contoh: uangpas.test, 192.168.1.50, atau 127.0.0.1:8000):",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Location = new Point(18, 28),
+                Width = 820,
+                Height = 20
             };
-            grpStatus.Controls.Add(lblCurrentServerInfo);
+            grpServer.Controls.Add(lblServerDesc);
 
-            Button btnTestConn = new Button {
-                Text = "🔄 Uji Koneksi Sekarang",
-                Location = new Point(620, 32),
-                Width = 180,
-                Height = 40,
+            Label lblIpTag = new Label { 
+                Text = "Alamat IP / Domain Server:", 
+                Location = new Point(18, 54), 
+                Width = 220, 
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59)
+            };
+            grpServer.Controls.Add(lblIpTag);
+
+            txtServerAddress = new TextBox {
+                Location = new Point(18, 76),
+                Width = 470,
+                Font = new Font("Segoe UI", 11f),
+                Text = GetDisplayServerAddress(this.apiUrl)
+            };
+            grpServer.Controls.Add(txtServerAddress);
+
+            Button btnSaveServer = new Button {
+                Text = "💾 Simpan & Sambungkan",
+                Location = new Point(500, 74),
+                Width = 200,
+                Height = 35,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSaveServer.FlatAppearance.BorderSize = 0;
+            btnSaveServer.Click += (s, e) => {
+                string input = txtServerAddress.Text.Trim();
+                if (string.IsNullOrEmpty(input))
+                {
+                    MessageBox.Show("Silakan masukkan alamat IP atau Domain server.", "Perhatian", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                ApplyNewServerUrl(input);
+            };
+            grpServer.Controls.Add(btnSaveServer);
+
+            Button btnTestServer = new Button {
+                Text = "🔄 Uji Koneksi",
+                Location = new Point(710, 74),
+                Width = 130,
+                Height = 35,
                 BackColor = Color.FromArgb(241, 245, 249),
                 ForeColor = Color.FromArgb(15, 23, 42),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            btnTestConn.Click += (s, e) => {
-                btnTestConn.Text = "⏳ Menguji...";
-                btnTestConn.Enabled = false;
+            btnTestServer.Click += (s, e) => {
+                btnTestServer.Text = "⏳ Menguji...";
+                btnTestServer.Enabled = false;
                 ThreadPool.QueueUserWorkItem(_ => {
                     TestCurrentConnection();
                     try
                     {
                         this.BeginInvoke((Action)(() => {
-                            btnTestConn.Text = "🔄 Uji Koneksi Sekarang";
-                            btnTestConn.Enabled = true;
+                            btnTestServer.Text = "🔄 Uji Koneksi";
+                            btnTestServer.Enabled = true;
                         }));
                     }
                     catch { }
                 });
             };
-            grpStatus.Controls.Add(btnTestConn);
-            p.Controls.Add(grpStatus);
+            grpServer.Controls.Add(btnTestServer);
 
-            cardTop += 130;
-
-            // CARD 2: CARI SERVER OTOMATIS (SCAN LAN)
-            GroupBox grpLan = new GroupBox {
-                Text = " 🚀 Pencarian Server Otomatis via Jaringan LAN (Paling Mudah) ",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                Location = new Point(24, cardTop),
-                Width = 820,
-                Height = 190,
-                BackColor = Color.White
-            };
-
-            Label lblLanDesc = new Label {
-                Text = "Memindai komputer di jaringan LAN / WiFi lokal untuk mendeteksi Server UangPas yang aktif secara otomatis.",
-                Font = new Font("Segoe UI", 9f),
+            // Quick Presets
+            Label lblPresets = new Label {
+                Text = "Pilihan Cepat:",
+                Location = new Point(18, 122),
+                Width = 95,
+                Height = 26,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
                 ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(16, 26),
-                Width = 780,
-                Height = 22
-            };
-            grpLan.Controls.Add(lblLanDesc);
-
-            btnScanLan = new Button {
-                Text = "🔍 Cari Server Otomatis di Jaringan LAN",
-                Location = new Point(16, 54),
-                Width = 330,
-                Height = 44,
-                BackColor = Color.FromArgb(16, 185, 129),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnScanLan.FlatAppearance.BorderSize = 0;
-            btnScanLan.Click += (s, e) => StartLanAutoDiscovery();
-            grpLan.Controls.Add(btnScanLan);
-
-            lblLanScanStatus = new Label {
-                Text = "Klik tombol di atas untuk memulai pencarian otomatis di LAN.",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Italic),
-                ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(358, 54),
-                Width = 440,
-                Height = 44,
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            grpLan.Controls.Add(lblLanScanStatus);
+            grpServer.Controls.Add(lblPresets);
 
-            Label lblResultPrompt = new Label {
-                Text = "Daftar Server Ditemukan di LAN:",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Location = new Point(16, 110),
-                Width = 260,
-                Height = 20
-            };
-            grpLan.Controls.Add(lblResultPrompt);
-
-            cmbDiscoveredServers = new ComboBox {
-                Location = new Point(16, 134),
-                Width = 550,
-                Height = 32,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 9.5f),
-                BackColor = Color.White
-            };
-            grpLan.Controls.Add(cmbDiscoveredServers);
-
-            btnApplyDiscovered = new Button {
-                Text = "🔌 Gunakan Server Ini",
-                Location = new Point(580, 132),
-                Width = 220,
-                Height = 35,
-                BackColor = Color.FromArgb(2, 132, 199),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                Enabled = false
-            };
-            btnApplyDiscovered.FlatAppearance.BorderSize = 0;
-            btnApplyDiscovered.Click += (s, e) => {
-                if (cmbDiscoveredServers.SelectedIndex >= 0 && cmbDiscoveredServers.SelectedIndex < lastDiscoveredServers.Count)
-                {
-                    var srv = lastDiscoveredServers[cmbDiscoveredServers.SelectedIndex];
-                    ApplyNewServerUrl(srv.Url, srv.UptName);
-                }
-            };
-            grpLan.Controls.Add(btnApplyDiscovered);
-            p.Controls.Add(grpLan);
-
-            cardTop += 205;
-
-            // CARD 3: PENGATURAN MANUAL RINGKAS (INPUT IP ATAU URL LENGKAP)
-            GroupBox grpManual = new GroupBox {
-                Text = " ✍️ Pengaturan Manual (Input IP Server) ",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                Location = new Point(24, cardTop),
-                Width = 820,
-                Height = 175,
-                BackColor = Color.White
-            };
-
-            Label lblManualDesc = new Label {
-                Text = "Cukup masukkan Alamat IP Server saja (contoh: 192.168.1.50 atau localhost), sistem otomatis melengkapi port & path API:",
-                Font = new Font("Segoe UI", 9f),
-                ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(16, 26),
-                Width = 780,
-                Height = 22
-            };
-            grpManual.Controls.Add(lblManualDesc);
-
-            Label lblIpTag = new Label { Text = "IP / Host Server:", Location = new Point(16, 56), Width = 130, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
-            grpManual.Controls.Add(lblIpTag);
-
-            txtManualIp = new TextBox {
-                Location = new Point(16, 78),
-                Width = 280,
-                Font = new Font("Segoe UI", 10.5f),
-                Text = ExtractHostFromUrl(this.apiUrl)
-            };
-            grpManual.Controls.Add(txtManualIp);
-
-            Label lblPortTag = new Label { Text = "Port:", Location = new Point(306, 56), Width = 60, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
-            grpManual.Controls.Add(lblPortTag);
-
-            txtManualPort = new TextBox {
-                Location = new Point(306, 78),
-                Width = 80,
-                Font = new Font("Segoe UI", 10.5f),
-                Text = "8000"
-            };
-            grpManual.Controls.Add(txtManualPort);
-
-            Button btnSaveManualIp = new Button {
-                Text = "💾 Simpan & Sambungkan",
-                Location = new Point(400, 75),
-                Width = 220,
-                Height = 34,
-                BackColor = Color.FromArgb(2, 132, 199),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnSaveManualIp.FlatAppearance.BorderSize = 0;
-            btnSaveManualIp.Click += (s, e) => {
-                string ip = txtManualIp.Text.Trim();
-                string port = txtManualPort.Text.Trim();
-                if (string.IsNullOrEmpty(ip)) { MessageBox.Show("Silakan masukkan alamat IP server.", "Perhatian", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
-                if (string.IsNullOrEmpty(port)) port = "8000";
-                string constructed = "http://" + ip + ":" + port + "/api/v1";
-                ApplyNewServerUrl(constructed, "Manual Config");
-            };
-            grpManual.Controls.Add(btnSaveManualIp);
-
-            Label lblFullUrl = new Label { Text = "Atau URL Lengkap:", Location = new Point(16, 122), Width = 120, Font = new Font("Segoe UI", 8.5f) };
-            grpManual.Controls.Add(lblFullUrl);
-
-            txtSettingApiUrl = new TextBox { Location = new Point(140, 120), Width = 470, Text = this.apiUrl, Font = new Font("Segoe UI", 9f) };
-            grpManual.Controls.Add(txtSettingApiUrl);
-
-            Button btnSaveFullUrl = new Button {
-                Text = "Simpan URL",
-                Location = new Point(620, 118),
-                Width = 120,
+            Button btnPresetLaragon = new Button {
+                Text = "🌐 Laragon Lokal (uangpas.test)",
+                Location = new Point(118, 120),
+                Width = 230,
                 Height = 28,
                 BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            btnSaveFullUrl.Click += (s, e) => {
-                ApplyNewServerUrl(txtSettingApiUrl.Text.Trim(), "Manual Full URL");
+            btnPresetLaragon.Click += (s, e) => {
+                txtServerAddress.Text = "uangpas.test";
             };
-            grpManual.Controls.Add(btnSaveFullUrl);
+            grpServer.Controls.Add(btnPresetLaragon);
 
-            p.Controls.Add(grpManual);
+            Button btnPresetLocalhost = new Button {
+                Text = "🏠 Localhost Port 8000 (127.0.0.1:8000)",
+                Location = new Point(358, 120),
+                Width = 270,
+                Height = 28,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnPresetLocalhost.Click += (s, e) => {
+                txtServerAddress.Text = "127.0.0.1:8000";
+            };
+            grpServer.Controls.Add(btnPresetLocalhost);
 
-            cardTop += 190;
-
-            // CARD 4: PENGATURAN TATA LETAK KERANJANG BELANJA
-            GroupBox grpLayout = new GroupBox {
-                Text = " 🛒 Pengaturan Tampilan & Lebar Keranjang Belanja ",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                Location = new Point(24, cardTop),
+            lblCurrentServerInfo = new Label {
+                Text = "Alamat Aktif: " + this.apiUrl + "\nStatus: Menunggu pengujian...",
+                Font = new Font("Segoe UI", 9.5f),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Location = new Point(18, 158),
                 Width = 820,
-                Height = 115,
+                Height = 44
+            };
+            grpServer.Controls.Add(lblCurrentServerInfo);
+
+            // Android LAN Info Banner
+            Panel pnlMobileHint = new Panel {
+                Location = new Point(18, 206),
+                Width = 820,
+                Height = 40,
+                BackColor = Color.FromArgb(240, 253, 250),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            Label lblMobileHint = new Label {
+                Text = "📱 Akses dari HP Android / Tablet (Satu Wi-Fi): Buka browser HP dan ketik  http://192.168.1.11  atau  http://192.168.1.11:8000",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(13, 148, 136),
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(8, 0, 8, 0)
+            };
+            pnlMobileHint.Controls.Add(lblMobileHint);
+            grpServer.Controls.Add(pnlMobileHint);
+
+            p.Controls.Add(grpServer);
+
+            cardTop += 275;
+
+            // ==========================================
+            // CARD 2: PENGATURAN TATA LETAK KERANJANG
+            // ==========================================
+            GroupBox grpLayout = new GroupBox {
+                Text = " 🛒 Pengaturan Tata Letak Keranjang Belanja & Katalog ",
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(24, cardTop),
+                Width = cardWidth,
+                Height = 150,
                 BackColor = Color.White
             };
 
             lblSplitterInfo = new Label {
-                Text = "Porsi Pembagian Layar: " + (int)((1 - this.savedSplitterRatio) * 100) + "% untuk Keranjang Belanja.\n(Posisi pemisah disimpan otomatis saat Anda menggesernya di Tab Kasir).",
+                Text = "Ukuran Saat Ini: " + (int)(this.savedSplitterRatio * 100) + "% Katalog Produk  |  " + (int)Math.Round((1.0 - this.savedSplitterRatio) * 100) + "% Keranjang Belanja\n(Posisi pemisah juga dapat langsung digeser dengan mouse di Tab Kasir, tersimpan otomatis).",
                 Font = new Font("Segoe UI", 9f),
                 ForeColor = Color.FromArgb(71, 85, 105),
-                Location = new Point(16, 28),
-                Width = 550,
-                Height = 45
+                Location = new Point(18, 28),
+                Width = 820,
+                Height = 42
             };
             grpLayout.Controls.Add(lblSplitterInfo);
 
-            Button btnResetSplitter = new Button {
-                Text = "⚖️ Reset Lebar Seimbang (50% : 50%)",
-                Location = new Point(580, 32),
-                Width = 220,
+            Button btnPreset25 = new Button {
+                Text = "📏 Standar (75% Produk : 25% Keranjang)",
+                Location = new Point(18, 80),
+                Width = 265,
+                Height = 42,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnPreset25.Click += (s, e) => {
+                this.savedSplitterRatio = 0.75;
+                SaveLocalSettings();
+                ApplySplitterRatio();
+                UpdateSplitterInfoText();
+                MessageBox.Show("Tata letak keranjang belanja diatur ke ukuran Standar:\n25% Keranjang Belanja, 75% Katalog Produk.", "Tata Letak Diperbarui", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            grpLayout.Controls.Add(btnPreset25);
+
+            Button btnPreset35 = new Button {
+                Text = "📐 Sedang (65% Produk : 35% Keranjang)",
+                Location = new Point(295, 80),
+                Width = 265,
+                Height = 42,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnPreset35.Click += (s, e) => {
+                this.savedSplitterRatio = 0.65;
+                SaveLocalSettings();
+                ApplySplitterRatio();
+                UpdateSplitterInfoText();
+                MessageBox.Show("Tata letak keranjang belanja diatur ke ukuran Sedang:\n35% Keranjang Belanja, 65% Katalog Produk.", "Tata Letak Diperbarui", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            grpLayout.Controls.Add(btnPreset35);
+
+            Button btnPreset50 = new Button {
+                Text = "⚖️ Seimbang (50% Produk : 50% Keranjang)",
+                Location = new Point(572, 80),
+                Width = 265,
+                Height = 42,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnPreset50.Click += (s, e) => {
+                this.savedSplitterRatio = 0.50;
+                SaveLocalSettings();
+                ApplySplitterRatio();
+                UpdateSplitterInfoText();
+                MessageBox.Show("Tata letak keranjang belanja diatur ke ukuran Seimbang:\n50% Keranjang Belanja, 50% Katalog Produk.", "Tata Letak Diperbarui", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            grpLayout.Controls.Add(btnPreset50);
+
+            p.Controls.Add(grpLayout);
+
+            cardTop += 165;
+
+            // ==========================================
+            // CARD 3: UJI DIAGNOSTIK SENSOR SIDIK JARI
+            // ==========================================
+            GroupBox grpDiag = new GroupBox {
+                Text = " 🔬 Uji & Diagnostik Sensor Sidik Jari Biometrik ",
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(24, cardTop),
+                Width = cardWidth,
+                Height = 445,
+                BackColor = Color.White
+            };
+
+            // Left: Live visual preview
+            Panel pnlDiagLeft = new Panel {
+                Location = new Point(18, 28),
+                Width = 310,
+                Height = 405,
+                BackColor = Color.Transparent
+            };
+
+            Label lblPreviewTitle = new Label {
+                Text = "Visual Citra Sidik Jari:",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Dock = DockStyle.Top,
+                Height = 24
+            };
+            pnlDiagLeft.Controls.Add(lblPreviewTitle);
+
+            picDiagFinger = new PictureBox {
+                Dock = DockStyle.Top,
+                Height = 265,
+                BackColor = Color.FromArgb(15, 23, 42),
+                BorderStyle = BorderStyle.FixedSingle,
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+            pnlDiagLeft.Controls.Add(picDiagFinger);
+
+            lblDiagStatus = new Label {
+                Text = "Sensor dalam keadaan siaga (standby).",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Dock = DockStyle.Top,
+                Height = 55,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            pnlDiagLeft.Controls.Add(lblDiagStatus);
+
+            btnDiagToggle = new Button {
+                Text = "▶️ Mulai Pengujian Sensor",
+                Dock = DockStyle.Bottom,
+                Height = 44,
+                BackColor = Color.FromArgb(16, 185, 129),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnDiagToggle.FlatAppearance.BorderSize = 0;
+            btnDiagToggle.Click += (s, e) => ToggleDiagCapture();
+            pnlDiagLeft.Controls.Add(btnDiagToggle);
+            grpDiag.Controls.Add(pnlDiagLeft);
+
+            // Right: Sensor Info, Quality, and Verification
+            Panel pnlDiagRight = new Panel {
+                Location = new Point(345, 28),
+                Width = 495,
+                Height = 405,
+                BackColor = Color.Transparent
+            };
+
+            // Sub-box 1: Hardware Info
+            GroupBox grpHardware = new GroupBox {
+                Text = " Informasi Perangkat Scanner ",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Location = new Point(0, 0),
+                Width = 495,
+                Height = 95
+            };
+            lblDiagDevice = new Label { 
+                Text = "Perangkat: " + (currentReader != null ? currentReader.Description.Id.ProductName : "Mendeteksi..."), 
+                Location = new Point(14, 22), 
+                AutoSize = true, 
+                Font = new Font("Segoe UI", 9f) 
+            };
+            lblDiagSerial = new Label { 
+                Text = "Serial ID: " + (currentReader != null ? currentReader.Description.SerialNumber : "-"), 
+                Location = new Point(14, 44), 
+                AutoSize = true, 
+                Font = new Font("Segoe UI", 9f) 
+            };
+            Label lblResInfo = new Label { 
+                Text = "Resolusi: 500 DPI (ANSI/NIST Optical Sensor)", 
+                Location = new Point(14, 66), 
+                AutoSize = true, 
+                Font = new Font("Segoe UI", 9f) 
+            };
+            grpHardware.Controls.Add(lblDiagDevice);
+            grpHardware.Controls.Add(lblDiagSerial);
+            grpHardware.Controls.Add(lblResInfo);
+            pnlDiagRight.Controls.Add(grpHardware);
+
+            // Sub-box 2: Kualitas Scan Terakhir
+            GroupBox grpQuality = new GroupBox {
+                Text = " Kualitas Hasil Scan Terakhir ",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Location = new Point(0, 102),
+                Width = 495,
+                Height = 82
+            };
+            lblDiagQuality = new Label { 
+                Text = "Kualitas: Belum ada sentuhan", 
+                Location = new Point(14, 24), 
+                AutoSize = true, 
+                Font = new Font("Segoe UI", 9f) 
+            };
+            lblDiagLatency = new Label { 
+                Text = "Kecepatan Respon: -", 
+                Location = new Point(14, 48), 
+                AutoSize = true, 
+                Font = new Font("Segoe UI", 9f) 
+            };
+            grpQuality.Controls.Add(lblDiagQuality);
+            grpQuality.Controls.Add(lblDiagLatency);
+            pnlDiagRight.Controls.Add(grpQuality);
+
+            // Sub-box 3: Uji Pencocokan 1:1
+            GroupBox grpTest = new GroupBox {
+                Text = " Uji Pencocokan 1:1 Biometrik ",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Location = new Point(0, 192),
+                Width = 495,
+                Height = 155
+            };
+
+            btnDiagSaveEnroll = new Button { 
+                Text = "1. Rekam Template Uji", 
+                Location = new Point(14, 26), 
+                Width = 205, 
+                Height = 34, 
+                BackColor = Color.FromArgb(2, 132, 199), 
+                ForeColor = Color.White, 
+                FlatStyle = FlatStyle.Flat, 
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Enabled = false 
+            };
+            btnDiagSaveEnroll.FlatAppearance.BorderSize = 0;
+            btnDiagSaveEnroll.Click += (s, e) => {
+                if (diagLastFmd != null) {
+                    diagEnrolledFmd = diagLastFmd;
+                    btnDiagCompare.Enabled = true;
+                    btnDiagCompare.BackColor = Color.FromArgb(16, 185, 129);
+                    btnDiagCompare.ForeColor = Color.White;
+                    lblDiagMatch.Text = "Template tersimpan. Tempelkan jari lagi lalu klik '2. Uji Kecocokan'.";
+                    lblDiagMatch.ForeColor = Color.FromArgb(16, 185, 129);
+                }
+            };
+
+            btnDiagCompare = new Button { 
+                Text = "2. Uji Kecocokan", 
+                Location = new Point(230, 26), 
+                Width = 150, 
+                Height = 34, 
+                BackColor = Color.FromArgb(241, 245, 249), 
+                FlatStyle = FlatStyle.Flat, 
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Enabled = false 
+            };
+            btnDiagCompare.Click += (s, e) => {
+                if (diagEnrolledFmd != null && diagLastFmd != null) {
+                    CompareResult cr = Comparison.Compare(diagLastFmd, 0, diagEnrolledFmd, 0);
+                    int threshold = 2147483647 / 100000;
+                    if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Score < threshold) {
+                        lblDiagMatch.Text = "🎉 COCOK 100%! Sidik jari identik (Score: " + cr.Score + ")";
+                        lblDiagMatch.ForeColor = Color.FromArgb(16, 185, 129);
+                        MessageBox.Show("✅ HASIL UJI COCOK 100%!\n\nAlgoritma ANSI Biometrik berhasil mencocokkan sidik jari dengan template referensi.", "Hasil Verifikasi: COCOK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    } else {
+                        lblDiagMatch.Text = "❌ TIDAK COCOK! Jari berbeda.";
+                        lblDiagMatch.ForeColor = Color.FromArgb(239, 68, 68);
+                        MessageBox.Show("❌ HASIL UJI TIDAK COCOK!\n\nSensor mendeteksi bahwa jari berbeda. Sistem proteksi transaksi bekerja akurat.", "Hasil Verifikasi: BEDA", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            };
+
+            lblDiagMatch = new Label { 
+                Text = "Tempelkan jari pada sensor untuk merekam template uji.", 
+                Location = new Point(14, 70), 
+                Width = 465, 
+                Height = 70, 
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(100, 116, 139) 
+            };
+            grpTest.Controls.Add(btnDiagSaveEnroll);
+            grpTest.Controls.Add(btnDiagCompare);
+            grpTest.Controls.Add(lblDiagMatch);
+            pnlDiagRight.Controls.Add(grpTest);
+
+            // Bottom action buttons for Diagnostic
+            Button btnRefreshScanner = new Button {
+                Text = "🔄 Deteksi Ulang Scanner",
+                Location = new Point(0, 358),
+                Width = 235,
                 Height = 38,
                 BackColor = Color.FromArgb(241, 245, 249),
                 ForeColor = Color.FromArgb(15, 23, 42),
@@ -1226,22 +1448,56 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            btnResetSplitter.Click += (s, e) => {
-                this.savedSplitterRatio = 0.48; // 48% left, 52% right
-                SaveLocalSettings();
-                ApplySplitterRatio();
-                lblSplitterInfo.Text = "Porsi Pembagian Layar: 52% untuk Keranjang Belanja.\n(Posisi pemisah disimpan otomatis saat Anda menggesernya di Tab Kasir).";
-                MessageBox.Show("Lebar keranjang belanja telah dikembalikan ke ukuran seimbang (52% lebar layar).", "Sukses", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            btnRefreshScanner.Click += (s, e) => {
+                StopDiagCapture();
+                InitializeBiometrics();
+                if (currentReader != null) {
+                    lblDiagDevice.Text = "Perangkat: " + currentReader.Description.Id.ProductName;
+                    lblDiagSerial.Text = "Serial ID: " + currentReader.Description.SerialNumber;
+                }
             };
-            grpLayout.Controls.Add(btnResetSplitter);
+            pnlDiagRight.Controls.Add(btnRefreshScanner);
 
-            p.Controls.Add(grpLayout);
+            Button btnOpenSdk = new Button {
+                Text = "🛠️ Diagnostic Sample SDK",
+                Location = new Point(245, 358),
+                Width = 250,
+                Height = 38,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnOpenSdk.Click += (s, e) => {
+                string sdkPath = @"C:\Program Files\DigitalPersona\U.are.U SDK\Windows\Samples\Bin\.NET\UareUSampleCSharp.exe";
+                if (File.Exists(sdkPath)) {
+                    StopDiagCapture();
+                    try { System.Diagnostics.Process.Start(sdkPath); } catch { }
+                } else {
+                    MessageBox.Show("File tidak ditemukan: " + sdkPath, "Info", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+            pnlDiagRight.Controls.Add(btnOpenSdk);
+
+            grpDiag.Controls.Add(pnlDiagRight);
+            p.Controls.Add(grpDiag);
 
             page.Controls.Add(p);
         }
+
+        private void UpdateSplitterInfoText()
+        {
+            if (lblSplitterInfo != null)
+            {
+                int cartPct = (int)Math.Round((1.0 - this.savedSplitterRatio) * 100);
+                int prodPct = 100 - cartPct;
+                lblSplitterInfo.Text = string.Format("Ukuran Saat Ini: {0}% Katalog Produk  |  {1}% Keranjang Belanja\n(Posisi pemisah juga dapat langsung digeser dengan mouse di Tab Kasir, tersimpan otomatis).", prodPct, cartPct);
+            }
+        }
         #endregion
 
-        #region SETTINGS & LAN DISCOVERY METHODS
+        #region SETTINGS METHODS
         private void LoadLocalSettings()
         {
             try
@@ -1262,7 +1518,8 @@ namespace UangPasDesktop
                             double r;
                             if (double.TryParse(dict["splitter_ratio"].ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out r))
                             {
-                                if (r >= 0.25 && r <= 0.75) this.savedSplitterRatio = r;
+                                if (r >= 0.40 && r <= 0.85) this.savedSplitterRatio = r;
+                                else this.savedSplitterRatio = 0.75;
                             }
                         }
                     }
@@ -1288,15 +1545,15 @@ namespace UangPasDesktop
         {
             try
             {
-                if (splitKasir != null && splitKasir.Width > 500)
+                if (splitKasir != null && splitKasir.Width > 400)
                 {
                     isApplyingSplitter = true;
-                    double ratio = (this.savedSplitterRatio >= 0.25 && this.savedSplitterRatio <= 0.75)
+                    double ratio = (this.savedSplitterRatio >= 0.40 && this.savedSplitterRatio <= 0.85)
                         ? this.savedSplitterRatio
-                        : 0.48; // 48% left, 52% right -> shopping cart gets plenty of room!
+                        : 0.75; // 75% left (katalog produk), 25% right (keranjang belanja)
                     int targetDist = (int)(splitKasir.Width * ratio);
-                    int minLeft = 360;
-                    int minRight = 500;
+                    int minLeft = 450;
+                    int minRight = 260;
                     if (targetDist < minLeft) targetDist = minLeft;
                     if (splitKasir.Width - targetDist < minRight) targetDist = Math.Max(minLeft, splitKasir.Width - minRight);
                     if (targetDist > 0 && targetDist < splitKasir.Width)
@@ -1314,7 +1571,7 @@ namespace UangPasDesktop
 
         private string NormalizeApiUrl(string input)
         {
-            if (string.IsNullOrEmpty(input)) return "http://127.0.0.1:8000/api/v1";
+            if (string.IsNullOrEmpty(input)) return "http://uangpas.test/api/v1";
             string s = input.Trim().TrimEnd('/');
             if (!s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !s.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
@@ -1323,12 +1580,20 @@ namespace UangPasDesktop
             try
             {
                 Uri uri = new Uri(s);
+                string scheme = uri.Scheme;
                 string host = uri.Host;
-                int port = uri.Port > 0 ? uri.Port : 8000;
-                if (uri.IsDefaultPort && !s.Contains(":" + port))
+                int port = uri.Port;
+
+                string authority;
+                if (uri.IsDefaultPort || (scheme.Equals("http", StringComparison.OrdinalIgnoreCase) && port == 80) || (scheme.Equals("https", StringComparison.OrdinalIgnoreCase) && port == 443))
                 {
-                    port = 8000;
+                    authority = host;
                 }
+                else
+                {
+                    authority = host + ":" + port;
+                }
+
                 string path = uri.AbsolutePath.TrimEnd('/');
                 if (string.IsNullOrEmpty(path) || path == "/")
                 {
@@ -1339,7 +1604,7 @@ namespace UangPasDesktop
                     if (path.EndsWith("/api", StringComparison.OrdinalIgnoreCase)) path += "/v1";
                     else path += "/api/v1";
                 }
-                return uri.Scheme + "://" + host + ":" + port + path;
+                return scheme + "://" + authority + path;
             }
             catch
             {
@@ -1347,36 +1612,43 @@ namespace UangPasDesktop
             }
         }
 
-        private string ExtractHostFromUrl(string url)
+        private string GetDisplayServerAddress(string url)
         {
             try
             {
+                if (string.IsNullOrEmpty(url)) return "uangpas.test";
                 Uri uri = new Uri(url);
-                return uri.Host;
+                if (uri.IsDefaultPort || uri.Port == 80 || uri.Port == 443)
+                {
+                    return uri.Host;
+                }
+                return uri.Host + ":" + uri.Port;
             }
             catch
             {
-                return "127.0.0.1";
+                return url ?? "uangpas.test";
             }
         }
 
-        private void ApplyNewServerUrl(string rawUrl, string sourceName)
+        private void ApplyNewServerUrl(string rawUrl)
         {
             string normalized = NormalizeApiUrl(rawUrl);
             this.apiUrl = normalized;
-            if (txtSettingApiUrl != null) txtSettingApiUrl.Text = normalized;
-            if (txtManualIp != null) txtManualIp.Text = ExtractHostFromUrl(normalized);
+            if (txtServerAddress != null) txtServerAddress.Text = GetDisplayServerAddress(normalized);
             SaveLocalSettings();
 
             if (lblCurrentServerInfo != null)
             {
-                lblCurrentServerInfo.Text = "Alamat Aktif: " + this.apiUrl + "\nStatus: Menghubungkan & menyinkronkan data...";
+                lblCurrentServerInfo.Text = "Alamat Aktif: " + this.apiUrl + "\n⏳ Menghubungkan & menyinkronkan data...";
                 lblCurrentServerInfo.ForeColor = Color.FromArgb(2, 132, 199);
             }
 
-            SyncDataFromApi();
+            ThreadPool.QueueUserWorkItem(_ => {
+                TestCurrentConnection();
+                SyncDataFromApi();
+            });
 
-            MessageBox.Show("Alamat Server UangPas berhasil diperbarui ke:\n" + this.apiUrl + "\n\nDatabase produk dan data WBP telah disinkronkan.", "Koneksi Berhasil", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Alamat Server UangPas berhasil diperbarui ke:\n" + this.apiUrl + "\n\nSistem sedang menyinkronkan database produk dan WBP.", "Koneksi Disimpan", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void TestCurrentConnection()
@@ -1403,8 +1675,11 @@ namespace UangPasDesktop
                         lblCurrentServerInfo.Text = "Alamat Aktif: " + this.apiUrl + "\n✅ Terhubung ke " + uptName + " (" + sw.ElapsedMilliseconds + " ms latency)";
                         lblCurrentServerInfo.ForeColor = Color.FromArgb(16, 185, 129);
                     }
-                    lblApiStatus.Text = "Server: Online (" + productList.Count + " Produk)";
-                    lblApiStatus.ForeColor = Color.FromArgb(52, 211, 153);
+                    if (lblApiStatus != null)
+                    {
+                        lblApiStatus.Text = "Server: Online (" + productList.Count + " Produk)";
+                        lblApiStatus.ForeColor = Color.FromArgb(52, 211, 153);
+                    }
                 }));
             }
             catch (Exception ex)
@@ -1415,368 +1690,17 @@ namespace UangPasDesktop
                         lblCurrentServerInfo.Text = "Alamat Aktif: " + this.apiUrl + "\n❌ Tidak dapat terhubung: " + ex.Message;
                         lblCurrentServerInfo.ForeColor = Color.FromArgb(239, 68, 68);
                     }
+                    if (lblApiStatus != null)
+                    {
+                        lblApiStatus.Text = "Server: Offline";
+                        lblApiStatus.ForeColor = Color.FromArgb(239, 68, 68);
+                    }
                 }));
             }
         }
-
-        private DiscoveredServer ProbeServer(string host, int port = 8000, int connectTimeoutMs = 250)
-        {
-            try
-            {
-                Stopwatch sw = Stopwatch.StartNew();
-                using (TcpClient tcp = new TcpClient())
-                {
-                    IAsyncResult ar = tcp.BeginConnect(host, port, null, null);
-                    bool connected = ar.AsyncWaitHandle.WaitOne(connectTimeoutMs, false);
-                    if (!connected || !tcp.Connected) return null;
-                    tcp.EndConnect(ar);
-                }
-
-                // Port is open! Verify endpoint
-                string pingUrl = "http://" + host + ":" + port + "/api/v1/sync/ping";
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(pingUrl);
-                req.Method = "GET";
-                req.Timeout = 1200;
-                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
-                using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
-                {
-                    string body = sr.ReadToEnd();
-                    sw.Stop();
-                    if (!string.IsNullOrEmpty(body) && (body.Contains("UangPas") || body.Contains("upt_name") || body.Contains("true")))
-                    {
-                        string uptName = "Server UangPas Lapas";
-                        string uptCode = "";
-                        try
-                        {
-                            var data = serializer.Deserialize<Dictionary<string, object>>(body);
-                            if (data != null)
-                            {
-                                if (data.ContainsKey("upt_name") && data["upt_name"] != null) uptName = data["upt_name"].ToString();
-                                if (data.ContainsKey("upt_code") && data["upt_code"] != null) uptCode = data["upt_code"].ToString();
-                            }
-                        }
-                        catch { }
-
-                        return new DiscoveredServer
-                        {
-                            Ip = host,
-                            Port = port,
-                            Url = "http://" + host + ":" + port + "/api/v1",
-                            UptName = uptName,
-                            UptCode = uptCode,
-                            LatencyMs = sw.ElapsedMilliseconds
-                        };
-                    }
-                }
-            }
-            catch { }
-            return null;
-        }
-
-        private List<string> GetLocalLanIps()
-        {
-            List<string> candidateIps = new List<string>();
-            HashSet<string> subnets = new HashSet<string>();
-
-            // Always test loopback and current configured host first
-            candidateIps.Add("127.0.0.1");
-            string currHost = ExtractHostFromUrl(this.apiUrl);
-            if (!string.IsNullOrEmpty(currHost) && currHost != "127.0.0.1") candidateIps.Add(currHost);
-
-            try
-            {
-                foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
-                {
-                    if (ni.OperationalStatus != OperationalStatus.Up) continue;
-                    if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
-
-                    IPInterfaceProperties props = ni.GetIPProperties();
-                    foreach (UnicastIPAddressInformation ipInfo in props.UnicastAddresses)
-                    {
-                        if (ipInfo.Address.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            string ipStr = ipInfo.Address.ToString();
-                            string[] parts = ipStr.Split('.');
-                            if (parts.Length == 4)
-                            {
-                                string subnetPrefix = parts[0] + "." + parts[1] + "." + parts[2] + ".";
-                                subnets.Add(subnetPrefix);
-                            }
-                        }
-                    }
-
-                    foreach (GatewayIPAddressInformation gw in props.GatewayAddresses)
-                    {
-                        if (gw.Address.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            string gwStr = gw.Address.ToString();
-                            if (!candidateIps.Contains(gwStr)) candidateIps.Add(gwStr);
-                        }
-                    }
-                }
-            }
-            catch { }
-
-            foreach (string sub in subnets)
-            {
-                for (int i = 1; i <= 254; i++)
-                {
-                    string target = sub + i;
-                    if (!candidateIps.Contains(target)) candidateIps.Add(target);
-                }
-            }
-
-            return candidateIps;
-        }
-
-        private void StartLanAutoDiscovery()
-        {
-            if (btnScanLan != null) btnScanLan.Enabled = false;
-            if (lblLanScanStatus != null)
-            {
-                lblLanScanStatus.Text = "⏳ Memindai jaringan LAN pada port 8000...";
-                lblLanScanStatus.ForeColor = Color.FromArgb(2, 132, 199);
-            }
-            if (cmbDiscoveredServers != null) cmbDiscoveredServers.Items.Clear();
-            if (btnApplyDiscovered != null) btnApplyDiscovered.Enabled = false;
-
-            ThreadPool.QueueUserWorkItem(_ => {
-                List<string> candidateIps = GetLocalLanIps();
-                List<DiscoveredServer> discovered = new List<DiscoveredServer>();
-                object lockObj = new object();
-
-                Parallel.ForEach(candidateIps, new ParallelOptions { MaxDegreeOfParallelism = 25 }, ip => {
-                    var srv = ProbeServer(ip, 8000, 250);
-                    if (srv != null)
-                    {
-                        lock (lockObj)
-                        {
-                            discovered.Add(srv);
-                        }
-                    }
-                });
-
-                try
-                {
-                    this.BeginInvoke((Action)(() => {
-                        lastDiscoveredServers = discovered;
-                        if (btnScanLan != null) btnScanLan.Enabled = true;
-
-                        if (discovered.Count > 0)
-                        {
-                            if (lblLanScanStatus != null)
-                            {
-                                lblLanScanStatus.Text = "🎉 Ditemukan " + discovered.Count + " server UangPas aktif!";
-                                lblLanScanStatus.ForeColor = Color.FromArgb(16, 185, 129);
-                            }
-
-                            if (cmbDiscoveredServers != null)
-                            {
-                                cmbDiscoveredServers.Items.Clear();
-                                foreach (var d in discovered)
-                                {
-                                    cmbDiscoveredServers.Items.Add(d.ToString());
-                                }
-                                cmbDiscoveredServers.SelectedIndex = 0;
-                            }
-
-                            if (btnApplyDiscovered != null) btnApplyDiscovered.Enabled = true;
-
-                            // If exactly 1 server found, auto-apply and inform user
-                            if (discovered.Count == 1)
-                            {
-                                ApplyNewServerUrl(discovered[0].Url, discovered[0].UptName);
-                            }
-                        }
-                        else
-                        {
-                            if (lblLanScanStatus != null)
-                            {
-                                lblLanScanStatus.Text = "❌ Tidak ada server UangPas yang ditemukan di LAN port 8000.";
-                                lblLanScanStatus.ForeColor = Color.FromArgb(239, 68, 68);
-                            }
-                            MessageBox.Show("Pencarian selesai. Tidak ditemukan server UangPas di jaringan lokal pada port 8000.\n\nPastikan komputer server sudah dinyalakan dan menjalankan launcher/artisan serve di jaringan yang sama.", "Server Tidak Ditemukan", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }));
-                }
-                catch { }
-            });
-        }
         #endregion
 
-        #region TAB 5: UJI HARDWARE SCANNER U.ARE.U
-        private PictureBox picDiagFinger;
-        private Label lblDiagStatus;
-        private Label lblDiagQuality;
-        private Label lblDiagLatency;
-        private Label lblDiagMatch;
-        private Label lblDiagDevice;
-        private Label lblDiagSerial;
-        private Button btnDiagToggle;
-        private Button btnDiagSaveEnroll;
-        private Button btnDiagCompare;
-        private bool isDiagCapturing = false;
-        private int diagScanCount = 0;
-        private Fmd diagEnrolledFmd = null;
-        private Fmd diagLastFmd = null;
-        private System.Diagnostics.Stopwatch diagSw = new System.Diagnostics.Stopwatch();
-
-        private void BuildDiagnosticTab(TabPage page)
-        {
-            page.AutoScroll = true;
-            TableLayoutPanel layout = new TableLayoutPanel {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1,
-                Padding = new Padding(16)
-            };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 360));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-            // Left
-            Panel left = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(16), BorderStyle = BorderStyle.FixedSingle };
-            Label lHead = new Label { Text = "Visual Sidik Jari Langsung", Font = new Font("Segoe UI", 11f, FontStyle.Bold), Dock = DockStyle.Top, Height = 28 };
-            left.Controls.Add(lHead);
-
-            picDiagFinger = new PictureBox {
-                Dock = DockStyle.Top,
-                Height = 360,
-                BackColor = Color.FromArgb(15, 23, 42),
-                BorderStyle = BorderStyle.FixedSingle,
-                SizeMode = PictureBoxSizeMode.Zoom
-            };
-            left.Controls.Add(picDiagFinger);
-
-            lblDiagStatus = new Label {
-                Text = "Klik tombol di bawah untuk mengaktifkan sensor.",
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(2, 132, 199),
-                Dock = DockStyle.Top,
-                Height = 50,
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-            left.Controls.Add(lblDiagStatus);
-
-            btnDiagToggle = new Button {
-                Text = "▶️ Mulai Pengujian Sensor U.are.U",
-                Dock = DockStyle.Bottom,
-                Height = 48,
-                BackColor = Color.FromArgb(16, 185, 129),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnDiagToggle.Click += (s, e) => ToggleDiagCapture();
-            left.Controls.Add(btnDiagToggle);
-            layout.Controls.Add(left, 0, 0);
-
-            // Right
-            Panel right = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(16), BorderStyle = BorderStyle.FixedSingle };
-
-            GroupBox grpHardware = new GroupBox { Text = " Informasi Perangkat Keras U.are.U ", Dock = DockStyle.Top, Height = 120, Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) };
-            lblDiagDevice = new Label { Text = "Perangkat: " + (currentReader != null ? currentReader.Description.Id.ProductName : "Mendeteksi..."), Location = new Point(16, 24), AutoSize = true, Font = new Font("Segoe UI", 9.5f) };
-            lblDiagSerial = new Label { Text = "Serial ID: " + (currentReader != null ? currentReader.Description.SerialNumber : "-"), Location = new Point(16, 50), AutoSize = true, Font = new Font("Segoe UI", 9.5f) };
-            Label l3 = new Label { Text = "Resolusi: 500 DPI (Optical Sensor ANSI/NIST Standard)", Location = new Point(16, 76), AutoSize = true, Font = new Font("Segoe UI", 9.5f) };
-            grpHardware.Controls.Add(lblDiagDevice);
-            grpHardware.Controls.Add(lblDiagSerial);
-            grpHardware.Controls.Add(l3);
-            right.Controls.Add(grpHardware);
-
-            GroupBox grpRes = new GroupBox { Text = " Kualitas Hasil Scan Terakhir ", Dock = DockStyle.Top, Height = 90, Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) };
-            lblDiagQuality = new Label { Text = "Kualitas: Belum ada sentuhan", Location = new Point(16, 26), AutoSize = true, Font = new Font("Segoe UI", 9.5f) };
-            lblDiagLatency = new Label { Text = "Kecepatan Respon: -", Location = new Point(16, 52), AutoSize = true, Font = new Font("Segoe UI", 9.5f) };
-            grpRes.Controls.Add(lblDiagQuality);
-            grpRes.Controls.Add(lblDiagLatency);
-            right.Controls.Add(grpRes);
-
-            GroupBox grpTest = new GroupBox { Text = " Uji Pencocokan 1:1 Biometrik ", Dock = DockStyle.Top, Height = 125, Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) };
-            btnDiagSaveEnroll = new Button { Text = "1. Rekam Template Uji", Location = new Point(16, 28), Width = 180, Height = 34, BackColor = Color.FromArgb(2, 132, 199), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Enabled = false };
-            btnDiagSaveEnroll.Click += (s, e) => {
-                if (diagLastFmd != null) {
-                    diagEnrolledFmd = diagLastFmd;
-                    btnDiagCompare.Enabled = true;
-                    btnDiagCompare.BackColor = Color.FromArgb(16, 185, 129);
-                    btnDiagCompare.ForeColor = Color.White;
-                    lblDiagMatch.Text = "Template tersimpan. Tempelkan jari lagi lalu klik '2. Uji Kecocokan'.";
-                    lblDiagMatch.ForeColor = Color.FromArgb(16, 185, 129);
-                }
-            };
-
-            btnDiagCompare = new Button { Text = "2. Uji Kecocokan", Location = new Point(206, 28), Width = 140, Height = 34, BackColor = Color.FromArgb(241, 245, 249), FlatStyle = FlatStyle.Flat, Enabled = false };
-            btnDiagCompare.Click += (s, e) => {
-                if (diagEnrolledFmd != null && diagLastFmd != null) {
-                    CompareResult cr = Comparison.Compare(diagLastFmd, 0, diagEnrolledFmd, 0);
-                    int threshold = 2147483647 / 100000;
-                    if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Score < threshold) {
-                        lblDiagMatch.Text = "🎉 COCOK 100%! Sidik jari identik (Score: " + cr.Score + ")";
-                        lblDiagMatch.ForeColor = Color.FromArgb(16, 185, 129);
-                        MessageBox.Show("✅ HASIL UJI COCOK 100%!\n\nAlgoritma ANSI Biometrik berhasil mencocokkan sidik jari dengan template referensi.", "Hasil Verifikasi: COCOK", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    } else {
-                        lblDiagMatch.Text = "❌ TIDAK COCOK! Jari berbeda.";
-                        lblDiagMatch.ForeColor = Color.FromArgb(239, 68, 68);
-                        MessageBox.Show("❌ HASIL UJI TIDAK COCOK!\n\nSensor mendeteksi bahwa jari berbeda. Sistem proteksi transaksi bekerja akurat.", "Hasil Verifikasi: BEDA", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                }
-            };
-
-            lblDiagMatch = new Label { Text = "Tempelkan jari pada sensor untuk menguji template biometrik.", Location = new Point(16, 75), Width = 480, Height = 30, ForeColor = Color.FromArgb(100, 116, 139) };
-            grpTest.Controls.Add(btnDiagSaveEnroll);
-            grpTest.Controls.Add(btnDiagCompare);
-            grpTest.Controls.Add(lblDiagMatch);
-            right.Controls.Add(grpTest);
-
-            Panel bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 48 };
-
-            Button btnOpenSdk = new Button {
-                Text = "🛠️ Buka Tool Resmi DigitalPersona SDK (Sample .NET)",
-                Dock = DockStyle.Left,
-                Width = 360,
-                Height = 44,
-                BackColor = Color.FromArgb(241, 245, 249),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold)
-            };
-            btnOpenSdk.Click += (s, e) => {
-                string p = @"C:\Program Files\DigitalPersona\U.are.U SDK\Windows\Samples\Bin\.NET\UareUSampleCSharp.exe";
-                if (File.Exists(p)) {
-                    StopDiagCapture();
-                    try { System.Diagnostics.Process.Start(p); } catch { }
-                } else {
-                    MessageBox.Show("File tidak ditemukan: " + p, "Info", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            };
-            bottomPanel.Controls.Add(btnOpenSdk);
-
-            Button btnRefreshScanner = new Button {
-                Text = "🔄 Deteksi Ulang",
-                Dock = DockStyle.Right,
-                Width = 140,
-                Height = 44,
-                BackColor = Color.FromArgb(241, 245, 249),
-                FlatStyle = FlatStyle.Flat
-            };
-            btnRefreshScanner.Click += (s, e) => {
-                StopDiagCapture();
-                InitializeBiometrics();
-                if (currentReader != null) {
-                    lblDiagDevice.Text = "Perangkat: " + currentReader.Description.Id.ProductName;
-                    lblDiagSerial.Text = "Serial ID: " + currentReader.Description.SerialNumber;
-                }
-            };
-            bottomPanel.Controls.Add(btnRefreshScanner);
-
-            right.Controls.Add(bottomPanel);
-
-            grpHardware.BringToFront();
-            grpRes.BringToFront();
-            grpTest.BringToFront();
-            bottomPanel.BringToFront();
-
-            layout.Controls.Add(right, 1, 0);
-            page.Controls.Add(layout);
-        }
-
+        #region SENSOR DIAGNOSTIC METHODS
         private void ToggleDiagCapture()
         {
             if (isDiagCapturing) StopDiagCapture();
@@ -1792,9 +1716,9 @@ namespace UangPasDesktop
                 ReaderCollection readers = ReaderCollection.GetReaders();
                 if (readers == null || readers.Count == 0)
                 {
-                    lblDiagStatus.Text = "Scanner U.are.U tidak ditemukan. Periksa kabel USB!";
+                    lblDiagStatus.Text = "Scanner sidik jari tidak ditemukan. Periksa kabel USB!";
                     lblDiagStatus.ForeColor = Color.FromArgb(239, 68, 68);
-                    MessageBox.Show("Scanner U.are.U tidak ditemukan. Periksa kabel USB.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Scanner sidik jari tidak ditemukan. Periksa kabel USB.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -1802,9 +1726,9 @@ namespace UangPasDesktop
                 Constants.ResultCode resOpen = currentReader.Open(Constants.CapturePriority.DP_PRIORITY_COOPERATIVE);
                 if (resOpen != Constants.ResultCode.DP_SUCCESS && resOpen != Constants.ResultCode.DP_DEVICE_BUSY)
                 {
-                    lblDiagStatus.Text = "Gagal buka scanner: " + resOpen + ".\nPastikan aplikasi '01_Uji_Sensor' sudah ditutup!";
+                    lblDiagStatus.Text = "Gagal buka scanner: " + resOpen + ".\nPastikan aplikasi penguji lain sudah ditutup!";
                     lblDiagStatus.ForeColor = Color.FromArgb(239, 68, 68);
-                    MessageBox.Show("Gagal mengakses scanner (" + resOpen + ")!\n\nKemungkinan scanner masih digunakan oleh aplikasi lain (misal: '01_Uji_Sensor_UareU_4500').\nSilakan tutup aplikasi penguji tersebut terlebih dahulu.", "Scanner Sibuk", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Gagal mengakses scanner (" + resOpen + ")!\n\nKemungkinan scanner masih digunakan oleh aplikasi lain.\nSilakan tutup aplikasi penguji tersebut terlebih dahulu.", "Scanner Sibuk", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -1851,10 +1775,16 @@ namespace UangPasDesktop
                 currentReader = null;
             }
             isDiagCapturing = false;
-            btnDiagToggle.Text = "▶️ Mulai Pengujian Sensor U.are.U";
-            btnDiagToggle.BackColor = Color.FromArgb(16, 185, 129);
-            lblDiagStatus.Text = "Sensor dalam keadaan siaga (standby).";
-            lblDiagStatus.ForeColor = Color.FromArgb(100, 116, 139);
+            if (btnDiagToggle != null)
+            {
+                btnDiagToggle.Text = "▶️ Mulai Pengujian Sensor";
+                btnDiagToggle.BackColor = Color.FromArgb(16, 185, 129);
+            }
+            if (lblDiagStatus != null)
+            {
+                lblDiagStatus.Text = "Sensor dalam keadaan siaga (standby).";
+                lblDiagStatus.ForeColor = Color.FromArgb(100, 116, 139);
+            }
         }
 
         private void Diag_OnCaptured(CaptureResult cr)
@@ -1871,40 +1801,55 @@ namespace UangPasDesktop
             if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Data != null)
             {
                 diagScanCount++;
-                System.Media.SystemSounds.Beep.Play();
+                try { System.Media.SystemSounds.Beep.Play(); } catch { }
 
                 if (cr.Data.Views != null && cr.Data.Views.Count > 0)
                 {
                     var view = cr.Data.Views[0];
-                    if (picDiagFinger.Image != null) picDiagFinger.Image.Dispose();
-                    picDiagFinger.Image = Create24bppBitmapStatic(view.RawImage, view.Width, view.Height);
+                    if (picDiagFinger != null)
+                    {
+                        if (picDiagFinger.Image != null) picDiagFinger.Image.Dispose();
+                        picDiagFinger.Image = Create24bppBitmapStatic(view.RawImage, view.Width, view.Height);
+                    }
                 }
 
                 DataResult<Fmd> res = FeatureExtraction.CreateFmdFromFid(cr.Data, Constants.Formats.Fmd.ANSI);
                 if (res.ResultCode == Constants.ResultCode.DP_SUCCESS && res.Data != null)
                 {
                     diagLastFmd = res.Data;
-                    btnDiagSaveEnroll.Enabled = true;
-                    if (diagEnrolledFmd != null) {
+                    if (btnDiagSaveEnroll != null) btnDiagSaveEnroll.Enabled = true;
+                    if (diagEnrolledFmd != null && btnDiagCompare != null) {
                         btnDiagCompare.Enabled = true;
                     }
                 }
 
-                lblDiagStatus.Text = "🟢 JARI TERDETEKSI! (Scan #" + diagScanCount + " Sukses)";
-                lblDiagStatus.ForeColor = Color.FromArgb(16, 185, 129);
+                if (lblDiagStatus != null)
+                {
+                    lblDiagStatus.Text = "🟢 JARI TERDETEKSI! (Scan #" + diagScanCount + " Sukses)";
+                    lblDiagStatus.ForeColor = Color.FromArgb(16, 185, 129);
+                }
 
-                lblDiagQuality.Text = "Kualitas: " + cr.Quality + " (Bagus)";
-                lblDiagQuality.ForeColor = Color.FromArgb(16, 185, 129);
+                if (lblDiagQuality != null)
+                {
+                    lblDiagQuality.Text = "Kualitas: " + cr.Quality + " (Bagus)";
+                    lblDiagQuality.ForeColor = Color.FromArgb(16, 185, 129);
+                }
 
-                lblDiagLatency.Text = "Kecepatan Respon: " + ms + " ms (Scan #" + diagScanCount + ")";
+                if (lblDiagLatency != null)
+                {
+                    lblDiagLatency.Text = "Kecepatan Respon: " + ms + " ms (Scan #" + diagScanCount + ")";
+                }
 
                 // Continue capture
                 RestartDiagCapture();
             }
             else
             {
-                lblDiagQuality.Text = "Kualitas: " + cr.Quality;
-                lblDiagQuality.ForeColor = Color.FromArgb(239, 68, 68);
+                if (lblDiagQuality != null)
+                {
+                    lblDiagQuality.Text = "Kualitas: " + cr.Quality;
+                    lblDiagQuality.ForeColor = Color.FromArgb(239, 68, 68);
+                }
                 RestartDiagCapture();
             }
         }
@@ -2388,7 +2333,7 @@ namespace UangPasDesktop
             foreach (var it in cart) totalAmount += (it.Harga * it.Qty);
 
             // Open Touch Prompt Form
-            using (FingerprintPromptForm prompt = new FingerprintPromptForm(currentReader, "Tempelkan jari WBP pada sensor U.are.U 4500 untuk otorisasi pembayaran Rp " + totalAmount.ToString("N0")))
+            using (FingerprintPromptForm prompt = new FingerprintPromptForm(currentReader, "Tempelkan jari WBP pada sensor sidik jari untuk otorisasi pembayaran Rp " + totalAmount.ToString("N0")))
             {
                 if (prompt.ShowDialog(this) == DialogResult.OK && prompt.CapturedFmd != null)
                 {
@@ -2430,7 +2375,7 @@ namespace UangPasDesktop
 
                         DialogResult dr = MessageBox.Show(
                             "⚠️ Sidik jari Anda belum terdaftar pada akun WBP mana pun!\n\n" +
-                            "Sensor U.are.U 4500 berhasil membaca sidik jari Anda.\n" +
+                            "Sensor sidik jari berhasil membaca sidik jari Anda.\n" +
                             "Apakah Anda ingin mendaftarkan sidik jari ini ke akun:\n" +
                             "👉 " + defaultInmateName + " (ID: " + defaultInmateId + ")\n\n" +
                             "dan langsung menyelesaikan pembayaran sebesar Rp " + totalAmount.ToString("N0") + "?",
@@ -2583,6 +2528,8 @@ namespace UangPasDesktop
 
             // Create copy of cart for receipt before clearing
             List<CartItem> receiptCart = new List<CartItem>(cart);
+            shiftTrxCount++;
+            shiftTotalOmset += totalAmount;
             cart.Clear();
             RefreshCartGrid();
             RenderProductGrid();
@@ -2602,6 +2549,354 @@ namespace UangPasDesktop
                 int qCount = GetOfflineQueueCount();
                 lblApiStatus.Text = "Server: Mode Offline (" + qCount + " antrean)";
                 lblApiStatus.ForeColor = Color.FromArgb(251, 191, 36);
+            }
+        }
+        #endregion
+
+        #region LEVEL 3: RETAIL SHORTCUTS, SHIFT & HOLD BILL
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.F1)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                FocusSearch();
+            }
+            else if (e.KeyCode == Keys.F2)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                EditSelectedCartQty();
+            }
+            else if (e.KeyCode == Keys.F3)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                DeleteSelectedCartItem();
+            }
+            else if (e.KeyCode == Keys.F4)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                SwitchTab(0);
+                ProcessCheckoutFingerprint();
+            }
+            else if (e.KeyCode == Keys.F5)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                HoldCurrentBill();
+            }
+            else if (e.KeyCode == Keys.F6)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                RecallBill();
+            }
+            else if (e.KeyCode == Keys.F7)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                ShowShiftRekap();
+            }
+            else if (e.KeyCode == Keys.F8)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                QuickCheckSaldoWbp();
+            }
+            else if (e.KeyCode == Keys.F9)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                ClearCartConfirm();
+            }
+            else if (e.KeyCode == Keys.F12)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                SwitchTab(0);
+                ProcessCheckoutFingerprint();
+            }
+        }
+
+        private void FocusSearch()
+        {
+            SwitchTab(0);
+            if (txtSearchProduct != null)
+            {
+                txtSearchProduct.Focus();
+                txtSearchProduct.SelectAll();
+            }
+        }
+
+        private void EditSelectedCartQty()
+        {
+            SwitchTab(0);
+            if (cart.Count == 0)
+            {
+                MessageBox.Show("Keranjang belanja masih kosong.", "Ubah Qty (F2)", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int idx = (gridCart.CurrentRow != null && gridCart.CurrentRow.Index >= 0 && gridCart.CurrentRow.Index < cart.Count) 
+                ? gridCart.CurrentRow.Index 
+                : cart.Count - 1;
+
+            var item = cart[idx];
+
+            using (Form prompt = new Form())
+            {
+                prompt.Width = 340;
+                prompt.Height = 190;
+                prompt.FormBorderStyle = FormBorderStyle.FixedDialog;
+                prompt.Text = "Ubah Jumlah: " + item.Nama;
+                prompt.StartPosition = FormStartPosition.CenterParent;
+                prompt.MaximizeBox = false;
+                prompt.MinimizeBox = false;
+                prompt.BackColor = Color.FromArgb(248, 250, 252);
+
+                Label lblPrompt = new Label {
+                    Left = 20, Top = 16, Width = 280,
+                    Text = "Masukkan Jumlah (Qty) Baru:",
+                    Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(15, 23, 42)
+                };
+                NumericUpDown num = new NumericUpDown {
+                    Left = 20, Top = 46, Width = 280,
+                    Minimum = 1, Maximum = 9999, Value = item.Qty,
+                    Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+                    TextAlign = HorizontalAlignment.Center
+                };
+                Button btnOk = new Button {
+                    Text = "Simpan (Enter)",
+                    Left = 160, Top = 96, Width = 140, Height = 36,
+                    DialogResult = DialogResult.OK,
+                    BackColor = Color.FromArgb(16, 185, 129),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                Button btnCancel = new Button {
+                    Text = "Batal",
+                    Left = 20, Top = 96, Width = 100, Height = 36,
+                    DialogResult = DialogResult.Cancel,
+                    BackColor = Color.FromArgb(241, 245, 249),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9.5f),
+                    Cursor = Cursors.Hand
+                };
+
+                prompt.Controls.Add(lblPrompt);
+                prompt.Controls.Add(num);
+                prompt.Controls.Add(btnOk);
+                prompt.Controls.Add(btnCancel);
+                prompt.AcceptButton = btnOk;
+                prompt.CancelButton = btnCancel;
+
+                num.Select(0, num.Text.Length);
+
+                if (prompt.ShowDialog(this) == DialogResult.OK)
+                {
+                    item.Qty = (int)num.Value;
+                    RefreshCartGrid();
+                }
+            }
+        }
+
+        private void DeleteSelectedCartItem()
+        {
+            SwitchTab(0);
+            if (cart.Count == 0) return;
+
+            int idx = (gridCart.CurrentRow != null && gridCart.CurrentRow.Index >= 0 && gridCart.CurrentRow.Index < cart.Count) 
+                ? gridCart.CurrentRow.Index 
+                : cart.Count - 1;
+
+            cart.RemoveAt(idx);
+            RefreshCartGrid();
+        }
+
+        private void HoldCurrentBill()
+        {
+            SwitchTab(0);
+            if (cart.Count == 0)
+            {
+                MessageBox.Show("Keranjang belanja masih kosong! Tidak ada transaksi yang perlu ditahan.", "Hold Bill (F5)", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            decimal total = 0;
+            foreach (var it in cart) total += (it.Harga * it.Qty);
+
+            HeldBill hb = new HeldBill {
+                Id = "HOLD-" + (heldBills.Count + 1),
+                Time = DateTime.Now,
+                Items = new List<CartItem>(cart),
+                TotalAmount = total
+            };
+            heldBills.Add(hb);
+
+            cart.Clear();
+            RefreshCartGrid();
+            UpdateHoldStatusUI();
+
+            MessageBox.Show(string.Format("Transaksi ({0} item, total Rp {1:N0}) berhasil DITAHAN [Antrean #{2}].\n\nTekan [F6] untuk memanggil kembali transaksi ini saat WBP siap bertransaksi.", hb.Items.Count, hb.TotalAmount, heldBills.Count), "Transaksi Ditahan (F5)", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void RecallBill()
+        {
+            SwitchTab(0);
+            if (heldBills.Count == 0)
+            {
+                MessageBox.Show("Tidak ada antrean transaksi yang sedang ditahan.", "Recall Bill (F6)", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (cart.Count > 0)
+            {
+                DialogResult dr = MessageBox.Show("Keranjang saat ini masih terisi barang. Apakah Anda ingin menahan transaksi saat ini terlebih dahulu sebelum memanggil antrean?", "Konfirmasi Antrean", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+                if (dr == DialogResult.Yes)
+                {
+                    HoldCurrentBill();
+                }
+                else if (dr == DialogResult.Cancel)
+                {
+                    return;
+                }
+            }
+
+            if (heldBills.Count == 1)
+            {
+                var hb = heldBills[0];
+                heldBills.RemoveAt(0);
+                cart = new List<CartItem>(hb.Items);
+                RefreshCartGrid();
+                UpdateHoldStatusUI();
+                MessageBox.Show(string.Format("Transaksi Antrean {0} ({1} item, Rp {2:N0}) telah dimuat kembali ke keranjang belanja.", hb.Id, cart.Count, hb.TotalAmount), "Recall Berhasil", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Multiple held bills dialog
+            using (Form picker = new Form())
+            {
+                picker.Text = "Pilih Antrean Transaksi yang Ditahan (F6 Recall)";
+                picker.Size = new Size(520, 360);
+                picker.StartPosition = FormStartPosition.CenterParent;
+                picker.FormBorderStyle = FormBorderStyle.FixedDialog;
+                picker.MaximizeBox = false;
+                picker.MinimizeBox = false;
+                picker.BackColor = Color.FromArgb(248, 250, 252);
+
+                Label lblHeader = new Label {
+                    Dock = DockStyle.Top, Height = 40,
+                    Text = "Pilih transaksi antrean yang ingin dibuka kembali ke kasir:",
+                    Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                    Padding = new Padding(12, 10, 12, 0)
+                };
+
+                ListBox lb = new ListBox {
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 10f),
+                    ItemHeight = 28
+                };
+                foreach (var hb in heldBills)
+                {
+                    lb.Items.Add(string.Format("{0}  [Pukul {1:HH:mm}]  -  {2} Item  -  Rp {3:N0}", hb.Id, hb.Time, hb.Items.Count, hb.TotalAmount));
+                }
+                lb.SelectedIndex = 0;
+
+                Panel pnl = new Panel {
+                    Dock = DockStyle.Bottom, Height = 56,
+                    Padding = new Padding(12),
+                    BackColor = Color.FromArgb(241, 245, 249)
+                };
+                Button btnOk = new Button {
+                    Text = "Buka Kembali (Enter)",
+                    Dock = DockStyle.Right, Width = 180,
+                    DialogResult = DialogResult.OK,
+                    BackColor = Color.FromArgb(16, 185, 129),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                Button btnCancel = new Button {
+                    Text = "Batal",
+                    Dock = DockStyle.Left, Width = 100,
+                    DialogResult = DialogResult.Cancel,
+                    BackColor = Color.FromArgb(203, 213, 225),
+                    FlatStyle = FlatStyle.Flat,
+                    Cursor = Cursors.Hand
+                };
+                pnl.Controls.Add(btnOk);
+                pnl.Controls.Add(btnCancel);
+
+                picker.Controls.Add(lb);
+                picker.Controls.Add(lblHeader);
+                picker.Controls.Add(pnl);
+                picker.AcceptButton = btnOk;
+                picker.CancelButton = btnCancel;
+
+                if (picker.ShowDialog(this) == DialogResult.OK && lb.SelectedIndex >= 0)
+                {
+                    var hb = heldBills[lb.SelectedIndex];
+                    heldBills.RemoveAt(lb.SelectedIndex);
+                    cart = new List<CartItem>(hb.Items);
+                    RefreshCartGrid();
+                    UpdateHoldStatusUI();
+                }
+            }
+        }
+
+        private void UpdateHoldStatusUI()
+        {
+            if (lblHoldStatus != null)
+            {
+                if (heldBills.Count > 0)
+                {
+                    lblHoldStatus.Text = string.Format("⚠️ {0} Transaksi Ditahan [Klik / Tekan F6 untuk Recall]", heldBills.Count);
+                    lblHoldStatus.Visible = true;
+                }
+                else
+                {
+                    lblHoldStatus.Visible = false;
+                }
+            }
+        }
+
+        private void ClearCartConfirm()
+        {
+            SwitchTab(0);
+            if (cart.Count == 0) return;
+
+            if (MessageBox.Show("Apakah Anda yakin ingin mengosongkan keranjang belanja?", "Kosongkan Keranjang (F9)", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                cart.Clear();
+                RefreshCartGrid();
+            }
+        }
+
+        private void ShowShiftRekap()
+        {
+            using (ShiftRekapForm f = new ShiftRekapForm(this.cashierName, this.shiftStartTime, this.shiftModalAwal, this.shiftTrxCount, this.shiftTotalOmset))
+            {
+                if (f.ShowDialog(this) == DialogResult.OK)
+                {
+                    this.shiftStartTime = DateTime.Now;
+                    this.shiftTrxCount = 0;
+                    this.shiftTotalOmset = 0;
+                    MessageBox.Show("Shift kasir telah ditutup dan direset untuk petugas kasir berikutnya.", "Shift Ditutup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+        }
+
+        private void QuickCheckSaldoWbp()
+        {
+            using (QuickCheckSaldoForm f = new QuickCheckSaldoForm(currentReader, inmateList, this.apiUrl))
+            {
+                f.ShowDialog(this);
             }
         }
         #endregion
@@ -2626,7 +2921,7 @@ namespace UangPasDesktop
                 Application.DoEvents();
                 System.Threading.Thread.Sleep(200);
 
-                using (FingerprintPromptForm prompt = new FingerprintPromptForm(currentReader, "Langkah " + step + "/4: Tempelkan jari WBP pada sensor U.are.U 4500"))
+                using (FingerprintPromptForm prompt = new FingerprintPromptForm(currentReader, "Langkah " + step + "/4: Tempelkan jari WBP pada sensor sidik jari"))
                 {
                     if (prompt.ShowDialog(this) == DialogResult.OK && prompt.CapturedFmd != null)
                     {
@@ -2788,7 +3083,7 @@ namespace UangPasDesktop
             this.reader = r;
             this.promptText = prompt;
 
-            this.Text = "Sentuh Sensor Sidik Jari U.are.U 4500";
+            this.Text = "Sentuh Sensor Sidik Jari";
             this.Size = new Size(480, 380);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -3152,7 +3447,7 @@ namespace UangPasDesktop
             sb.AppendLine("No. Invoice : " + invoiceNo);
             sb.AppendLine("Tanggal     : " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
             sb.AppendLine("Kasir       : Kasir POS Desktop");
-            sb.AppendLine("Metode Bayar: " + (method == "fingerprint" ? "SIDIK JARI (DigitalPersona U.are.U)" : "MANUAL (Petugas Kasir)"));
+            sb.AppendLine("Metode Bayar: " + (method == "fingerprint" ? "SIDIK JARI (BIOMETRIK)" : "MANUAL (Petugas Kasir)"));
             sb.AppendLine("------------------------------------------------");
             sb.AppendLine("Warga Binaan: " + (inmate.ContainsKey("nama") ? inmate["nama"] : "-"));
             sb.AppendLine("No. Registr : " + (inmate.ContainsKey("no_registrasi") ? inmate["no_registrasi"] : "-"));
@@ -3248,6 +3543,331 @@ namespace UangPasDesktop
             catch (Exception ex)
             {
                 MessageBox.Show("Gagal mencetak: " + ex.Message, "Error Printer", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+    }
+
+    public class HeldBill
+    {
+        public string Id { get; set; }
+        public DateTime Time { get; set; }
+        public List<CartItem> Items { get; set; }
+        public decimal TotalAmount { get; set; }
+    }
+
+    public class ShiftRekapForm : Form
+    {
+        private string rekapText;
+
+        public ShiftRekapForm(string cashier, DateTime startTime, decimal modalAwal, int trxCount, decimal totalOmset)
+        {
+            this.Text = "Rekap Shift Kasir & Laporan Omset (Z-Report)";
+            this.Size = new Size(460, 620);
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.BackColor = Color.FromArgb(248, 250, 252);
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("================================================");
+            sb.AppendLine("            KOPERASI LAPAS DIGITAL             ");
+            sb.AppendLine("       LAPORAN REKAP SHIFT KASIR (Z-REPORT)    ");
+            sb.AppendLine("================================================");
+            sb.AppendLine("Petugas Kasir: " + cashier);
+            sb.AppendLine("Waktu Buka   : " + startTime.ToString("dd/MM/yyyy HH:mm:ss"));
+            sb.AppendLine("Waktu Tutup  : " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
+            TimeSpan dur = DateTime.Now - startTime;
+            sb.AppendLine("Durasi Shift : " + string.Format("{0} jam {1} menit", (int)dur.TotalHours, dur.Minutes));
+            sb.AppendLine("------------------------------------------------");
+            sb.AppendLine(string.Format("{0,-24} {1,21}", "Modal Kasir Awal", "Rp " + modalAwal.ToString("N0")));
+            sb.AppendLine("------------------------------------------------");
+            sb.AppendLine(string.Format("{0,-24} {1,21}", "Total Transaksi POS", trxCount + " Transaksi"));
+            sb.AppendLine(string.Format("{0,-24} {1,21}", "Total Omset Belanja", "Rp " + totalOmset.ToString("N0")));
+            sb.AppendLine("------------------------------------------------");
+            sb.AppendLine(string.Format("{0,-24} {1,21}", "TOTAL REKAP SHIFT", "Rp " + (modalAwal + totalOmset).ToString("N0")));
+            sb.AppendLine("================================================");
+            sb.AppendLine("  Dicetak otomatis Terminal Kasir POS UangPas   ");
+            sb.AppendLine("================================================");
+
+            this.rekapText = sb.ToString();
+
+            TextBox txt = new TextBox {
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Consolas", 10f),
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Dock = DockStyle.Fill,
+                Text = rekapText
+            };
+            this.Controls.Add(txt);
+
+            Panel bottom = new Panel {
+                Dock = DockStyle.Bottom,
+                Height = 60,
+                Padding = new Padding(12),
+                BackColor = Color.FromArgb(241, 245, 249)
+            };
+
+            Button btnPrint = new Button {
+                Text = "🖨️ Cetak Struk Z-Report",
+                Dock = DockStyle.Right,
+                Width = 200,
+                BackColor = Color.FromArgb(16, 185, 129),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnPrint.Click += (s, e) => {
+                try {
+                    System.Drawing.Printing.PrintDocument pDoc = new System.Drawing.Printing.PrintDocument();
+                    pDoc.PrintPage += (ps, pe) => {
+                        Font f = new Font("Consolas", 9.5f);
+                        pe.Graphics.DrawString(this.rekapText, f, Brushes.Black, new PointF(10, 10));
+                    };
+                    PrintDialog pd = new PrintDialog();
+                    pd.Document = pDoc;
+                    if (pd.ShowDialog() == DialogResult.OK) pDoc.Print();
+                } catch (Exception ex) {
+                    MessageBox.Show("Gagal mencetak: " + ex.Message, "Printer", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+            bottom.Controls.Add(btnPrint);
+
+            Button btnCloseShift = new Button {
+                Text = "🔒 Tutup Shift & Reset",
+                Dock = DockStyle.Left,
+                Width = 170,
+                BackColor = Color.FromArgb(239, 68, 68),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCloseShift.Click += (s, e) => {
+                if (MessageBox.Show("Tutup shift saat ini dan reset akumulasi transaksi kasir?", "Konfirmasi Tutup Shift", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
+                }
+            };
+            bottom.Controls.Add(btnCloseShift);
+
+            this.Controls.Add(bottom);
+            txt.BringToFront();
+        }
+    }
+
+    public class QuickCheckSaldoForm : Form
+    {
+        private Reader reader;
+        private List<Dictionary<string, object>> inmateList;
+        private string apiUrl;
+        private TextBox txtSearch;
+        private Panel pnlResult;
+        private Label lblNama;
+        private Label lblNoReg;
+        private Label lblKamar;
+        private Label lblSaldo;
+        private Label lblLimit;
+        private Label lblStatusSanction;
+
+        public QuickCheckSaldoForm(Reader r, List<Dictionary<string, object>> inmates, string api)
+        {
+            this.reader = r;
+            this.inmateList = inmates;
+            this.apiUrl = api;
+
+            this.Text = "🔍 Cek Saldo & Limit WBP Cepat (F8)";
+            this.Size = new Size(540, 480);
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.BackColor = Color.FromArgb(248, 250, 252);
+
+            Panel top = new Panel {
+                Dock = DockStyle.Top,
+                Height = 85,
+                Padding = new Padding(18, 14, 18, 10),
+                BackColor = Color.FromArgb(15, 23, 42)
+            };
+
+            Label lblTitle = new Label {
+                Text = "Scan Barcode Kartu / No Registrasi / Nama WBP:",
+                ForeColor = Color.FromArgb(203, 213, 225),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Dock = DockStyle.Top,
+                Height = 22
+            };
+            top.Controls.Add(lblTitle);
+
+            txtSearch = new TextBox {
+                Dock = DockStyle.Bottom,
+                Height = 32,
+                Font = new Font("Segoe UI", 12f),
+                ForeColor = Color.FromArgb(15, 23, 42)
+            };
+            txtSearch.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    DoSearch(txtSearch.Text.Trim());
+                }
+            };
+            top.Controls.Add(txtSearch);
+            this.Controls.Add(top);
+
+            // Result Card
+            pnlResult = new Panel {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(24),
+                BackColor = Color.White
+            };
+
+            lblNama = new Label {
+                Text = "Silakan scan atau masukkan nomor registrasi WBP...",
+                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Dock = DockStyle.Top,
+                Height = 34
+            };
+            pnlResult.Controls.Add(lblNama);
+
+            lblNoReg = new Label {
+                Text = "-",
+                Font = new Font("Consolas", 11f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(2, 132, 199),
+                Dock = DockStyle.Top,
+                Height = 24
+            };
+            pnlResult.Controls.Add(lblNoReg);
+
+            lblKamar = new Label {
+                Text = "-",
+                Font = new Font("Segoe UI", 10f),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Dock = DockStyle.Top,
+                Height = 26
+            };
+            pnlResult.Controls.Add(lblKamar);
+
+            lblStatusSanction = new Label {
+                Text = "",
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(239, 68, 68),
+                Dock = DockStyle.Top,
+                Height = 26
+            };
+            pnlResult.Controls.Add(lblStatusSanction);
+
+            Panel saldoBox = new Panel {
+                Dock = DockStyle.Top,
+                Height = 85,
+                BackColor = Color.FromArgb(240, 253, 244),
+                Padding = new Padding(16, 10, 16, 10),
+                Margin = new Padding(0, 10, 0, 0)
+            };
+            Label lblSaldoTitle = new Label {
+                Text = "SISA SALDO DOMPET DIGITAL:",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(22, 101, 52),
+                Dock = DockStyle.Top,
+                Height = 20
+            };
+            lblSaldo = new Label {
+                Text = "Rp 0",
+                Font = new Font("Segoe UI", 20f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(22, 101, 52),
+                Dock = DockStyle.Bottom,
+                Height = 44
+            };
+            saldoBox.Controls.Add(lblSaldo);
+            saldoBox.Controls.Add(lblSaldoTitle);
+            pnlResult.Controls.Add(saldoBox);
+
+            lblLimit = new Label {
+                Text = "Sisa Kuota Belanja Hari Ini: -",
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(14, 165, 233),
+                Dock = DockStyle.Top,
+                Height = 36,
+                Padding = new Padding(0, 10, 0, 0)
+            };
+            pnlResult.Controls.Add(lblLimit);
+
+            Panel bottom = new Panel {
+                Dock = DockStyle.Bottom,
+                Height = 56,
+                Padding = new Padding(16, 10, 16, 10),
+                BackColor = Color.FromArgb(241, 245, 249)
+            };
+            Button btnClose = new Button {
+                Text = "Tutup [Esc / Enter]",
+                Dock = DockStyle.Right,
+                Width = 160,
+                DialogResult = DialogResult.OK,
+                BackColor = Color.FromArgb(30, 41, 59),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            bottom.Controls.Add(btnClose);
+            this.Controls.Add(pnlResult);
+            this.Controls.Add(bottom);
+            this.AcceptButton = btnClose;
+            this.CancelButton = btnClose;
+
+            this.Shown += (s, e) => txtSearch.Focus();
+        }
+
+        private void DoSearch(string query)
+        {
+            if (string.IsNullOrEmpty(query)) return;
+
+            var match = inmateList.Find(x => 
+                (x.ContainsKey("no_registrasi") && x["no_registrasi"] != null && x["no_registrasi"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (x.ContainsKey("nama") && x["nama"] != null && x["nama"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (x.ContainsKey("nik") && x["nik"] != null && x["nik"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (x.ContainsKey("va_number") && x["va_number"] != null && x["va_number"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+            );
+
+            if (match != null)
+            {
+                lblNama.Text = match.ContainsKey("nama") ? match["nama"].ToString() : "-";
+                lblNoReg.Text = "No. Registrasi: " + (match.ContainsKey("no_registrasi") ? match["no_registrasi"].ToString() : "-");
+                lblKamar.Text = "Lokasi: " + (match.ContainsKey("blok_kamar") ? match["blok_kamar"].ToString() : "-") + " • Lapas: " + (match.ContainsKey("lapas_asal") ? match["lapas_asal"].ToString() : "-");
+
+                decimal saldo = match.ContainsKey("saldo") ? Convert.ToDecimal(match["saldo"]) : 0;
+                decimal limit = match.ContainsKey("remaining_limit") ? Convert.ToDecimal(match["remaining_limit"]) : 0;
+                string status = match.ContainsKey("status") ? match["status"].ToString().ToLower() : "aktif";
+
+                lblSaldo.Text = "Rp " + saldo.ToString("N0");
+                lblLimit.Text = "Sisa Kuota Belanja Hari Ini: Rp " + limit.ToString("N0");
+
+                if (status == "isolasi")
+                {
+                    lblStatusSanction.Text = "⛔ STATUS: SANKSI REGISTER F (ISOLASI) - TRANSAKSI DIBLOKIR!";
+                    lblStatusSanction.ForeColor = Color.FromArgb(220, 38, 38);
+                }
+                else if (status == "bebas")
+                {
+                    lblStatusSanction.Text = "ℹ️ STATUS: TELAH BEBAS (NONAKTIF)";
+                    lblStatusSanction.ForeColor = Color.FromArgb(100, 116, 139);
+                }
+                else
+                {
+                    lblStatusSanction.Text = "✅ STATUS: AKTIF (DAPAT BERTRANSAKSI)";
+                    lblStatusSanction.ForeColor = Color.FromArgb(16, 185, 129);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Warga Binaan dengan kata kunci '" + query + "' tidak ditemukan.", "Pencarian WBP", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }

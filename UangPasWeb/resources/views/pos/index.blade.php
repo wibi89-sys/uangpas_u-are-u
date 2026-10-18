@@ -805,7 +805,7 @@
             <div class="scanner-visual" id="modalScannerVisual">👆</div>
             <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px;" id="modalBiometricTitle">Tempelkan Sidik Jari WBP</h2>
             <p style="color: #64748b; font-size: 13.5px; margin-bottom: 20px;" id="modalBiometricDesc">
-                Silakan tempelkan jari WBP pada alat scanner <strong>DigitalPersona U.are.U 4500</strong> untuk otorisasi pembayaran.
+                Silakan tempelkan jari WBP pada alat scanner sidik jari untuk otorisasi pembayaran.
             </p>
 
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 20px; text-align: left;">
@@ -841,7 +841,7 @@
                     <strong style="color: #92400e; font-size: 13.5px;">Sidik Jari Belum Terdaftar!</strong>
                 </div>
                 <p style="color: #78350f; font-size: 12px; margin-bottom: 12px; line-height: 1.4;">
-                    Scanner U.are.U 4500 berhasil membaca sidik jari Anda. Pilih akun WBP di bawah untuk mendaftarkan sidik jari ini dan langsung menyelesaikan transaksi:
+                    Scanner sidik jari berhasil membaca sidik jari Anda. Pilih akun WBP di bawah untuk mendaftarkan sidik jari ini dan langsung menyelesaikan transaksi:
                 </p>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <select id="quickEnrollInmateSelect" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600; background: #fff;">
@@ -913,7 +913,7 @@
             <div class="scanner-visual" id="enrollScannerVisual">👆</div>
             <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px;" id="enrollModalTitle">Perekaman Sidik Jari WBP</h2>
             <p style="color: #64748b; font-size: 12.5px; margin-bottom: 16px;" id="enrollModalDesc">
-                Pilih Warga Binaan, lalu tempelkan jarinya pada scanner DigitalPersona U.are.U 4500.
+                Pilih Warga Binaan, lalu tempelkan jarinya pada scanner sidik jari.
             </p>
 
             <div style="text-align: left; margin-bottom: 16px;">
@@ -1152,7 +1152,7 @@
             identBox.style.display = 'none';
             visual.innerHTML = '👆';
             title.innerText = 'Tempelkan Sidik Jari WBP';
-            desc.innerHTML = 'Silakan tempelkan jari WBP pada alat scanner <strong>DigitalPersona U.are.U 4500</strong>...';
+            desc.innerHTML = 'Silakan tempelkan jari WBP pada alat scanner sidik jari...';
 
             if (!bridgeOnline) {
                 desc.innerHTML = `<span style="color: #ef4444; font-weight: 700;">Hardware Bridge Offline!</span><br>Pastikan UangPasBridge berjalan di port 8080. Atau gunakan tombol <strong>"Pilih WBP Manual"</strong> di bawah.`;
@@ -1293,7 +1293,7 @@
 
             visual.innerHTML = '🔴';
             title.innerText = 'Menunggu Jari Ditempelkan...';
-            desc.innerText = 'Tempelkan jari WBP pada alat scanner U.are.U 4500 sekarang...';
+            desc.innerText = 'Tempelkan jari WBP pada alat scanner sidik jari sekarang...';
             btn.disabled = true;
             statusBox.style.display = 'none';
 

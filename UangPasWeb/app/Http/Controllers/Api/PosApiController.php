@@ -8,6 +8,7 @@ use App\Models\Inmate;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
+use App\Models\StockMutation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -189,10 +190,11 @@ class PosApiController extends Controller
                 'payment_method' => $request->payment_method ?? 'fingerprint',
                 'status' => 'success',
                 'cashier_name' => $request->cashier_name ?? 'Kasir Koperasi',
-                'notes' => $request->notes ?? 'Otorisasi Sidik Jari U.are.U 4500 Sukses',
+                'notes' => $request->notes ?? 'Otorisasi Sidik Jari Sukses',
             ]);
 
-            // 5. Simpan Rincian Belanja & Potong Stok
+            // 5. Simpan Rincian Belanja, Potong Stok & Catat Kartu Stok
+            $cashierName = $request->cashier_name ?? 'Kasir Koperasi';
             foreach ($itemsData as $it) {
                 TransactionItem::create([
                     'transaction_id' => $transaction->id,
@@ -203,7 +205,22 @@ class PosApiController extends Controller
                     'subtotal' => $it['subtotal']
                 ]);
 
+                $stokAwal = $it['product']->stok;
                 $it['product']->decrement('stok', $it['qty']);
+                $stokAkhir = max(0, $stokAwal - $it['qty']);
+
+                // Audit Kartu Stok (Stock Mutation)
+                StockMutation::record(
+                    $it['product']->id,
+                    'sale',
+                    0,
+                    $it['qty'],
+                    $stokAwal,
+                    $stokAkhir,
+                    $invoiceNo,
+                    $cashierName,
+                    'Penjualan kasir POS struk ' . $invoiceNo
+                );
             }
 
             return response()->json([

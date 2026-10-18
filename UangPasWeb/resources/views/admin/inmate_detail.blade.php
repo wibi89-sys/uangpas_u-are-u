@@ -70,7 +70,7 @@
         <!-- Biometric Status -->
         <div class="card">
             <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-                <span>👆</span> Status Biometrik Sidik Jari (U.are.U 4500)
+                <span>👆</span> Status Biometrik Sidik Jari
             </h3>
             
             <div style="display: flex; gap: 18px; align-items: center;">
@@ -87,7 +87,7 @@
                             ✓ Template Sidik Jari Tersimpan
                         </div>
                         <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
-                            WBP dapat melakukan transaksi kasir di seluruh koperasi Lapas hanya dengan menempelkan jari pada sensor U.are.U 4500.
+                            WBP dapat melakukan transaksi kasir di seluruh koperasi Lapas hanya dengan menempelkan jari pada sensor sidik jari.
                         </p>
                     @else
                         <div style="color: #f59e0b; font-weight: 700; font-size: 14px; margin-bottom: 4px;">
