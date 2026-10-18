@@ -1219,6 +1219,16 @@ namespace UangPasDesktop
         #endregion
 
         #region DATA SYNC FROM LARAVEL API
+        private decimal ParseDecimal(object val)
+        {
+            if (val == null) return 0;
+            decimal d = 0;
+            if (decimal.TryParse(val.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out d))
+                return d;
+            decimal.TryParse(val.ToString(), out d);
+            return d;
+        }
+
         private void SyncDataFromApi()
         {
             try
@@ -1255,12 +1265,12 @@ namespace UangPasDesktop
                     if (cmbInmateEnroll.Items.Count > 0) cmbInmateEnroll.SelectedIndex = 0;
                 }
 
-                lblApiStatus.Text = "Server: Online (Terhubung)";
+                lblApiStatus.Text = "Server: Online (" + productList.Count + " Produk)";
                 lblApiStatus.ForeColor = Color.FromArgb(52, 211, 153);
             }
             catch (Exception ex)
             {
-                lblApiStatus.Text = "Server: Terputus (" + ex.Message + ")";
+                lblApiStatus.Text = "Server: Terputus (Klik Sinkron)";
                 lblApiStatus.ForeColor = Color.FromArgb(248, 113, 113);
             }
         }
@@ -1277,7 +1287,7 @@ namespace UangPasDesktop
                 string barcode = p.ContainsKey("barcode") && p["barcode"] != null ? p["barcode"].ToString() : "";
                 string nama = p.ContainsKey("nama_barang") && p["nama_barang"] != null ? p["nama_barang"].ToString() : "";
                 string kategori = p.ContainsKey("kategori") && p["kategori"] != null ? p["kategori"].ToString() : "Umum";
-                decimal harga = p.ContainsKey("harga") ? Convert.ToDecimal(p["harga"]) : 0;
+                decimal harga = p.ContainsKey("harga") ? ParseDecimal(p["harga"]) : 0;
                 int stok = p.ContainsKey("stok") ? Convert.ToInt32(p["stok"]) : 0;
 
                 if (!string.IsNullOrEmpty(keyword))
@@ -1338,7 +1348,7 @@ namespace UangPasDesktop
                 cart.Add(new CartItem {
                     ProductId = pId,
                     Nama = product["nama_barang"].ToString(),
-                    Harga = Convert.ToDecimal(product["harga"]),
+                    Harga = ParseDecimal(product["harga"]),
                     Qty = 1
                 });
             }
