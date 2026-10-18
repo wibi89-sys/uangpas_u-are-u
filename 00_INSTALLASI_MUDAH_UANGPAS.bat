@@ -102,19 +102,15 @@ if %errorlevel% equ 0 (
     )
 )
 
-:: 6. Kompilasi UangPasDesktop & Bridge
+:: 6. Kompilasi UangPasDesktop
 echo.
-echo [6/6] Memeriksa dan mengompilasi modul aplikasi C#...
+echo [6/6] Memeriksa dan mengompilasi aplikasi Kasir Desktop C#...
 set CSC_PATH=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 
 if exist "%CSC_PATH%" (
     cd /d "%BASE_DIR%UangPasDesktop"
-    & "%CSC_PATH%" /target:winexe /out:UangPasDesktop.exe /r:DPUruNet.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll Program.cs >nul 2>&1
+    "%CSC_PATH%" /target:winexe /out:UangPasDesktop.exe /r:DPUruNet.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll Program.cs >nul 2>&1
     echo       [OK] UangPasDesktop.exe berhasil dikompilasi.
-
-    cd /d "%BASE_DIR%UangPasBridge"
-    & "%CSC_PATH%" /target:winexe /out:UangPasBridge.exe /r:DPUruNet.dll,System.Drawing.dll,System.Web.Extensions.dll Program.cs >nul 2>&1
-    echo       [OK] UangPasBridge.exe berhasil dikompilasi.
 ) else (
     echo       [INFO] Menggunakan file binary yang sudah tersedia.
 )
@@ -127,15 +123,13 @@ echo                      INSTALASI BERHASIL 100%%! 🎉
 echo ===============================================================================
 echo.
 echo  Pilihan Launcher yang Siap Digunakan:
-echo    [1] 01_Buka_Kasir_POS_Modern.bat   - Buka Kasir Web Modern (Tabel Excel CSS)
-echo    [2] 02_Buka_Kasir_POS_Lapas.bat    - Buka Kasir Desktop Windows Forms
-echo    [3] 03_Buka_Portal_Admin_Lapas.bat - Buka Portal Manajemen WBP & Mutasi
-echo    [4] 04_Buka_Hardware_Bridge.bat    - Jalankan Bridge Biometrik Port 8080
+echo    [1] 01_Buka_Kasir_POS_Lapas.bat    - Terminal Kasir POS & Sensor Biometrik (Desktop)
+echo    [2] 02_Buka_Portal_Admin_Lapas.bat - Portal Manajemen WBP, Stok, Top-Up & Mutasi (Web)
 echo.
 echo ===============================================================================
 echo.
-set /p PILIH="Apakah Anda ingin langsung membuka Kasir POS Modern sekarang? (Y/T): "
+set /p PILIH="Apakah Anda ingin langsung membuka Kasir POS Lapas sekarang? (Y/T): "
 if /i "%PILIH%"=="Y" (
-    start "" "%BASE_DIR%01_Buka_Kasir_POS_Modern.bat"
+    start "" "%BASE_DIR%01_Buka_Kasir_POS_Lapas.bat"
 )
 exit /b 0

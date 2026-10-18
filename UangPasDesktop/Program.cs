@@ -45,6 +45,8 @@ namespace UangPasDesktop
         private Label lblApiStatus;
         private TextBox txtBarcode;
         private TextBox txtSearchProduct;
+        private ComboBox cmbCategory;
+        private Button btnCheckoutManual;
         private Button btnCheckoutFingerprint;
 
         // UI Controls - Enrollment
@@ -253,9 +255,35 @@ namespace UangPasDesktop
             btnTopUji.Click += (s, e) => SwitchTab(4);
             topFlowLeft.Controls.Add(btnTopUji);
 
-            Button btnOpenWebPos = new Button {
-                Text = "⚡ Web POS Modern",
-                Width = 150,
+            Button btnTopSync = new Button {
+                Text = "🔄 Sinkron Data",
+                Width = 135,
+                Height = 34,
+                BackColor = Color.FromArgb(30, 41, 59),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(3, 0, 4, 0)
+            };
+            btnTopSync.Click += (s, e) => {
+                btnTopSync.Text = "⏳ Sinkron...";
+                btnTopSync.Enabled = false;
+                SyncDataFromApi();
+                Timer t = new Timer { Interval = 800 };
+                t.Tick += (ts, te) => {
+                    btnTopSync.Text = "🔄 Sinkron Data";
+                    btnTopSync.Enabled = true;
+                    t.Stop();
+                    t.Dispose();
+                };
+                t.Start();
+            };
+            topFlowLeft.Controls.Add(btnTopSync);
+
+            Button btnOpenPortalAdmin = new Button {
+                Text = "🏛️ Portal Admin Lapas",
+                Width = 175,
                 Height = 34,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
@@ -264,14 +292,14 @@ namespace UangPasDesktop
                 Cursor = Cursors.Hand,
                 Margin = new Padding(3, 0, 4, 0)
             };
-            btnOpenWebPos.Click += (s, e) => {
+            btnOpenPortalAdmin.Click += (s, e) => {
                 try {
-                    System.Diagnostics.Process.Start("http://localhost:8000/pos");
+                    System.Diagnostics.Process.Start("http://localhost:8000/admin/dashboard");
                 } catch (Exception ex) {
                     MessageBox.Show("Gagal membuka browser: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             };
-            topFlowLeft.Controls.Add(btnOpenWebPos);
+            topFlowLeft.Controls.Add(btnOpenPortalAdmin);
 
             topBar.Controls.Add(topFlowLeft);
 
@@ -398,15 +426,16 @@ namespace UangPasDesktop
                 Dock = DockStyle.Top,
                 Height = 44,
                 RowCount = 1,
-                ColumnCount = 3,
+                ColumnCount = 4,
                 Padding = new Padding(0, 0, 0, 6)
             };
-            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155f));
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140f));
             searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155f));
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150f));
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130f));
 
             Label lblSearch = new Label { 
-                Text = "Cari Barang / Barcode:", 
+                Text = "Cari / Scan Barcode:", 
                 Dock = DockStyle.Fill, 
                 TextAlign = ContentAlignment.MiddleLeft, 
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) 
@@ -416,9 +445,35 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 10.5f) 
             };
             txtSearchProduct.TextChanged += (s, e) => FilterProducts();
+            txtSearchProduct.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    string code = txtSearchProduct.Text.Trim();
+                    if (!string.IsNullOrEmpty(code))
+                    {
+                        var found = productList.Find(x => (x.ContainsKey("barcode") && x["barcode"] != null && x["barcode"].ToString().Equals(code, StringComparison.OrdinalIgnoreCase)));
+                        if (found != null)
+                        {
+                            AddProductToCart(found);
+                            txtSearchProduct.Clear();
+                        }
+                    }
+                }
+            };
+
+            cmbCategory = new ComboBox {
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9.5f),
+                BackColor = Color.White
+            };
+            cmbCategory.Items.Add("Semua Kategori");
+            cmbCategory.SelectedIndex = 0;
+            cmbCategory.SelectedIndexChanged += (s, e) => RenderProductGrid();
 
             Button btnRefresh = new Button {
-                Text = "🔄 Sinkron Database",
+                Text = "🔄 Sinkron Data",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(241, 245, 249),
                 FlatStyle = FlatStyle.Flat,
@@ -429,7 +484,8 @@ namespace UangPasDesktop
 
             searchTable.Controls.Add(lblSearch, 0, 0);
             searchTable.Controls.Add(txtSearchProduct, 1, 0);
-            searchTable.Controls.Add(btnRefresh, 2, 0);
+            searchTable.Controls.Add(cmbCategory, 2, 0);
+            searchTable.Controls.Add(btnRefresh, 3, 0);
 
             // Excel-style Products Grid with Modern Flat Table Styling
             gridProducts = new DataGridView {
@@ -634,11 +690,12 @@ namespace UangPasDesktop
                 Dock = DockStyle.Bottom,
                 Height = 72,
                 RowCount = 1,
-                ColumnCount = 2,
+                ColumnCount = 3,
                 Padding = new Padding(0, 6, 0, 0)
             };
-            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110f));
-            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58f));
             
             Button btnClear = new Button {
                 Text = "Batal",
@@ -646,23 +703,35 @@ namespace UangPasDesktop
                 BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnClear.Click += (s, e) => { cart.Clear(); RefreshCartGrid(); };
             btnTable.Controls.Add(btnClear, 0, 0);
 
+            btnCheckoutManual = new Button {
+                Text = "👤 BAYAR MANUAL (WBP)",
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCheckoutManual.Click += (s, e) => ProcessCheckoutManual();
+            btnTable.Controls.Add(btnCheckoutManual, 1, 0);
+
             btnCheckoutFingerprint = new Button {
-                Text = "👆 BAYAR DENGAN SIDIK JARI WBP",
+                Text = "👆 BAYAR SIDIK JARI WBP",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnCheckoutFingerprint.Click += (s, e) => ProcessCheckoutFingerprint();
-            btnTable.Controls.Add(btnCheckoutFingerprint, 1, 0);
+            btnTable.Controls.Add(btnCheckoutFingerprint, 2, 0);
 
             bottomPanel.Controls.Add(btnTable);
             rightPanel.Controls.Add(bottomPanel);
@@ -1253,6 +1322,9 @@ namespace UangPasDesktop
         {
             try
             {
+                // First, flush any pending offline transactions!
+                FlushOfflineQueue();
+
                 // 1. Fetch Products
                 string productsJson = HttpGet(this.apiUrl + "/pos/products");
                 var prodResp = serializer.Deserialize<Dictionary<string, object>>(productsJson);
@@ -1264,6 +1336,8 @@ namespace UangPasDesktop
                     {
                         productList.Add(it);
                     }
+                    try { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "cache_products.json"), productsJson); } catch { }
+                    PopulateCategories();
                     RenderProductGrid();
                 }
 
@@ -1283,16 +1357,181 @@ namespace UangPasDesktop
                         cmbInmateEnroll.Items.Add(wbp["id"] + " - " + wbp["nama"] + " (" + wbp["no_registrasi"] + ")" + hasFp);
                     }
                     if (cmbInmateEnroll.Items.Count > 0) cmbInmateEnroll.SelectedIndex = 0;
+                    try { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "cache_inmates.json"), inmatesJson); } catch { }
                 }
 
-                lblApiStatus.Text = "Server: Online (" + productList.Count + " Produk)";
-                lblApiStatus.ForeColor = Color.FromArgb(52, 211, 153);
+                int queueCount = GetOfflineQueueCount();
+                if (queueCount > 0)
+                {
+                    lblApiStatus.Text = "Server: Online (" + queueCount + " antrean offline)";
+                    lblApiStatus.ForeColor = Color.FromArgb(251, 191, 36);
+                }
+                else
+                {
+                    lblApiStatus.Text = "Server: Online (" + productList.Count + " Produk, " + inmateList.Count + " WBP)";
+                    lblApiStatus.ForeColor = Color.FromArgb(52, 211, 153);
+                }
             }
             catch (Exception ex)
             {
-                lblApiStatus.Text = "Server: Terputus (Klik Sinkron)";
-                lblApiStatus.ForeColor = Color.FromArgb(248, 113, 113);
+                LoadLocalCache();
+                int qCount = GetOfflineQueueCount();
+                lblApiStatus.Text = "Server: Mode Offline" + (qCount > 0 ? " (" + qCount + " antrean)" : "");
+                lblApiStatus.ForeColor = Color.FromArgb(251, 191, 36);
             }
+        }
+
+        private void PopulateCategories()
+        {
+            if (cmbCategory == null) return;
+            string currentSelected = (cmbCategory.SelectedItem != null) ? cmbCategory.SelectedItem.ToString() : "Semua Kategori";
+            HashSet<string> cats = new HashSet<string>();
+            foreach (var p in productList)
+            {
+                if (p.ContainsKey("kategori") && p["kategori"] != null && !string.IsNullOrEmpty(p["kategori"].ToString()))
+                {
+                    cats.Add(p["kategori"].ToString());
+                }
+            }
+            cmbCategory.Items.Clear();
+            cmbCategory.Items.Add("Semua Kategori");
+            foreach (string c in cats) cmbCategory.Items.Add(c);
+            if (cmbCategory.Items.Contains(currentSelected)) cmbCategory.SelectedItem = currentSelected;
+            else cmbCategory.SelectedIndex = 0;
+        }
+
+        private void LoadLocalCache()
+        {
+            try
+            {
+                string pCache = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "cache_products.json");
+                if (File.Exists(pCache))
+                {
+                    string json = File.ReadAllText(pCache);
+                    var prodResp = serializer.Deserialize<Dictionary<string, object>>(json);
+                    if (prodResp != null && prodResp.ContainsKey("data"))
+                    {
+                        var items = (System.Collections.ArrayList)prodResp["data"];
+                        productList.Clear();
+                        foreach (Dictionary<string, object> it in items) productList.Add(it);
+                        PopulateCategories();
+                        RenderProductGrid();
+                    }
+                }
+
+                string iCache = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "cache_inmates.json");
+                if (File.Exists(iCache))
+                {
+                    string json = File.ReadAllText(iCache);
+                    var inmateResp = serializer.Deserialize<Dictionary<string, object>>(json);
+                    if (inmateResp != null && inmateResp.ContainsKey("data"))
+                    {
+                        var list = (System.Collections.ArrayList)inmateResp["data"];
+                        inmateList.Clear();
+                        cmbInmateEnroll.Items.Clear();
+                        foreach (Dictionary<string, object> wbp in list)
+                        {
+                            inmateList.Add(wbp);
+                            string hasFp = Convert.ToBoolean(wbp["has_fingerprint"]) ? " [Sudah Ada Sidik Jari]" : " [BELUM ADA SIDIK JARI]";
+                            cmbInmateEnroll.Items.Add(wbp["id"] + " - " + wbp["nama"] + " (" + wbp["no_registrasi"] + ")" + hasFp);
+                        }
+                        if (cmbInmateEnroll.Items.Count > 0) cmbInmateEnroll.SelectedIndex = 0;
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private int GetOfflineQueueCount()
+        {
+            try
+            {
+                string queuePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "offline_queue.json");
+                if (File.Exists(queuePath))
+                {
+                    string json = File.ReadAllText(queuePath);
+                    var list = serializer.Deserialize<List<Dictionary<string, object>>>(json);
+                    return (list != null) ? list.Count : 0;
+                }
+            }
+            catch { }
+            return 0;
+        }
+
+        private void QueueOfflineTransaction(Dictionary<string, object> reqData, string invNo)
+        {
+            try
+            {
+                string queuePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "offline_queue.json");
+                List<Dictionary<string, object>> queueList = new List<Dictionary<string, object>>();
+
+                if (File.Exists(queuePath))
+                {
+                    string existingJson = File.ReadAllText(queuePath);
+                    var list = serializer.Deserialize<List<Dictionary<string, object>>>(existingJson);
+                    if (list != null) queueList = list;
+                }
+
+                reqData["offline_inv"] = invNo;
+                reqData["queued_at"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                queueList.Add(reqData);
+
+                File.WriteAllText(queuePath, serializer.Serialize(queueList));
+            }
+            catch { }
+        }
+
+        private void FlushOfflineQueue()
+        {
+            try
+            {
+                string queuePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "offline_queue.json");
+                if (!File.Exists(queuePath)) return;
+
+                string existingJson = File.ReadAllText(queuePath);
+                var list = serializer.Deserialize<List<Dictionary<string, object>>>(existingJson);
+                if (list == null || list.Count == 0) return;
+
+                List<Dictionary<string, object>> remaining = new List<Dictionary<string, object>>();
+                int syncedCount = 0;
+
+                foreach (var item in list)
+                {
+                    try
+                    {
+                        string jsonPayload = serializer.Serialize(item);
+                        string respJson = HttpPost(this.apiUrl + "/pos/checkout", jsonPayload);
+                        var resp = serializer.Deserialize<Dictionary<string, object>>(respJson);
+                        if (resp != null && Convert.ToBoolean(resp["success"]))
+                        {
+                            syncedCount++;
+                        }
+                        else
+                        {
+                            remaining.Add(item);
+                        }
+                    }
+                    catch
+                    {
+                        remaining.Add(item);
+                    }
+                }
+
+                if (remaining.Count > 0)
+                {
+                    File.WriteAllText(queuePath, serializer.Serialize(remaining));
+                }
+                else
+                {
+                    File.Delete(queuePath);
+                }
+
+                if (syncedCount > 0)
+                {
+                    Console.WriteLine("[SYNC] Berhasil mengunggah " + syncedCount + " transaksi antrean offline.");
+                }
+            }
+            catch { }
         }
 
         private void RenderProductGrid()
@@ -1301,6 +1540,7 @@ namespace UangPasDesktop
             gridProducts.Rows.Clear();
 
             string keyword = (txtSearchProduct != null) ? txtSearchProduct.Text.Trim().ToLowerInvariant() : "";
+            string selectedCat = (cmbCategory != null && cmbCategory.SelectedItem != null) ? cmbCategory.SelectedItem.ToString() : "Semua Kategori";
 
             foreach (var p in productList)
             {
@@ -1309,6 +1549,11 @@ namespace UangPasDesktop
                 string kategori = p.ContainsKey("kategori") && p["kategori"] != null ? p["kategori"].ToString() : "Umum";
                 decimal harga = p.ContainsKey("harga") ? ParseDecimal(p["harga"]) : 0;
                 int stok = p.ContainsKey("stok") ? Convert.ToInt32(p["stok"]) : 0;
+
+                if (selectedCat != "Semua Kategori" && !string.Equals(kategori, selectedCat, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
 
                 if (!string.IsNullOrEmpty(keyword))
                 {
@@ -1547,75 +1792,131 @@ namespace UangPasDesktop
                         }
                     }
 
-                    // Verify Balance & Daily Limit
-                    decimal saldo = Convert.ToDecimal(matchedInmate["saldo"]);
-                    decimal limit = Convert.ToDecimal(matchedInmate["remaining_limit"]);
-
-                    if (saldo < totalAmount)
-                    {
-                        MessageBox.Show("Saldo WBP " + matchedInmate["nama"] + " TIDAK MENCUKUPI!\n\nSisa Saldo: Rp " + saldo.ToString("N0") + "\nTotal Tagihan: Rp " + totalAmount.ToString("N0"), "Saldo Kurang", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    if (totalAmount > limit)
-                    {
-                        MessageBox.Show("Transaksi MELEBIHI LIMIT BELANJA HARIAN LAPAS!\n\nSisa Limit Hari Ini: Rp " + limit.ToString("N0") + "\nTotal Tagihan: Rp " + totalAmount.ToString("N0"), "Limit Terlampaui", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    // Submit to Laravel REST API
-                    try
-                    {
-                        var reqData = new Dictionary<string, object>();
-                        reqData["inmate_id"] = Convert.ToInt32(matchedInmate["id"]);
-                        reqData["payment_method"] = "fingerprint";
-                        reqData["cashier_name"] = "Kasir POS Desktop";
-
-                        var itemsArr = new List<Dictionary<string, object>>();
-                        foreach (var it in cart)
-                        {
-                            itemsArr.Add(new Dictionary<string, object> {
-                                { "product_id", it.ProductId },
-                                { "qty", it.Qty }
-                            });
-                        }
-                        reqData["items"] = itemsArr;
-
-                        string jsonPayload = serializer.Serialize(reqData);
-                        string respJson = HttpPost(this.apiUrl + "/pos/checkout", jsonPayload);
-                        var resp = serializer.Deserialize<Dictionary<string, object>>(respJson);
-
-                        if (resp != null && Convert.ToBoolean(resp["success"]))
-                        {
-                            var data = (Dictionary<string, object>)resp["data"];
-                            string inv = data["invoice_no"].ToString();
-                            decimal newBal = Convert.ToDecimal(data["balance_after"]);
-
-                            MessageBox.Show(
-                                "🎉 PEMBAYARAN SUKSES!\n\n" +
-                                "Invoice: " + inv + "\n" +
-                                "WBP: " + matchedInmate["nama"] + " (" + matchedInmate["blok_kamar"] + ")\n" +
-                                "Total: Rp " + totalAmount.ToString("N0") + "\n" +
-                                "Sisa Saldo Baru: Rp " + newBal.ToString("N0"),
-                                "Transaksi Berhasil",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Information
-                            );
-
-                            cart.Clear();
-                            RefreshCartGrid();
-                            SyncDataFromApi();
-                        }
-                        else
-                        {
-                            MessageBox.Show("Gagal memproses transaksi: " + (resp != null && resp.ContainsKey("message") ? resp["message"] : "Unknown error"), "Gagal", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Error kirim data ke server: " + ex.Message, "Koneksi Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    SubmitTransaction(matchedInmate, "fingerprint", totalAmount);
                 }
+            }
+        }
+
+        private void ProcessCheckoutManual()
+        {
+            if (cart.Count == 0)
+            {
+                MessageBox.Show("Keranjang belanja masih kosong! Pilih barang terlebih dahulu.", "Keranjang Kosong", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            decimal totalAmount = 0;
+            foreach (var it in cart) totalAmount += (it.Harga * it.Qty);
+
+            using (SelectInmateForm selectForm = new SelectInmateForm(inmateList, totalAmount))
+            {
+                if (selectForm.ShowDialog(this) == DialogResult.OK && selectForm.SelectedInmate != null)
+                {
+                    SubmitTransaction(selectForm.SelectedInmate, "manual", totalAmount);
+                }
+            }
+        }
+
+        private void SubmitTransaction(Dictionary<string, object> matchedInmate, string paymentMethod, decimal totalAmount)
+        {
+            // Verify Balance & Daily Limit
+            decimal saldo = Convert.ToDecimal(matchedInmate["saldo"]);
+            decimal limit = Convert.ToDecimal(matchedInmate["remaining_limit"]);
+
+            if (saldo < totalAmount)
+            {
+                MessageBox.Show("Saldo WBP " + matchedInmate["nama"] + " TIDAK MENCUKUPI!\n\nSisa Saldo: Rp " + saldo.ToString("N0") + "\nTotal Tagihan: Rp " + totalAmount.ToString("N0"), "Saldo Kurang", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (totalAmount > limit)
+            {
+                MessageBox.Show("Transaksi MELEBIHI LIMIT BELANJA HARIAN LAPAS!\n\nSisa Limit Hari Ini: Rp " + limit.ToString("N0") + "\nTotal Tagihan: Rp " + totalAmount.ToString("N0"), "Limit Terlampaui", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var reqData = new Dictionary<string, object>();
+            reqData["inmate_id"] = Convert.ToInt32(matchedInmate["id"]);
+            reqData["payment_method"] = paymentMethod;
+            reqData["cashier_name"] = "Kasir POS Desktop";
+
+            var itemsArr = new List<Dictionary<string, object>>();
+            foreach (var it in cart)
+            {
+                itemsArr.Add(new Dictionary<string, object> {
+                    { "product_id", it.ProductId },
+                    { "qty", it.Qty }
+                });
+            }
+            reqData["items"] = itemsArr;
+
+            string jsonPayload = serializer.Serialize(reqData);
+
+            bool isOnlineSuccess = false;
+            string invNo = "";
+            decimal balanceAfter = saldo - totalAmount;
+
+            try
+            {
+                string respJson = HttpPost(this.apiUrl + "/pos/checkout", jsonPayload);
+                var resp = serializer.Deserialize<Dictionary<string, object>>(respJson);
+
+                if (resp != null && Convert.ToBoolean(resp["success"]))
+                {
+                    isOnlineSuccess = true;
+                    var data = (Dictionary<string, object>)resp["data"];
+                    invNo = data["invoice_no"].ToString();
+                    balanceAfter = Convert.ToDecimal(data["balance_after"]);
+                }
+                else
+                {
+                    string errMsg = (resp != null && resp.ContainsKey("message")) ? resp["message"].ToString() : "Transaksi ditolak server.";
+                    MessageBox.Show(errMsg, "Gagal Checkout", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                // OFFLINE FALLBACK: Save to offline queue!
+                invNo = "OFF-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+                QueueOfflineTransaction(reqData, invNo);
+                isOnlineSuccess = false;
+            }
+
+            // Update local in-memory inmate balance and product stock
+            matchedInmate["saldo"] = balanceAfter;
+            matchedInmate["remaining_limit"] = limit - totalAmount;
+            foreach (var cartIt in cart)
+            {
+                var prod = productList.Find(x => Convert.ToInt32(x["id"]) == cartIt.ProductId);
+                if (prod != null && prod.ContainsKey("stok"))
+                {
+                    int s = Convert.ToInt32(prod["stok"]);
+                    prod["stok"] = Math.Max(0, s - cartIt.Qty);
+                }
+            }
+
+            // Create copy of cart for receipt before clearing
+            List<CartItem> receiptCart = new List<CartItem>(cart);
+            cart.Clear();
+            RefreshCartGrid();
+            RenderProductGrid();
+
+            // Show Receipt Dialog
+            using (ReceiptForm rForm = new ReceiptForm(invNo, matchedInmate, paymentMethod, receiptCart, totalAmount, saldo, balanceAfter, !isOnlineSuccess))
+            {
+                rForm.ShowDialog(this);
+            }
+
+            if (isOnlineSuccess)
+            {
+                SyncDataFromApi();
+            }
+            else
+            {
+                int qCount = GetOfflineQueueCount();
+                lblApiStatus.Text = "Server: Mode Offline (" + qCount + " antrean)";
+                lblApiStatus.ForeColor = Color.FromArgb(251, 191, 36);
             }
         }
         #endregion
@@ -1991,5 +2292,278 @@ namespace UangPasDesktop
         public string Nama { get; set; }
         public decimal Harga { get; set; }
         public int Qty { get; set; }
+    }
+
+    public class SelectInmateForm : Form
+    {
+        public Dictionary<string, object> SelectedInmate { get; private set; }
+        private List<Dictionary<string, object>> allInmates;
+        private DataGridView grid;
+        private TextBox txtSearch;
+        private decimal totalAmount;
+
+        public SelectInmateForm(List<Dictionary<string, object>> inmates, decimal total)
+        {
+            this.allInmates = inmates;
+            this.totalAmount = total;
+
+            this.Text = "Pilih Warga Binaan (WBP) - Pembayaran Manual";
+            this.Size = new Size(680, 520);
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.BackColor = Color.FromArgb(248, 250, 252);
+
+            Panel top = new Panel { Dock = DockStyle.Top, Height = 95, Padding = new Padding(16, 12, 16, 8), BackColor = Color.FromArgb(15, 23, 42) };
+            
+            Label lblH = new Label { 
+                Text = "Otorisasi Manual: Tagihan Rp " + total.ToString("N0"), 
+                ForeColor = Color.White, 
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold), 
+                Dock = DockStyle.Top, 
+                Height = 28 
+            };
+            top.Controls.Add(lblH);
+
+            txtSearch = new TextBox { 
+                Dock = DockStyle.Bottom, 
+                Font = new Font("Segoe UI", 11f), 
+                Height = 32 
+            };
+            txtSearch.TextChanged += (s, e) => FilterGrid();
+            top.Controls.Add(txtSearch);
+
+            Label lblSub = new Label { 
+                Text = "Ketik Nama, NIK, atau No. Registrasi WBP untuk mencari:", 
+                ForeColor = Color.FromArgb(148, 163, 184), 
+                Font = new Font("Segoe UI", 8.5f), 
+                Dock = DockStyle.Top, 
+                Height = 20 
+            };
+            top.Controls.Add(lblSub);
+
+            this.Controls.Add(top);
+
+            grid = new DataGridView {
+                Dock = DockStyle.Fill,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                GridColor = Color.FromArgb(241, 245, 249),
+                RowHeadersVisible = false,
+                AllowUserToAddRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                EnableHeadersVisualStyles = false,
+                Font = new Font("Segoe UI", 9.5f)
+            };
+            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
+            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            grid.ColumnHeadersHeight = 36;
+            grid.RowTemplate.Height = 36;
+
+            grid.Columns.Add("no_reg", "No. Registrasi");
+            grid.Columns.Add("nama", "Nama WBP");
+            grid.Columns.Add("kamar", "Kamar / Blok");
+            grid.Columns.Add("saldo", "Sisa Saldo");
+            grid.Columns["saldo"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            grid.Columns["saldo"].DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            grid.Columns["saldo"].DefaultCellStyle.ForeColor = Color.FromArgb(16, 185, 129);
+
+            grid.DoubleClick += (s, e) => ConfirmSelection();
+
+            Panel bottom = new Panel { Dock = DockStyle.Bottom, Height = 56, Padding = new Padding(16, 8, 16, 10), BackColor = Color.FromArgb(241, 245, 249) };
+            Button btnCancel = new Button { Text = "Batal", Dock = DockStyle.Left, Width = 100, BackColor = Color.FromArgb(203, 213, 225), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnCancel.Click += (s, e) => { this.DialogResult = DialogResult.Cancel; this.Close(); };
+            bottom.Controls.Add(btnCancel);
+
+            Button btnSelect = new Button { Text = "✅ Pilih & Lanjutkan Pembayaran", Dock = DockStyle.Right, Width = 250, BackColor = Color.FromArgb(2, 132, 199), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10f, FontStyle.Bold), Cursor = Cursors.Hand };
+            btnSelect.Click += (s, e) => ConfirmSelection();
+            bottom.Controls.Add(btnSelect);
+
+            this.Controls.Add(grid);
+            this.Controls.Add(bottom);
+            grid.BringToFront();
+
+            PopulateGrid("");
+        }
+
+        private void FilterGrid()
+        {
+            PopulateGrid(txtSearch.Text.Trim().ToLowerInvariant());
+        }
+
+        private void PopulateGrid(string query)
+        {
+            grid.Rows.Clear();
+            foreach (var wbp in allInmates)
+            {
+                string nama = wbp.ContainsKey("nama") && wbp["nama"] != null ? wbp["nama"].ToString() : "";
+                string noReg = wbp.ContainsKey("no_registrasi") && wbp["no_registrasi"] != null ? wbp["no_registrasi"].ToString() : "";
+                string kamar = wbp.ContainsKey("blok_kamar") && wbp["blok_kamar"] != null ? wbp["blok_kamar"].ToString() : "";
+                decimal saldo = 0;
+                if (wbp.ContainsKey("saldo")) decimal.TryParse(wbp["saldo"].ToString(), out saldo);
+
+                if (!string.IsNullOrEmpty(query))
+                {
+                    bool match = nama.ToLowerInvariant().Contains(query) ||
+                                 noReg.ToLowerInvariant().Contains(query) ||
+                                 kamar.ToLowerInvariant().Contains(query);
+                    if (!match) continue;
+                }
+
+                int rowIdx = grid.Rows.Add(noReg, nama, kamar, "Rp " + saldo.ToString("N0"));
+                grid.Rows[rowIdx].Tag = wbp;
+
+                if (saldo < totalAmount)
+                {
+                    grid.Rows[rowIdx].Cells["saldo"].Style.ForeColor = Color.FromArgb(239, 68, 68);
+                }
+            }
+        }
+
+        private void ConfirmSelection()
+        {
+            if (grid.SelectedRows.Count > 0)
+            {
+                this.SelectedInmate = (Dictionary<string, object>)grid.SelectedRows[0].Tag;
+                this.DialogResult = DialogResult.OK;
+                this.Close();
+            }
+            else
+            {
+                MessageBox.Show("Pilih Warga Binaan terlebih dahulu.", "Pilih WBP", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+    }
+
+    public class ReceiptForm : Form
+    {
+        private string receiptText;
+
+        public ReceiptForm(string invoiceNo, Dictionary<string, object> inmate, string method, List<CartItem> items, decimal total, decimal saldoBefore, decimal saldoAfter, bool isOffline)
+        {
+            this.Text = "Struk Belanja Kasir Koperasi Lapas";
+            this.Size = new Size(460, 640);
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.BackColor = Color.FromArgb(248, 250, 252);
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("================================================");
+            sb.AppendLine("            KOPERASI LAPAS DIGITAL             ");
+            sb.AppendLine("         TERMINAL KASIR POS BIOMETRIK          ");
+            sb.AppendLine("================================================");
+            if (isOffline)
+            {
+                sb.AppendLine("   *** MODE OFFLINE - TERSIMPAN DALAM ANTREAN ***");
+                sb.AppendLine("------------------------------------------------");
+            }
+            sb.AppendLine("No. Invoice : " + invoiceNo);
+            sb.AppendLine("Tanggal     : " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
+            sb.AppendLine("Kasir       : Kasir POS Desktop");
+            sb.AppendLine("Metode Bayar: " + (method == "fingerprint" ? "SIDIK JARI (DigitalPersona U.are.U)" : "MANUAL (Petugas Kasir)"));
+            sb.AppendLine("------------------------------------------------");
+            sb.AppendLine("Warga Binaan: " + (inmate.ContainsKey("nama") ? inmate["nama"] : "-"));
+            sb.AppendLine("No. Registr : " + (inmate.ContainsKey("no_registrasi") ? inmate["no_registrasi"] : "-"));
+            sb.AppendLine("Kamar / Blok: " + (inmate.ContainsKey("blok_kamar") ? inmate["blok_kamar"] : "-"));
+            sb.AppendLine("------------------------------------------------");
+            sb.AppendLine(string.Format("{0,-24} {1,5} {2,15}", "BARANG", "QTY", "SUBTOTAL"));
+            sb.AppendLine("------------------------------------------------");
+
+            foreach (var it in items)
+            {
+                string nama = it.Nama;
+                if (nama.Length > 23) nama = nama.Substring(0, 23);
+                decimal sub = it.Harga * it.Qty;
+                sb.AppendLine(string.Format("{0,-24} {1,5} {2,15}", nama, "x" + it.Qty, "Rp " + sub.ToString("N0")));
+            }
+
+            sb.AppendLine("------------------------------------------------");
+            sb.AppendLine(string.Format("{0,-24} {1,21}", "TOTAL TAGIHAN", "Rp " + total.ToString("N0")));
+            sb.AppendLine("------------------------------------------------");
+            sb.AppendLine(string.Format("{0,-24} {1,21}", "Saldo Sebelum", "Rp " + saldoBefore.ToString("N0")));
+            sb.AppendLine(string.Format("{0,-24} {1,21}", "SISA SALDO WBP", "Rp " + saldoAfter.ToString("N0")));
+            sb.AppendLine("================================================");
+            sb.AppendLine("       TERIMA KASIH ATAS KUNJUNGAN ANDA         ");
+            sb.AppendLine("  UangPas Lapas - Dompet Digital Pemasyarakatan ");
+            sb.AppendLine("================================================");
+
+            this.receiptText = sb.ToString();
+
+            TextBox txtReceipt = new TextBox {
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Consolas", 10f),
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Dock = DockStyle.Fill,
+                Text = receiptText
+            };
+            this.Controls.Add(txtReceipt);
+
+            Panel bottom = new Panel {
+                Dock = DockStyle.Bottom,
+                Height = 60,
+                Padding = new Padding(12),
+                BackColor = Color.FromArgb(241, 245, 249)
+            };
+
+            Button btnClose = new Button {
+                Text = "Tutup",
+                Dock = DockStyle.Left,
+                Width = 110,
+                BackColor = Color.FromArgb(203, 213, 225),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnClose.Click += (s, e) => this.Close();
+            bottom.Controls.Add(btnClose);
+
+            Button btnPrint = new Button {
+                Text = "🖨️ Cetak ke Printer Kasir",
+                Dock = DockStyle.Right,
+                Width = 220,
+                BackColor = Color.FromArgb(16, 185, 129),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnPrint.Click += (s, e) => PrintThermalReceipt();
+            bottom.Controls.Add(btnPrint);
+
+            this.Controls.Add(bottom);
+            txtReceipt.BringToFront();
+        }
+
+        private void PrintThermalReceipt()
+        {
+            try
+            {
+                System.Drawing.Printing.PrintDocument pDoc = new System.Drawing.Printing.PrintDocument();
+                pDoc.PrintPage += (s, e) => {
+                    Font f = new Font("Consolas", 9.5f);
+                    e.Graphics.DrawString(this.receiptText, f, Brushes.Black, new PointF(10, 10));
+                };
+                PrintDialog pd = new PrintDialog();
+                pd.Document = pDoc;
+                if (pd.ShowDialog() == DialogResult.OK)
+                {
+                    pDoc.Print();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Gagal mencetak: " + ex.Message, "Error Printer", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
     }
 }

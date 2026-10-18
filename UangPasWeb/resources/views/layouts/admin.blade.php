@@ -537,18 +537,20 @@
             </a>
 
             <div class="nav-label">Koperasi & Kasir</div>
-            <a href="{{ route('pos.index') }}" target="_blank" class="nav-item">
-                <span class="nav-icon">⚡</span>
-                <span>Buka Kasir POS Modern</span>
-            </a>
             <a href="{{ route('admin.products') }}" class="nav-item {{ request()->routeIs('admin.products*') ? 'active' : '' }}">
                 <span class="nav-icon">🛒</span>
-                <span>Katalog Barang Koperasi</span>
+                <span>Katalog Barang & Stok</span>
             </a>
             <a href="{{ route('admin.transactions') }}" class="nav-item {{ request()->routeIs('admin.transactions*') ? 'active' : '' }}">
                 <span class="nav-icon">📑</span>
-                <span>Laporan & Mutasi Kasir</span>
+                <span>Laporan Mutasi Kasir</span>
             </a>
+            <div style="padding: 10px 14px; margin: 8px 12px; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 8px; font-size: 11px; color: #0369a1; line-height: 1.4;">
+                <div style="font-weight: 700; display: flex; align-items: center; gap: 5px; margin-bottom: 2px;">
+                    <span>🖥️</span> Terminal Kasir Lapas
+                </div>
+                Transaksi & sensor biometrik U.are.U 4500 aktif di <b>UangPasDesktop.exe</b>
+            </div>
 
             <div class="nav-label">Jaringan & Sinkronisasi</div>
             <a href="{{ route('admin.sync') }}" class="nav-item {{ request()->routeIs('admin.sync*') ? 'active' : '' }}">

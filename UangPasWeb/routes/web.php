@@ -38,8 +38,7 @@ Route::post('/sync/backup', [SyncController::class, 'triggerBackup'])->name('adm
 Route::post('/sync/pull-mutasi', [SyncController::class, 'pullMutation'])->name('admin.sync.pull');
 Route::post('/sync/settings', [SyncController::class, 'updateSettings'])->name('admin.sync.settings');
 
-// Web POS Modern (CSS-based Point of Sale)
-use App\Http\Controllers\Web\PosWebController;
-Route::get('/pos', [PosWebController::class, 'index'])->name('pos.index');
-Route::post('/pos/checkout', [PosWebController::class, 'checkout'])->name('pos.checkout');
+// Terminal Kasir POS dialihkan sepenuhnya ke Desktop Application (UangPasDesktop.exe)
+// Fitur Web difokuskan untuk Portal Admin & Manajemen Koperasi (tanpa perangkat transaksi)
+Route::redirect('/pos', '/')->name('pos.index');
 
