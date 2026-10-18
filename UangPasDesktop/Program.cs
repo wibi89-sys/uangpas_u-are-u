@@ -2725,27 +2725,79 @@ namespace UangPasDesktop
         #endregion
 
         #region CHECKOUT VIA FINGERPRINT
-        private Fmd ParseFmdFromTemplate(string tXml)
+        public static Fmd ParseFmdFromTemplate(string tXml)
         {
             if (string.IsNullOrEmpty(tXml)) return null;
+            tXml = tXml.Trim();
+
+            // 1. Try standard Fmd.DeserializeXml (DPUruNet native FMD XML format)
+            try
+            {
+                Fmd fmd = Fmd.DeserializeXml(tXml);
+                if (fmd != null && fmd.Views != null && fmd.Views.Count > 0) return fmd;
+            }
+            catch { }
+
+            // 2. Try replacing <Fid> root tag with <Fmd> in case XML root was mislabeled
+            try
+            {
+                if (tXml.Contains("<Fid") || tXml.Contains("</Fid>"))
+                {
+                    string replaced = tXml.Replace("<Fid>", "<Fmd>").Replace("</Fid>", "</Fmd>").Replace("<Fid ", "<Fmd ");
+                    Fmd fmd = Fmd.DeserializeXml(replaced);
+                    if (fmd != null && fmd.Views != null && fmd.Views.Count > 0) return fmd;
+                }
+            }
+            catch { }
+
+            // 3. Try extracting raw <Bytes>...</Bytes> and importing via ANSI/ISO Importer
+            try
+            {
+                int bStart = tXml.IndexOf("<Bytes>");
+                int bEnd = tXml.IndexOf("</Bytes>");
+                if (bStart >= 0 && bEnd > bStart)
+                {
+                    string b64 = tXml.Substring(bStart + 7, bEnd - (bStart + 7)).Trim();
+                    byte[] raw = Convert.FromBase64String(b64);
+                    var imp = Importer.ImportFmd(raw, Constants.Formats.Fmd.ANSI, Constants.Formats.Fmd.ANSI);
+                    if (imp.ResultCode == Constants.ResultCode.DP_SUCCESS && imp.Data != null) return imp.Data;
+
+                    var impIso = Importer.ImportFmd(raw, Constants.Formats.Fmd.ISO, Constants.Formats.Fmd.ANSI);
+                    if (impIso.ResultCode == Constants.ResultCode.DP_SUCCESS && impIso.Data != null) return impIso.Data;
+                }
+            }
+            catch { }
+
+            // 4. Try raw Base64 string directly (if template is stored as pure base64 without XML wrapper)
+            try
+            {
+                if (!tXml.StartsWith("<"))
+                {
+                    byte[] raw = Convert.FromBase64String(tXml);
+                    var imp = Importer.ImportFmd(raw, Constants.Formats.Fmd.ANSI, Constants.Formats.Fmd.ANSI);
+                    if (imp.ResultCode == Constants.ResultCode.DP_SUCCESS && imp.Data != null) return imp.Data;
+
+                    var impIso = Importer.ImportFmd(raw, Constants.Formats.Fmd.ISO, Constants.Formats.Fmd.ANSI);
+                    if (impIso.ResultCode == Constants.ResultCode.DP_SUCCESS && impIso.Data != null) return impIso.Data;
+                }
+            }
+            catch { }
+
+            // 5. Try true Fid image format (raw pixel data converted to FMD minutiae)
             try
             {
                 if (tXml.Contains("<Fid") || tXml.StartsWith("<Fid"))
                 {
-                    try
+                    Fid fid = Fid.DeserializeXml(tXml);
+                    if (fid != null)
                     {
-                        Fid fid = Fid.DeserializeXml(tXml);
                         var fe = FeatureExtraction.CreateFmdFromFid(fid, Constants.Formats.Fmd.ANSI);
-                        if (fe.ResultCode == Constants.ResultCode.DP_SUCCESS) return fe.Data;
+                        if (fe.ResultCode == Constants.ResultCode.DP_SUCCESS && fe.Data != null) return fe.Data;
                     }
-                    catch { }
-                }
-                else
-                {
-                    return Fmd.DeserializeXml(tXml);
                 }
             }
             catch { }
+
             return null;
         }
 
@@ -2770,7 +2822,7 @@ namespace UangPasDesktop
                     // Match 1:N with enrolled inmates
                     Dictionary<string, object> matchedInmate = null;
                     int bestScore = int.MaxValue;
-                    int threshold = 2147483647 / 100000;
+                    int threshold = 2147483647 / 10000;
 
                     foreach (var wbp in inmateList)
                     {
@@ -3566,16 +3618,20 @@ namespace UangPasDesktop
 
                     Fmd liveFmd = prompt.CapturedFmd;
                     Dictionary<string, object> matched = null;
-                    int threshold = 2147483647 / 100000;
+                    int threshold = 2147483647 / 10000;
                     int bestScore = int.MaxValue;
+                    int totalWithTemplate = 0;
+                    int parsedCount = 0;
 
                     foreach (var wbp in inmateList)
                     {
                         if (wbp.ContainsKey("template") && wbp["template"] != null && !string.IsNullOrEmpty(wbp["template"].ToString()))
                         {
+                            totalWithTemplate++;
                             Fmd storedFmd = ParseFmdFromTemplate(wbp["template"].ToString());
                             if (storedFmd != null)
                             {
+                                parsedCount++;
                                 try
                                 {
                                     CompareResult cr = Comparison.Compare(liveFmd, 0, storedFmd, 0);
@@ -3597,7 +3653,34 @@ namespace UangPasDesktop
                     }
                     else
                     {
-                        MessageBox.Show("Sidik jari belum terdaftar pada sistem.\nSilakan daftarkan sidik jari WBP pada menu 'Rekam Jari' terlebih dahulu, atau gunakan pencarian Nomor Registrasi di atas.", "Sidik Jari Tidak Dikenal", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        if (totalWithTemplate == 0)
+                        {
+                            MessageBox.Show(
+                                "⚠️ Belum ada Warga Binaan yang memiliki data sidik jari di sistem POS (0 template terdaftar).\n\n" +
+                                "Silakan lakukan perekaman sidik jari terlebih dahulu pada tab 'Rekam Jari' atau lakukan pencarian saldo menggunakan Nomor Registrasi / Scan Barcode pada kotak pencarian di atas.",
+                                "Data Sidik Jari Belum Ada",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning
+                            );
+                        }
+                        else
+                        {
+                            DialogResult dr = MessageBox.Show(
+                                "⚠️ Sidik jari tidak dikenali (tidak cocok dengan " + parsedCount + " WBP terdaftar sidik jari).\n\n" +
+                                "Kemungkinan penyebab:\n" +
+                                "1. WBP belum pernah melakukan rekam sidik jari di sistem.\n" +
+                                "2. Jari yang ditempelkan berbeda dengan jari saat perekaman (misal jempol vs telunjuk).\n" +
+                                "3. Posisi jari miring atau sensor kotor.\n\n" +
+                                "Apakah Anda ingin membuka menu 'Rekam Jari' untuk mendaftarkan WBP ini sekarang?",
+                                "Sidik Jari Belum Terdaftar",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question
+                            );
+                            if (dr == DialogResult.Yes && tabs != null && tabs.TabPages.Count > 1)
+                            {
+                                tabs.SelectedIndex = 1; // Pindah ke tab Rekam Jari
+                            }
+                        }
                     }
                 }
             }
@@ -4523,13 +4606,13 @@ namespace UangPasDesktop
 
             Panel top = new Panel {
                 Dock = DockStyle.Top,
-                Height = 85,
-                Padding = new Padding(18, 14, 18, 10),
+                Height = 90,
+                Padding = new Padding(18, 12, 18, 10),
                 BackColor = Color.FromArgb(15, 23, 42)
             };
 
             Label lblTitle = new Label {
-                Text = "Scan Barcode Kartu / No Registrasi / Nama WBP:",
+                Text = "Ketik No. Reg / Scan Barcode / Scan Sidik Jari Biometrik:",
                 ForeColor = Color.FromArgb(203, 213, 225),
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Dock = DockStyle.Top,
@@ -4537,9 +4620,14 @@ namespace UangPasDesktop
             };
             top.Controls.Add(lblTitle);
 
-            txtSearch = new TextBox {
+            Panel pnlSearchRow = new Panel {
                 Dock = DockStyle.Bottom,
-                Height = 32,
+                Height = 36
+            };
+
+            txtSearch = new TextBox {
+                Location = new Point(0, 2),
+                Width = 340,
                 Font = new Font("Segoe UI", 12f),
                 ForeColor = Color.FromArgb(15, 23, 42)
             };
@@ -4550,7 +4638,24 @@ namespace UangPasDesktop
                     DoSearch(txtSearch.Text.Trim());
                 }
             };
-            top.Controls.Add(txtSearch);
+            pnlSearchRow.Controls.Add(txtSearch);
+
+            Button btnScanFinger = new Button {
+                Text = "👆 Scan Sidik Jari",
+                Location = new Point(348, 0),
+                Width = 156,
+                Height = 35,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnScanFinger.FlatAppearance.BorderSize = 0;
+            btnScanFinger.Click += (s, e) => DoQuickFingerprintScan();
+            pnlSearchRow.Controls.Add(btnScanFinger);
+
+            top.Controls.Add(pnlSearchRow);
             this.Controls.Add(top);
 
             // Result Card
@@ -4657,6 +4762,101 @@ namespace UangPasDesktop
             this.Shown += (s, e) => txtSearch.Focus();
         }
 
+        private void DoQuickFingerprintScan()
+        {
+            if (this.reader == null)
+            {
+                ReaderCollection readers = ReaderCollection.GetReaders();
+                if (readers != null && readers.Count > 0) this.reader = readers[0];
+            }
+
+            if (this.reader == null)
+            {
+                MessageBox.Show("Sensor sidik jari belum terhubung.\nSilakan gunakan pencarian menggunakan Nomor Registrasi atau Barcode kartu.", "Sensor Tidak Ditemukan", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (FingerprintPromptForm prompt = new FingerprintPromptForm(this.reader, "Tempelkan jari WBP pada sensor untuk cek saldo..."))
+            {
+                if (prompt.ShowDialog(this) == DialogResult.OK && prompt.CapturedFmd != null)
+                {
+                    Fmd liveFmd = prompt.CapturedFmd;
+                    Dictionary<string, object> matched = null;
+                    int threshold = 2147483647 / 10000;
+                    int bestScore = int.MaxValue;
+                    int withTemplate = 0;
+
+                    foreach (var wbp in inmateList)
+                    {
+                        if (wbp.ContainsKey("template") && wbp["template"] != null && !string.IsNullOrEmpty(wbp["template"].ToString()))
+                        {
+                            withTemplate++;
+                            Fmd storedFmd = MainForm.ParseFmdFromTemplate(wbp["template"].ToString());
+                            if (storedFmd != null)
+                            {
+                                try
+                                {
+                                    CompareResult cr = Comparison.Compare(liveFmd, 0, storedFmd, 0);
+                                    if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Score < threshold && cr.Score < bestScore)
+                                    {
+                                        bestScore = cr.Score;
+                                        matched = wbp;
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+
+                    if (matched != null)
+                    {
+                        DisplayInmate(matched);
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "Sidik jari tidak cocok dengan " + withTemplate + " WBP terdaftar pada sistem.\nSilakan gunakan pencarian Nomor Registrasi atau daftarkan sidik jari di menu Rekam Jari.",
+                            "Sidik Jari Tidak Dikenali",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+                    }
+                }
+            }
+        }
+
+        private void DisplayInmate(Dictionary<string, object> match)
+        {
+            if (match == null) return;
+
+            lblNama.Text = match.ContainsKey("nama") ? match["nama"].ToString() : "-";
+            lblNoReg.Text = "No. Registrasi: " + (match.ContainsKey("no_registrasi") ? match["no_registrasi"].ToString() : "-");
+            lblKamar.Text = "Lokasi: " + (match.ContainsKey("blok_kamar") ? match["blok_kamar"].ToString() : "-") + " • Lapas: " + (match.ContainsKey("lapas_asal") ? match["lapas_asal"].ToString() : "-");
+
+            decimal saldo = match.ContainsKey("saldo") ? Convert.ToDecimal(match["saldo"]) : 0;
+            decimal limit = match.ContainsKey("remaining_limit") ? Convert.ToDecimal(match["remaining_limit"]) : (match.ContainsKey("limit_harian") ? Convert.ToDecimal(match["limit_harian"]) : 0);
+            string status = match.ContainsKey("status") ? match["status"].ToString().ToLower() : "aktif";
+
+            lblSaldo.Text = "Rp " + saldo.ToString("N0");
+            lblLimit.Text = "Sisa Kuota Belanja Hari Ini: Rp " + limit.ToString("N0");
+
+            if (status == "isolasi")
+            {
+                lblStatusSanction.Text = "⛔ STATUS: SANKSI REGISTER F (ISOLASI) - TRANSAKSI DIBLOKIR!";
+                lblStatusSanction.ForeColor = Color.FromArgb(220, 38, 38);
+            }
+            else if (status == "bebas")
+            {
+                lblStatusSanction.Text = "ℹ️ STATUS: TELAH BEBAS (NONAKTIF)";
+                lblStatusSanction.ForeColor = Color.FromArgb(100, 116, 139);
+            }
+            else
+            {
+                lblStatusSanction.Text = "✅ STATUS: AKTIF (DAPAT BERTRANSAKSI)";
+                lblStatusSanction.ForeColor = Color.FromArgb(16, 185, 129);
+            }
+        }
+
         private void DoSearch(string query)
         {
             if (string.IsNullOrEmpty(query)) return;
@@ -4693,32 +4893,7 @@ namespace UangPasDesktop
 
             if (match != null)
             {
-                lblNama.Text = match.ContainsKey("nama") ? match["nama"].ToString() : "-";
-                lblNoReg.Text = "No. Registrasi: " + (match.ContainsKey("no_registrasi") ? match["no_registrasi"].ToString() : "-");
-                lblKamar.Text = "Lokasi: " + (match.ContainsKey("blok_kamar") ? match["blok_kamar"].ToString() : "-") + " • Lapas: " + (match.ContainsKey("lapas_asal") ? match["lapas_asal"].ToString() : "-");
-
-                decimal saldo = match.ContainsKey("saldo") ? Convert.ToDecimal(match["saldo"]) : 0;
-                decimal limit = match.ContainsKey("remaining_limit") ? Convert.ToDecimal(match["remaining_limit"]) : (match.ContainsKey("limit_harian") ? Convert.ToDecimal(match["limit_harian"]) : 0);
-                string status = match.ContainsKey("status") ? match["status"].ToString().ToLower() : "aktif";
-
-                lblSaldo.Text = "Rp " + saldo.ToString("N0");
-                lblLimit.Text = "Sisa Kuota Belanja Hari Ini: Rp " + limit.ToString("N0");
-
-                if (status == "isolasi")
-                {
-                    lblStatusSanction.Text = "⛔ STATUS: SANKSI REGISTER F (ISOLASI) - TRANSAKSI DIBLOKIR!";
-                    lblStatusSanction.ForeColor = Color.FromArgb(220, 38, 38);
-                }
-                else if (status == "bebas")
-                {
-                    lblStatusSanction.Text = "ℹ️ STATUS: TELAH BEBAS (NONAKTIF)";
-                    lblStatusSanction.ForeColor = Color.FromArgb(100, 116, 139);
-                }
-                else
-                {
-                    lblStatusSanction.Text = "✅ STATUS: AKTIF (DAPAT BERTRANSAKSI)";
-                    lblStatusSanction.ForeColor = Color.FromArgb(16, 185, 129);
-                }
+                DisplayInmate(match);
             }
             else
             {
