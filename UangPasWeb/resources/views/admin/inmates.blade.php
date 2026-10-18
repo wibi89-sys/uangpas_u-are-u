@@ -19,10 +19,18 @@
         <button type="submit" class="btn btn-outline">Cari</button>
     </form>
 
-    <!-- Add WBP Button -->
-    <button class="btn btn-primary" onclick="openModal('modalAddWbp')">
-        <span>➕</span> Registrasi WBP Baru
-    </button>
+    <!-- Action Buttons -->
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="{{ route('admin.inmates.template_excel') }}" class="btn btn-outline" style="border-color: #10b981; color: #047857;" title="Unduh Format Microsoft Excel (.xlsx)">
+            <span>📊</span> Unduh Template Excel (.xlsx)
+        </a>
+        <button type="button" class="btn btn-outline" style="border-color: #0284c7; color: #0284c7;" onclick="openModal('modalImportExcel')">
+            <span>📥</span> Import Excel WBP
+        </button>
+        <button class="btn btn-primary" onclick="openModal('modalAddWbp')">
+            <span>➕</span> Registrasi WBP Baru
+        </button>
+    </div>
 </div>
 
 <!-- Table Card -->
@@ -409,6 +417,69 @@
         </form>
     </div>
 </div>
+
+<!-- Modal Import Excel WBP (.xlsx) -->
+<div id="modalImportExcel" class="modal" style="display: none; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); z-index: 9999; backdrop-filter: blur(4px);">
+    <div class="card" style="width: 100%; max-width: 580px; margin: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                <span>📊</span> Import Massal WBP dari Microsoft Excel
+            </h3>
+            <button type="button" onclick="closeModal('modalImportExcel')" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+
+        <form action="{{ route('admin.inmates.import_excel') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+
+            <!-- Step 1: Download Template Notice -->
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-bottom: 18px;">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <span style="font-size: 24px;">📥</span>
+                    <div>
+                        <strong style="color: #166534; font-size: 13.5px; display: block; margin-bottom: 4px;">Langkah 1: Gunakan Template Resmi Excel (.xlsx)</strong>
+                        <p style="font-size: 12px; color: #15803d; margin: 0 0 10px 0; line-height: 1.5;">
+                            Gunakan format template Microsoft Excel standar yang telah dilengkapi petunjuk kolom (No. Registrasi, Nama, Blok/Kamar, dsb).
+                        </p>
+                        <a href="{{ route('admin.inmates.template_excel') }}" class="btn btn-outline" style="background: white; border-color: #16a34a; color: #16a34a; font-size: 12px; padding: 6px 12px; font-weight: 700;">
+                            ⬇️ Unduh Format Template Excel (.xlsx)
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Upload File -->
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">
+                    Langkah 2: Pilih File Microsoft Excel (.xlsx / .xls): <span style="color: red;">*</span>
+                </label>
+                <div style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; background: #f8fafc; cursor: pointer;" onclick="document.getElementById('excelFileInput').click()">
+                    <span style="font-size: 32px; display: block; margin-bottom: 8px;">📂</span>
+                    <span id="excelFileName" style="font-size: 13px; font-weight: 600; color: #334155; display: block;">Klik di sini untuk memilih file Excel (.xlsx)</span>
+                    <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 4px;">Hanya format .xlsx atau .xls (Bukan CSV) &bull; Maksimal 10 MB</span>
+                    <input type="file" id="excelFileInput" name="excel_file" accept=".xlsx, .xls" style="display: none;" required onchange="handleExcelFileSelect(this)">
+                </div>
+            </div>
+
+            <!-- Information & Rules -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                <strong style="color: #1e40af; font-size: 12px; display: block; margin-bottom: 4px;">ℹ️ Ketentuan Import:</strong>
+                <ul style="font-size: 11.5px; color: #1e3a8a; margin: 0; padding-left: 18px; line-height: 1.5;">
+                    <li>No. Registrasi harus unik dan belum pernah didaftarkan.</li>
+                    <li>WBP yang berhasil diimpor otomatis berstatus <strong>Aktif</strong> dengan Nomor Virtual Account (VA) baru.</li>
+                    <li>Jika diisi nominal saldo awal, sistem akan mencatat transaksi setoran awal secara otomatis.</li>
+                    <li>Data sidik jari biometrik dapat direkam langsung di POS Kasir setelah WBP masuk sistem.</li>
+                </ul>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-outline" onclick="closeModal('modalImportExcel')">Batal</button>
+                <button type="submit" class="btn btn-primary" id="btnSubmitImport" style="background: #10b981; border-color: #10b981; font-weight: 700;">
+                    🚀 Mulai Import Data WBP
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -458,6 +529,17 @@
         document.getElementById('trfCurrentLocation').innerText = 'Posisi Saat Ini: ' + lapas + ' (' + blok + ')';
         document.getElementById('trfLapasTujuan').value = lapas;
         openModal('modalTransferWbp');
+    }
+
+    function handleExcelFileSelect(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const nameEl = document.getElementById('excelFileName');
+            if (nameEl) {
+                nameEl.innerHTML = '📄 <strong>' + file.name + '</strong> (' + (file.size / 1024).toFixed(1) + ' KB)';
+                nameEl.style.color = '#047857';
+            }
+        }
     }
 </script>
 @endsection

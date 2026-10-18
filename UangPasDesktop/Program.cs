@@ -56,18 +56,32 @@ namespace UangPasDesktop
         private Button btnCheckoutManual;
         private Button btnCheckoutFingerprint;
 
-        // UI Controls - Enrollment
+        // UI Controls - Enrollment (Batch & Searchable)
         private ComboBox cmbInmateEnroll;
+        private TextBox txtEnrollSearch;
+        private CheckBox chkEnrollOnlyUnenrolled;
+        private ListBox lstEnrollInmates;
+        private Label lblEnrollCount;
+        private Label lblEnrollSelectedName;
+        private Label lblEnrollSelectedReg;
+        private Label lblEnrollSelectedFpStatus;
+        private Dictionary<string, object> selectedEnrollInmate = null;
         private Label lblEnrollStep;
         private PictureBox picEnrollPreview;
         private Button btnStartEnroll;
         private List<Fmd> enrollFmdList = new List<Fmd>();
         private int currentEnrollStep = 0;
 
-        // UI Controls - Cek Saldo Kiosk
+        // UI Controls - Cek Saldo Kiosk (Barcode, No. Reg & Biometrik)
+        private TextBox txtKioskSearch;
+        private Button btnKioskSearch;
+        private Button btnKioskReset;
         private Label lblKioskNama;
         private Label lblKioskNoReg;
         private Label lblKioskKamar;
+        private Label lblKioskVa;
+        private Label lblKioskStatusBadge;
+        private Label lblKioskSanctionWarning;
         private Label lblKioskSaldo;
         private Label lblKioskLimit;
         private PictureBox picKioskFinger;
@@ -798,69 +812,214 @@ namespace UangPasDesktop
         #region TAB 2: ENROLLMENT
         private void BuildEnrollmentTab(TabPage page)
         {
-            Panel panel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32), AutoScroll = true };
+            Panel panel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), AutoScroll = true, BackColor = Color.FromArgb(248, 250, 252) };
 
             Label lblTitle = new Label {
-                Text = "Pendaftaran Sidik Jari Warga Binaan Pemasyarakatan",
+                Text = "👆 Pendaftaran & Perekaman Biometrik Sidik Jari WBP (4-Touch Enrollment)",
                 Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
                 AutoSize = true,
-                Location = new Point(32, 24)
+                Location = new Point(24, 16)
             };
             panel.Controls.Add(lblTitle);
 
             Label lblSub = new Label {
-                Text = "Pilih WBP yang belum memiliki rekam biometrik, lalu minta WBP menempelkan jari 4x pada sensor sidik jari.",
+                Text = "Cari WBP pada daftar di bawah, pilih nama yang bersangkutan, lalu minta WBP menempelkan jari 4x pada sensor biometrik.",
+                Font = new Font("Segoe UI", 9.5f),
                 ForeColor = Color.FromArgb(100, 116, 139),
                 AutoSize = true,
-                Location = new Point(32, 56)
+                Location = new Point(24, 44)
             };
             panel.Controls.Add(lblSub);
 
-            Label lblSelect = new Label { Text = "Pilih Warga Binaan:", Location = new Point(32, 100), AutoSize = true, Font = new Font("Segoe UI", 10f, FontStyle.Bold) };
-            panel.Controls.Add(lblSelect);
-
-            cmbInmateEnroll = new ComboBox {
-                Location = new Point(32, 128),
-                Width = 480,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 10.5f)
-            };
+            // Hidden fallback ComboBox
+            cmbInmateEnroll = new ComboBox { Visible = false, Location = new Point(0, 0), Width = 10 };
             panel.Controls.Add(cmbInmateEnroll);
 
-            // Preview Box
+            // LEFT PANEL: Inmate Search & List
+            GroupBox grpInmateList = new GroupBox {
+                Text = " 👥 Daftar Warga Binaan Pemasyarakatan ",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(24, 76),
+                Width = 470,
+                Height = 490,
+                BackColor = Color.White
+            };
+
+            Label lblSearchIcon = new Label {
+                Text = "🔍 Cari Nama / No. Reg / NIK / Kamar:",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Location = new Point(16, 26),
+                AutoSize = true
+            };
+            grpInmateList.Controls.Add(lblSearchIcon);
+
+            txtEnrollSearch = new TextBox {
+                Location = new Point(16, 48),
+                Width = 436,
+                Font = new Font("Segoe UI", 11f),
+                ForeColor = Color.FromArgb(15, 23, 42)
+            };
+            txtEnrollSearch.TextChanged += (s, e) => FilterEnrollInmates();
+            grpInmateList.Controls.Add(txtEnrollSearch);
+
+            chkEnrollOnlyUnenrolled = new CheckBox {
+                Text = "⚠️ Hanya WBP yang BELUM ada sidik jari",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(194, 65, 12),
+                Location = new Point(16, 82),
+                Width = 330,
+                Height = 24,
+                Checked = true
+            };
+            chkEnrollOnlyUnenrolled.CheckedChanged += (s, e) => FilterEnrollInmates();
+            grpInmateList.Controls.Add(chkEnrollOnlyUnenrolled);
+
+            Button btnRefreshInmates = new Button {
+                Text = "🔄 Segarkan",
+                Location = new Point(352, 80),
+                Width = 100,
+                Height = 26,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnRefreshInmates.Click += (s, e) => SyncDataFromApi();
+            grpInmateList.Controls.Add(btnRefreshInmates);
+
+            lblEnrollCount = new Label {
+                Text = "Memuat data...",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(16, 110),
+                Width = 436,
+                Height = 20
+            };
+            grpInmateList.Controls.Add(lblEnrollCount);
+
+            lstEnrollInmates = new ListBox {
+                Location = new Point(16, 134),
+                Width = 436,
+                Height = 338,
+                Font = new Font("Segoe UI", 9.5f),
+                BorderStyle = BorderStyle.FixedSingle,
+                ItemHeight = 22
+            };
+            lstEnrollInmates.SelectedIndexChanged += (s, e) => {
+                var item = lstEnrollInmates.SelectedItem as InmateEnrollItem;
+                if (item != null)
+                {
+                    selectedEnrollInmate = item.Inmate;
+                    UpdateEnrollInmateCard(item.Inmate);
+                }
+            };
+            grpInmateList.Controls.Add(lstEnrollInmates);
+            panel.Controls.Add(grpInmateList);
+
+            // RIGHT PANEL: Enrollment Action Card & Biometrics Preview
+            GroupBox grpAction = new GroupBox {
+                Text = " 👆 Panel Perekaman Biometrik Sensor U.are.U ",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(510, 76),
+                Width = 490,
+                Height = 490,
+                BackColor = Color.White
+            };
+
+            // Selected Inmate Card
+            Panel pnlSelectedInfo = new Panel {
+                Location = new Point(16, 26),
+                Width = 456,
+                Height = 105,
+                BackColor = Color.FromArgb(248, 250, 252),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(12)
+            };
+
+            lblEnrollSelectedName = new Label {
+                Text = "Pilih Warga Binaan dari daftar...",
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(10, 8),
+                Width = 430,
+                Height = 26
+            };
+            pnlSelectedInfo.Controls.Add(lblEnrollSelectedName);
+
+            lblEnrollSelectedReg = new Label {
+                Text = "No. Registrasi: -  •  Kamar: -",
+                Font = new Font("Consolas", 10f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(2, 132, 199),
+                Location = new Point(10, 36),
+                Width = 430,
+                Height = 20
+            };
+            pnlSelectedInfo.Controls.Add(lblEnrollSelectedReg);
+
+            lblEnrollSelectedFpStatus = new Label {
+                Text = "Status: -",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(10, 60),
+                Width = 430,
+                Height = 36
+            };
+            pnlSelectedInfo.Controls.Add(lblEnrollSelectedFpStatus);
+            grpAction.Controls.Add(pnlSelectedInfo);
+
+            // Sensor Preview Box
             picEnrollPreview = new PictureBox {
-                Location = new Point(32, 180),
-                Width = 200,
-                Height = 250,
+                Location = new Point(16, 145),
+                Width = 160,
+                Height = 200,
                 BackColor = Color.FromArgb(15, 23, 42),
                 BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
-            panel.Controls.Add(picEnrollPreview);
+            grpAction.Controls.Add(picEnrollPreview);
 
+            // Enrollment Status & Step Indicator
             lblEnrollStep = new Label {
-                Text = "Status: Siap memulai pendaftaran.",
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Text = "Status: Pilih Warga Binaan pada daftar, lalu klik tombol Mulai Perekaman di bawah.",
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(2, 132, 199),
-                Location = new Point(260, 200),
-                Width = 500,
-                Height = 80
+                Location = new Point(190, 150),
+                Width = 280,
+                Height = 100
             };
-            panel.Controls.Add(lblEnrollStep);
+            grpAction.Controls.Add(lblEnrollStep);
 
             btnStartEnroll = new Button {
                 Text = "▶️ Mulai Perekaman 4x Sentuh Jari",
-                Location = new Point(260, 290),
-                Width = 300,
+                Location = new Point(190, 260),
+                Width = 280,
                 Height = 48,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold)
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnStartEnroll.FlatAppearance.BorderSize = 0;
             btnStartEnroll.Click += (s, e) => StartEnrollmentSequence();
-            panel.Controls.Add(btnStartEnroll);
+            grpAction.Controls.Add(btnStartEnroll);
 
+            Label lblEnrollTips = new Label {
+                Text = "💡 Tips Perekaman: Minta WBP menempelkan jari yang sama sebanyak 4 kali dengan posisi mantap dan bersih dari minyak.",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(16, 360),
+                Width = 456,
+                Height = 50
+            };
+            grpAction.Controls.Add(lblEnrollTips);
+
+            panel.Controls.Add(grpAction);
             page.Controls.Add(panel);
         }
         #endregion
@@ -868,70 +1027,300 @@ namespace UangPasDesktop
         #region TAB 3: KIOSK CEK SALDO MANDIRI
         private void BuildKioskTab(TabPage page)
         {
-            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32), AutoScroll = true };
+            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), AutoScroll = true, BackColor = Color.FromArgb(248, 250, 252) };
 
             Label lblTitle = new Label {
-                Text = "Kios Pengecekan Saldo Mandiri WBP (Self-Service)",
+                Text = "🔍 Kios Pengecekan Saldo & Status Dompet WBP (Self-Service)",
                 Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
                 AutoSize = true,
-                Location = new Point(32, 24)
+                Location = new Point(24, 16)
             };
             p.Controls.Add(lblTitle);
 
             Label lblSub = new Label {
-                Text = "Narapidana cukup menempelkan jari pada sensor untuk melihat sisa saldo dan batas belanja hari ini.",
+                Text = "Pengecekan saldo dapat dilakukan dengan Scan Sidik Jari Biometrik atau Scan Barcode Kartu / Ketik No. Registrasi WBP.",
+                Font = new Font("Segoe UI", 9.5f),
                 ForeColor = Color.FromArgb(100, 116, 139),
                 AutoSize = true,
-                Location = new Point(32, 56)
+                Location = new Point(24, 44)
             };
             p.Controls.Add(lblSub);
 
+            // ==========================================
+            // SEARCH & BARCODE SCAN BAR
+            // ==========================================
+            Panel pnlSearch = new Panel {
+                Location = new Point(24, 76),
+                Width = 920,
+                Height = 62,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(12, 10, 12, 10)
+            };
+
+            Label lblSearchIcon = new Label {
+                Text = "💳 Scan Barcode / Ketik No. Registrasi / NIK / Nama:",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Location = new Point(10, 7),
+                AutoSize = true
+            };
+            pnlSearch.Controls.Add(lblSearchIcon);
+
+            txtKioskSearch = new TextBox {
+                Location = new Point(12, 28),
+                Width = 530,
+                Font = new Font("Segoe UI", 11.5f),
+                ForeColor = Color.FromArgb(15, 23, 42)
+            };
+            txtKioskSearch.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    DoKioskSearch(txtKioskSearch.Text.Trim());
+                }
+            };
+            pnlSearch.Controls.Add(txtKioskSearch);
+
+            btnKioskSearch = new Button {
+                Text = "🔍 Cek Saldo [Enter]",
+                Location = new Point(552, 26),
+                Width = 160,
+                Height = 32,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnKioskSearch.FlatAppearance.BorderSize = 0;
+            btnKioskSearch.Click += (s, e) => DoKioskSearch(txtKioskSearch.Text.Trim());
+            pnlSearch.Controls.Add(btnKioskSearch);
+
+            btnKioskReset = new Button {
+                Text = "🔄 Bersihkan",
+                Location = new Point(722, 26),
+                Width = 110,
+                Height = 32,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnKioskReset.Click += (s, e) => ResetKioskDisplay();
+            pnlSearch.Controls.Add(btnKioskReset);
+
+            p.Controls.Add(pnlSearch);
+
+            // ==========================================
+            // LEFT COLUMN: SENSOR BIOMETRIK
+            // ==========================================
+            GroupBox grpSensor = new GroupBox {
+                Text = " 👆 Scan Sidik Jari Biometrik ",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(24, 150),
+                Width = 260,
+                Height = 420,
+                BackColor = Color.White
+            };
+
             picKioskFinger = new PictureBox {
-                Location = new Point(32, 110),
-                Width = 180,
-                Height = 220,
+                Location = new Point(24, 30),
+                Width = 210,
+                Height = 240,
                 BackColor = Color.FromArgb(15, 23, 42),
                 BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
-            p.Controls.Add(picKioskFinger);
+            grpSensor.Controls.Add(picKioskFinger);
 
             btnStartKioskScan = new Button {
-                Text = "👆 Scan Sidik Jari untuk Cek Saldo",
-                Location = new Point(32, 345),
-                Width = 260,
-                Height = 48,
+                Text = "👆 Scan Sidik Jari WBP",
+                Location = new Point(24, 282),
+                Width = 210,
+                Height = 46,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold)
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnStartKioskScan.FlatAppearance.BorderSize = 0;
             btnStartKioskScan.Click += (s, e) => DoKioskScan();
-            p.Controls.Add(btnStartKioskScan);
+            grpSensor.Controls.Add(btnStartKioskScan);
 
-            // Info Card
+            Label lblSensorHint = new Label {
+                Text = "Minta WBP menempelkan jari pada sensor untuk menampilkan saldo secara otomatis.",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(24, 340),
+                Width = 210,
+                Height = 65,
+                TextAlign = ContentAlignment.TopCenter
+            };
+            grpSensor.Controls.Add(lblSensorHint);
+
+            p.Controls.Add(grpSensor);
+
+            // ==========================================
+            // RIGHT COLUMN: DIGITAL WALLET CARD
+            // ==========================================
             Panel infoCard = new Panel {
-                Location = new Point(320, 110),
-                Width = 520,
-                Height = 280,
+                Location = new Point(302, 150),
+                Width = 642,
+                Height = 420,
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(24)
+                Padding = new Padding(20)
             };
 
-            lblKioskNama = new Label { Text = "Nama: -", Font = new Font("Segoe UI", 14f, FontStyle.Bold), Location = new Point(20, 20), Width = 480 };
-            lblKioskNoReg = new Label { Text = "No. Registrasi: -", Font = new Font("Segoe UI", 10.5f), Location = new Point(20, 60), Width = 480 };
-            lblKioskKamar = new Label { Text = "Kamar / Blok: -", Font = new Font("Segoe UI", 10.5f), Location = new Point(20, 90), Width = 480 };
-            lblKioskSaldo = new Label { Text = "Sisa Saldo: Rp 0", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = Color.FromArgb(16, 185, 129), Location = new Point(20, 130), Width = 480 };
-            lblKioskLimit = new Label { Text = "Sisa Limit Belanja Hari Ini: Rp 0", Font = new Font("Segoe UI", 11f, FontStyle.Bold), ForeColor = Color.FromArgb(2, 132, 199), Location = new Point(20, 180), Width = 480 };
+            Label lblCardTitle = new Label {
+                Text = "KARTU DOMPET DIGITAL WARGA BINAAN",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(20, 16),
+                Width = 360,
+                Height = 18
+            };
+            infoCard.Controls.Add(lblCardTitle);
 
+            lblKioskStatusBadge = new Label {
+                Text = "● MENUNGGU SCAN / PENCARIAN",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(360, 14),
+                Width = 250,
+                Height = 22,
+                TextAlign = ContentAlignment.MiddleRight
+            };
+            infoCard.Controls.Add(lblKioskStatusBadge);
+
+            lblKioskNama = new Label {
+                Text = "Nama WBP: -",
+                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(20, 38),
+                Width = 590,
+                Height = 32
+            };
             infoCard.Controls.Add(lblKioskNama);
-            infoCard.Controls.Add(lblKioskNoReg);
-            infoCard.Controls.Add(lblKioskKamar);
-            infoCard.Controls.Add(lblKioskSaldo);
-            infoCard.Controls.Add(lblKioskLimit);
-            p.Controls.Add(infoCard);
 
+            lblKioskNoReg = new Label {
+                Text = "No. Registrasi: -",
+                Font = new Font("Consolas", 10.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(2, 132, 199),
+                Location = new Point(20, 72),
+                Width = 300,
+                Height = 22
+            };
+            infoCard.Controls.Add(lblKioskNoReg);
+
+            lblKioskKamar = new Label {
+                Text = "Kamar / Blok: -",
+                Font = new Font("Segoe UI", 9.5f),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Location = new Point(330, 72),
+                Width = 280,
+                Height = 22
+            };
+            infoCard.Controls.Add(lblKioskKamar);
+
+            lblKioskSanctionWarning = new Label {
+                Text = "",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 38, 38),
+                Location = new Point(20, 96),
+                Width = 590,
+                Height = 24
+            };
+            infoCard.Controls.Add(lblKioskSanctionWarning);
+
+            // SISA SALDO BOX (Guaranteed ample height, NO text clipping)
+            Panel pnlSaldoBox = new Panel {
+                Location = new Point(20, 124),
+                Width = 598,
+                Height = 110,
+                BackColor = Color.FromArgb(236, 253, 245),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(16, 10, 16, 10)
+            };
+            Label lblSaldoHeader = new Label {
+                Text = "💰 SISA SALDO DOMPET ELEKTRONIK:",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(4, 120, 87),
+                Location = new Point(14, 10),
+                Width = 400,
+                Height = 20
+            };
+            pnlSaldoBox.Controls.Add(lblSaldoHeader);
+
+            lblKioskSaldo = new Label {
+                Text = "Rp 0",
+                Font = new Font("Segoe UI", 24f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(5, 150, 105),
+                Location = new Point(14, 34),
+                Width = 560,
+                Height = 60,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            pnlSaldoBox.Controls.Add(lblKioskSaldo);
+            infoCard.Controls.Add(pnlSaldoBox);
+
+            // SISA LIMIT BOX
+            Panel pnlLimitBox = new Panel {
+                Location = new Point(20, 244),
+                Width = 598,
+                Height = 80,
+                BackColor = Color.FromArgb(240, 249, 255),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(16, 8, 16, 8)
+            };
+            Label lblLimitHeader = new Label {
+                Text = "🛒 SISA KUOTA BELANJA HARI INI:",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(3, 105, 161),
+                Location = new Point(14, 8),
+                Width = 400,
+                Height = 18
+            };
+            pnlLimitBox.Controls.Add(lblLimitHeader);
+
+            lblKioskLimit = new Label {
+                Text = "Rp 0",
+                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(2, 132, 199),
+                Location = new Point(14, 28),
+                Width = 560,
+                Height = 42,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            pnlLimitBox.Controls.Add(lblKioskLimit);
+            infoCard.Controls.Add(pnlLimitBox);
+
+            lblKioskVa = new Label {
+                Text = "Virtual Account Bank: -  •  Gunakan untuk titipan transfer uang keluarga",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(20, 334),
+                Width = 590,
+                Height = 22
+            };
+            infoCard.Controls.Add(lblKioskVa);
+
+            Label lblKioskFooter = new Label {
+                Text = "ℹ️ Data saldo disinkronkan secara real-time dengan server lokal Lapas & Kanwil.",
+                Font = new Font("Segoe UI", 8f, FontStyle.Italic),
+                ForeColor = Color.FromArgb(148, 163, 184),
+                Location = new Point(20, 364),
+                Width = 590,
+                Height = 22
+            };
+            infoCard.Controls.Add(lblKioskFooter);
+
+            p.Controls.Add(infoCard);
             page.Controls.Add(p);
         }
         #endregion
@@ -1988,6 +2377,7 @@ namespace UangPasDesktop
                         cmbInmateEnroll.Items.Add(wbp["id"] + " - " + wbp["nama"] + " (" + wbp["no_registrasi"] + ")" + hasFp);
                     }
                     if (cmbInmateEnroll.Items.Count > 0) cmbInmateEnroll.SelectedIndex = 0;
+                    try { this.BeginInvoke((Action)(() => FilterEnrollInmates())); } catch { }
                     try { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "cache_inmates.json"), inmatesJson); } catch { }
                 }
 
@@ -2085,6 +2475,7 @@ namespace UangPasDesktop
                             cmbInmateEnroll.Items.Add(wbp["id"] + " - " + wbp["nama"] + " (" + wbp["no_registrasi"] + ")" + hasFp);
                         }
                         if (cmbInmateEnroll.Items.Count > 0) cmbInmateEnroll.SelectedIndex = 0;
+                        try { this.BeginInvoke((Action)(() => FilterEnrollInmates())); } catch { }
                     }
                 }
 
@@ -2938,27 +3329,157 @@ namespace UangPasDesktop
         }
         #endregion
 
-        #region ENROLLMENT WIZARD (4-TOUCH)
+        #region ENROLLMENT WIZARD (SEARCHABLE & BATCH 4-TOUCH)
+        private void UpdateEnrollInmateCard(Dictionary<string, object> wbp)
+        {
+            if (wbp == null) return;
+            string nama = wbp.ContainsKey("nama") && wbp["nama"] != null ? wbp["nama"].ToString() : "-";
+            string reg = wbp.ContainsKey("no_registrasi") && wbp["no_registrasi"] != null ? wbp["no_registrasi"].ToString() : "-";
+            string kamar = wbp.ContainsKey("blok_kamar") && wbp["blok_kamar"] != null ? wbp["blok_kamar"].ToString() : "-";
+            bool hasFp = wbp.ContainsKey("has_fingerprint") && Convert.ToBoolean(wbp["has_fingerprint"]);
+
+            if (lblEnrollSelectedName != null) lblEnrollSelectedName.Text = nama;
+            if (lblEnrollSelectedReg != null) lblEnrollSelectedReg.Text = "No. Registrasi: " + reg + "  •  Kamar: " + kamar;
+
+            if (lblEnrollSelectedFpStatus != null)
+            {
+                if (hasFp)
+                {
+                    lblEnrollSelectedFpStatus.Text = "Status: ✅ SUDAH TERDAFTAR DI SISTEM\n(Perekaman ulang akan memperbarui template sidik jari WBP)";
+                    lblEnrollSelectedFpStatus.ForeColor = Color.FromArgb(5, 150, 105);
+                    if (btnStartEnroll != null) btnStartEnroll.Text = "🔄 Perbarui Sidik Jari (4x Sentuh)";
+                }
+                else
+                {
+                    lblEnrollSelectedFpStatus.Text = "Status: ⚪ BELUM ADA SIDIK JARI\n(Wajib rekam 4x sentuh untuk aktivasi belanja di kantin)";
+                    lblEnrollSelectedFpStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                    if (btnStartEnroll != null) btnStartEnroll.Text = "▶️ Mulai Perekaman 4x Sentuh Jari";
+                }
+            }
+
+            if (lblEnrollStep != null)
+            {
+                lblEnrollStep.Text = "Siap merekam sidik jari untuk:\n" + nama;
+                lblEnrollStep.ForeColor = Color.FromArgb(2, 132, 199);
+            }
+        }
+
+        private void FilterEnrollInmates()
+        {
+            if (lstEnrollInmates == null) return;
+
+            string query = txtEnrollSearch != null ? txtEnrollSearch.Text.Trim().ToLower() : "";
+            bool onlyUnenrolled = chkEnrollOnlyUnenrolled != null && chkEnrollOnlyUnenrolled.Checked;
+
+            lstEnrollInmates.BeginUpdate();
+            lstEnrollInmates.Items.Clear();
+
+            int matchedCount = 0;
+            int unenrolledCount = 0;
+            InmateEnrollItem toSelect = null;
+
+            foreach (var wbp in inmateList)
+            {
+                bool hasFp = wbp.ContainsKey("has_fingerprint") && Convert.ToBoolean(wbp["has_fingerprint"]);
+                if (!hasFp) unenrolledCount++;
+
+                if (onlyUnenrolled && hasFp) continue;
+
+                string nama = wbp.ContainsKey("nama") && wbp["nama"] != null ? wbp["nama"].ToString().ToLower() : "";
+                string reg = wbp.ContainsKey("no_registrasi") && wbp["no_registrasi"] != null ? wbp["no_registrasi"].ToString().ToLower() : "";
+                string kamar = wbp.ContainsKey("blok_kamar") && wbp["blok_kamar"] != null ? wbp["blok_kamar"].ToString().ToLower() : "";
+                string nik = wbp.ContainsKey("nik") && wbp["nik"] != null ? wbp["nik"].ToString().ToLower() : "";
+
+                if (!string.IsNullOrEmpty(query))
+                {
+                    if (!nama.Contains(query) && !reg.Contains(query) && !kamar.Contains(query) && !nik.Contains(query))
+                    {
+                        continue;
+                    }
+                }
+
+                var item = new InmateEnrollItem { Inmate = wbp };
+                lstEnrollInmates.Items.Add(item);
+                matchedCount++;
+
+                if (selectedEnrollInmate != null && wbp.ContainsKey("id") && selectedEnrollInmate.ContainsKey("id") &&
+                    wbp["id"].ToString() == selectedEnrollInmate["id"].ToString())
+                {
+                    toSelect = item;
+                }
+            }
+
+            lstEnrollInmates.EndUpdate();
+
+            if (lblEnrollCount != null)
+            {
+                lblEnrollCount.Text = "Menampilkan " + matchedCount + " dari " + inmateList.Count + " WBP (" + unenrolledCount + " belum ada sidik jari)";
+            }
+
+            if (toSelect != null)
+            {
+                lstEnrollInmates.SelectedItem = toSelect;
+            }
+            else if (lstEnrollInmates.Items.Count > 0)
+            {
+                lstEnrollInmates.SelectedIndex = 0;
+            }
+            else
+            {
+                selectedEnrollInmate = null;
+                if (lblEnrollSelectedName != null) lblEnrollSelectedName.Text = "(Tidak ada WBP yang cocok)";
+                if (lblEnrollSelectedReg != null) lblEnrollSelectedReg.Text = "No. Registrasi: -";
+                if (lblEnrollSelectedFpStatus != null)
+                {
+                    lblEnrollSelectedFpStatus.Text = onlyUnenrolled ? "Semua WBP sudah memiliki rekam sidik jari." : "Pencarian tidak menemukan hasil.";
+                    lblEnrollSelectedFpStatus.ForeColor = Color.FromArgb(100, 116, 139);
+                }
+            }
+        }
+
         private void StartEnrollmentSequence()
         {
-            if (cmbInmateEnroll.SelectedIndex < 0)
+            if (selectedEnrollInmate == null && lstEnrollInmates != null && lstEnrollInmates.SelectedItem != null)
             {
-                MessageBox.Show("Pilih Warga Binaan terlebih dahulu.", "Peringatan", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                var item = lstEnrollInmates.SelectedItem as InmateEnrollItem;
+                if (item != null) selectedEnrollInmate = item.Inmate;
+            }
+
+            if (selectedEnrollInmate == null && cmbInmateEnroll.SelectedIndex >= 0)
+            {
+                int fallbackId = Convert.ToInt32(cmbInmateEnroll.SelectedItem.ToString().Split('-')[0].Trim());
+                selectedEnrollInmate = inmateList.Find(x => x.ContainsKey("id") && Convert.ToInt32(x["id"]) == fallbackId);
+            }
+
+            if (selectedEnrollInmate == null)
+            {
+                MessageBox.Show("Silakan pilih salah satu Warga Binaan pada daftar terlebih dahulu.", "Peringatan", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            int inmateId = Convert.ToInt32(cmbInmateEnroll.SelectedItem.ToString().Split('-')[0].Trim());
+            if (currentReader == null)
+            {
+                InitializeBiometrics();
+                if (currentReader == null)
+                {
+                    MessageBox.Show("Sensor sidik jari biometrik belum terdeteksi.\nSilakan pastikan kabel scanner U.are.U terpasang pada port USB komputer.", "Sensor Belum Siap", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            int inmateId = Convert.ToInt32(selectedEnrollInmate["id"]);
+            string inmateNama = selectedEnrollInmate.ContainsKey("nama") ? selectedEnrollInmate["nama"].ToString() : "WBP";
             enrollFmdList.Clear();
             currentEnrollStep = 0;
 
             for (int step = 1; step <= 4; step++)
             {
-                lblEnrollStep.Text = "LANGKAH " + step + " DARI 4:\nTempelkan jari WBP pada sensor...";
+                lblEnrollStep.Text = "LANGKAH " + step + " DARI 4:\nTempelkan jari " + inmateNama + " pada sensor...";
                 lblEnrollStep.ForeColor = Color.FromArgb(2, 132, 199);
                 Application.DoEvents();
                 System.Threading.Thread.Sleep(200);
 
-                using (FingerprintPromptForm prompt = new FingerprintPromptForm(currentReader, "Langkah " + step + "/4: Tempelkan jari WBP pada sensor sidik jari"))
+                using (FingerprintPromptForm prompt = new FingerprintPromptForm(currentReader, "Langkah " + step + "/4: Tempelkan jari " + inmateNama + " pada sensor sidik jari"))
                 {
                     if (prompt.ShowDialog(this) == DialogResult.OK && prompt.CapturedFmd != null)
                     {
@@ -2978,7 +3499,7 @@ namespace UangPasDesktop
             }
 
             // Combine 4 FMDs into Master Enrollment FMD
-            lblEnrollStep.Text = "Memproses Master Template...";
+            lblEnrollStep.Text = "Memproses Master Template ANSI/INCITS...";
             Application.DoEvents();
 
             try
@@ -2994,11 +3515,17 @@ namespace UangPasDesktop
                     };
                     string resp = HttpPost(this.apiUrl + "/pos/inmate/" + inmateId + "/save-fingerprint", serializer.Serialize(payload));
 
-                    lblEnrollStep.Text = "✅ SUKSES! Sidik jari berhasil disimpan di server pusat.";
+                    lblEnrollStep.Text = "✅ SUKSES! Sidik jari " + inmateNama + " berhasil tersimpan di server.";
                     lblEnrollStep.ForeColor = Color.FromArgb(16, 185, 129);
 
-                    MessageBox.Show("Pendaftaran sidik jari WBP berhasil disimpan ke database hosting!", "Sukses", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    SyncDataFromApi();
+                    // Mark as enrolled locally
+                    selectedEnrollInmate["has_fingerprint"] = true;
+                    selectedEnrollInmate["template"] = masterXml;
+
+                    MessageBox.Show("Pendaftaran sidik jari WBP " + inmateNama + " berhasil disimpan ke server pusat!\n\nWBP ini kini dapat langsung berbelanja di kasir POS.", "Perekaman Berhasil", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // Refresh list - if onlyUnenrolled is active, this person disappears and next person is selected!
+                    FilterEnrollInmates();
                 }
                 else
                 {
@@ -3014,10 +3541,21 @@ namespace UangPasDesktop
         }
         #endregion
 
-        #region KIOSK SCAN (CEK SALDO)
+        #region TAB 3: KIOSK SCAN & SEARCH (CEK SALDO)
         private void DoKioskScan()
         {
-            using (FingerprintPromptForm prompt = new FingerprintPromptForm(currentReader, "Tempelkan jari Anda pada sensor untuk melihat informasi saldo..."))
+            if (currentReader == null)
+            {
+                InitializeBiometrics();
+                if (currentReader == null)
+                {
+                    MessageBox.Show("Sensor sidik jari biometrik belum terdeteksi.\n\nAnda dapat mengecek saldo dengan mengetikkan Nomor Registrasi / Nama WBP atau melakukan scan barcode kartu pada kotak pencarian di atas.", "Sensor Belum Siap", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (txtKioskSearch != null) txtKioskSearch.Focus();
+                    return;
+                }
+            }
+
+            using (FingerprintPromptForm prompt = new FingerprintPromptForm(currentReader, "Tempelkan jari WBP pada sensor untuk melihat informasi saldo..."))
             {
                 if (prompt.ShowDialog(this) == DialogResult.OK && prompt.CapturedFmd != null)
                 {
@@ -3054,20 +3592,164 @@ namespace UangPasDesktop
 
                     if (matched != null)
                     {
-                        lblKioskNama.Text = "Nama: " + matched["nama"];
-                        lblKioskNoReg.Text = "No. Registrasi: " + matched["no_registrasi"];
-                        lblKioskKamar.Text = "Kamar / Blok: " + matched["blok_kamar"];
-                        decimal saldo = Convert.ToDecimal(matched["saldo"]);
-                        decimal limit = Convert.ToDecimal(matched["remaining_limit"]);
-                        lblKioskSaldo.Text = "Sisa Saldo: Rp " + saldo.ToString("N0");
-                        lblKioskLimit.Text = "Sisa Limit Hari Ini: Rp " + limit.ToString("N0");
+                        DisplayKioskInmate(matched, true);
+                        FetchFreshInmateBalance(matched);
                     }
                     else
                     {
-                        MessageBox.Show("Sidik jari tidak terdaftar pada sistem.", "Tidak Dikenal", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Sidik jari belum terdaftar pada sistem.\nSilakan daftarkan sidik jari WBP pada menu 'Rekam Jari' terlebih dahulu, atau gunakan pencarian Nomor Registrasi di atas.", "Sidik Jari Tidak Dikenal", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
             }
+        }
+
+        private void DoKioskSearch(string query)
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                MessageBox.Show("Masukkan Nomor Registrasi, Barcode Kartu, atau Nama WBP terlebih dahulu.", "Pencarian Saldo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (txtKioskSearch != null) txtKioskSearch.Focus();
+                return;
+            }
+
+            // 1. Search locally in inmateList
+            Dictionary<string, object> found = inmateList.Find(x => 
+                (x.ContainsKey("no_registrasi") && x["no_registrasi"] != null && x["no_registrasi"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (x.ContainsKey("nama") && x["nama"] != null && x["nama"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (x.ContainsKey("nik") && x["nik"] != null && x["nik"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (x.ContainsKey("va_number") && x["va_number"] != null && x["va_number"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+            );
+
+            if (found != null)
+            {
+                DisplayKioskInmate(found, false);
+                FetchFreshInmateBalance(found);
+            }
+            else
+            {
+                // Try direct API lookup if not found locally
+                ThreadPool.QueueUserWorkItem(_ => {
+                    try
+                    {
+                        string url = this.apiUrl + "/pos/inmate/" + Uri.EscapeDataString(query);
+                        string json = HttpGet(url);
+                        var resp = serializer.Deserialize<Dictionary<string, object>>(json);
+                        if (resp != null && resp.ContainsKey("success") && Convert.ToBoolean(resp["success"]) && resp.ContainsKey("data"))
+                        {
+                            var wbpData = (Dictionary<string, object>)resp["data"];
+                            this.BeginInvoke((Action)(() => {
+                                DisplayKioskInmate(wbpData, false);
+                            }));
+                            return;
+                        }
+                    }
+                    catch { }
+
+                    this.BeginInvoke((Action)(() => {
+                        MessageBox.Show("Warga Binaan dengan kata kunci '" + query + "' tidak ditemukan di database Lapas.", "Pencarian WBP", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        if (txtKioskSearch != null)
+                        {
+                            txtKioskSearch.SelectAll();
+                            txtKioskSearch.Focus();
+                        }
+                    }));
+                });
+            }
+        }
+
+        private void DisplayKioskInmate(Dictionary<string, object> wbp, bool fromBiometric)
+        {
+            if (wbp == null) return;
+
+            string nama = wbp.ContainsKey("nama") && wbp["nama"] != null ? wbp["nama"].ToString() : "-";
+            string reg = wbp.ContainsKey("no_registrasi") && wbp["no_registrasi"] != null ? wbp["no_registrasi"].ToString() : "-";
+            string kamar = wbp.ContainsKey("blok_kamar") && wbp["blok_kamar"] != null ? wbp["blok_kamar"].ToString() : "-";
+            string status = wbp.ContainsKey("status") && wbp["status"] != null ? wbp["status"].ToString().ToLower() : "aktif";
+            string va = wbp.ContainsKey("va_number") && wbp["va_number"] != null ? wbp["va_number"].ToString() : "-";
+
+            decimal saldo = wbp.ContainsKey("saldo") ? Convert.ToDecimal(wbp["saldo"]) : 0;
+            decimal limit = wbp.ContainsKey("remaining_limit") ? Convert.ToDecimal(wbp["remaining_limit"]) : (wbp.ContainsKey("limit_harian") ? Convert.ToDecimal(wbp["limit_harian"]) : 0);
+
+            if (lblKioskNama != null) lblKioskNama.Text = nama;
+            if (lblKioskNoReg != null) lblKioskNoReg.Text = "No. Registrasi: " + reg;
+            if (lblKioskKamar != null) lblKioskKamar.Text = "Kamar / Blok: " + kamar;
+            if (lblKioskVa != null) lblKioskVa.Text = "Virtual Account: " + va + "  •  Gunakan untuk titipan transfer uang keluarga";
+
+            if (lblKioskSaldo != null) lblKioskSaldo.Text = "Rp " + saldo.ToString("N0");
+            if (lblKioskLimit != null) lblKioskLimit.Text = "Rp " + limit.ToString("N0");
+
+            if (lblKioskStatusBadge != null && lblKioskSanctionWarning != null)
+            {
+                if (status == "isolasi")
+                {
+                    lblKioskStatusBadge.Text = "⛔ REGISTER F (ISOLASI)";
+                    lblKioskStatusBadge.ForeColor = Color.FromArgb(220, 38, 38);
+                    lblKioskSanctionWarning.Text = "⚠️ SANKSI REGISTER F AKTIF - SELURUH TRANSAKSI BELANJA KANTIN DIBLOKIR!";
+                    lblKioskSanctionWarning.Visible = true;
+                }
+                else if (status == "bebas")
+                {
+                    lblKioskStatusBadge.Text = "🕊️ TELAH BEBAS";
+                    lblKioskStatusBadge.ForeColor = Color.FromArgb(100, 116, 139);
+                    lblKioskSanctionWarning.Text = "ℹ️ Warga Binaan telah dinyatakan bebas. Rekening dompet telah ditutup.";
+                    lblKioskSanctionWarning.Visible = true;
+                }
+                else
+                {
+                    lblKioskStatusBadge.Text = fromBiometric ? "✅ TERVERIFIKASI (SIDIK JARI)" : "● AKTIF (KARTU/BARCODE)";
+                    lblKioskStatusBadge.ForeColor = Color.FromArgb(5, 150, 105);
+                    lblKioskSanctionWarning.Visible = false;
+                }
+            }
+        }
+
+        private void ResetKioskDisplay()
+        {
+            if (txtKioskSearch != null)
+            {
+                txtKioskSearch.Clear();
+                txtKioskSearch.Focus();
+            }
+            if (picKioskFinger != null) picKioskFinger.Image = null;
+            if (lblKioskNama != null) lblKioskNama.Text = "Nama WBP: -";
+            if (lblKioskNoReg != null) lblKioskNoReg.Text = "No. Registrasi: -";
+            if (lblKioskKamar != null) lblKioskKamar.Text = "Kamar / Blok: -";
+            if (lblKioskVa != null) lblKioskVa.Text = "Virtual Account: -  •  Gunakan untuk titipan transfer uang keluarga";
+            if (lblKioskSaldo != null) lblKioskSaldo.Text = "Rp 0";
+            if (lblKioskLimit != null) lblKioskLimit.Text = "Rp 0";
+            if (lblKioskStatusBadge != null)
+            {
+                lblKioskStatusBadge.Text = "● MENUNGGU SCAN / PENCARIAN";
+                lblKioskStatusBadge.ForeColor = Color.FromArgb(100, 116, 139);
+            }
+            if (lblKioskSanctionWarning != null) lblKioskSanctionWarning.Visible = false;
+        }
+
+        private void FetchFreshInmateBalance(Dictionary<string, object> wbp)
+        {
+            if (wbp == null || !wbp.ContainsKey("id")) return;
+            string idOrReg = wbp.ContainsKey("no_registrasi") ? wbp["no_registrasi"].ToString() : wbp["id"].ToString();
+
+            ThreadPool.QueueUserWorkItem(_ => {
+                try
+                {
+                    string url = this.apiUrl + "/pos/inmate/" + Uri.EscapeDataString(idOrReg);
+                    string json = HttpGet(url);
+                    var resp = serializer.Deserialize<Dictionary<string, object>>(json);
+                    if (resp != null && resp.ContainsKey("success") && Convert.ToBoolean(resp["success"]) && resp.ContainsKey("data"))
+                    {
+                        var fresh = (Dictionary<string, object>)resp["data"];
+                        if (fresh.ContainsKey("saldo")) wbp["saldo"] = fresh["saldo"];
+                        if (fresh.ContainsKey("remaining_limit")) wbp["remaining_limit"] = fresh["remaining_limit"];
+                        if (fresh.ContainsKey("status")) wbp["status"] = fresh["status"];
+
+                        this.BeginInvoke((Action)(() => {
+                            DisplayKioskInmate(wbp, false);
+                        }));
+                    }
+                }
+                catch { }
+            });
         }
         #endregion
 
@@ -3795,6 +4477,21 @@ namespace UangPasDesktop
             txt.BringToFront();
         }
     }
+    
+    public class InmateEnrollItem
+    {
+        public Dictionary<string, object> Inmate { get; set; }
+        public override string ToString()
+        {
+            if (Inmate == null) return "";
+            string reg = Inmate.ContainsKey("no_registrasi") && Inmate["no_registrasi"] != null ? Inmate["no_registrasi"].ToString() : "-";
+            string nama = Inmate.ContainsKey("nama") && Inmate["nama"] != null ? Inmate["nama"].ToString() : "-";
+            string kamar = Inmate.ContainsKey("blok_kamar") && Inmate["blok_kamar"] != null ? Inmate["blok_kamar"].ToString() : "-";
+            bool hasFp = Inmate.ContainsKey("has_fingerprint") && Convert.ToBoolean(Inmate["has_fingerprint"]);
+            string badge = hasFp ? "[✓ Terdaftar]" : "[⚪ BELUM REKAM]";
+            return badge + "  " + reg + " - " + nama + " (" + kamar + ")";
+        }
+    }
 
     public class QuickCheckSaldoForm : Form
     {
@@ -3817,7 +4514,7 @@ namespace UangPasDesktop
             this.apiUrl = api;
 
             this.Text = "🔍 Cek Saldo & Limit WBP Cepat (F8)";
-            this.Size = new Size(540, 480);
+            this.Size = new Size(560, 520);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -3901,9 +4598,9 @@ namespace UangPasDesktop
 
             Panel saldoBox = new Panel {
                 Dock = DockStyle.Top,
-                Height = 85,
+                Height = 110,
                 BackColor = Color.FromArgb(240, 253, 244),
-                Padding = new Padding(16, 10, 16, 10),
+                Padding = new Padding(16, 12, 16, 12),
                 Margin = new Padding(0, 10, 0, 0)
             };
             Label lblSaldoTitle = new Label {
@@ -3911,14 +4608,14 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(22, 101, 52),
                 Dock = DockStyle.Top,
-                Height = 20
+                Height = 22
             };
             lblSaldo = new Label {
                 Text = "Rp 0",
-                Font = new Font("Segoe UI", 20f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 22f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(22, 101, 52),
-                Dock = DockStyle.Bottom,
-                Height = 44
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
             };
             saldoBox.Controls.Add(lblSaldo);
             saldoBox.Controls.Add(lblSaldoTitle);
@@ -3926,7 +4623,7 @@ namespace UangPasDesktop
 
             lblLimit = new Label {
                 Text = "Sisa Kuota Belanja Hari Ini: -",
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(14, 165, 233),
                 Dock = DockStyle.Top,
                 Height = 36,
@@ -3971,6 +4668,29 @@ namespace UangPasDesktop
                 (x.ContainsKey("va_number") && x["va_number"] != null && x["va_number"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
             );
 
+            // If not found locally, query API server
+            if (match == null && !string.IsNullOrEmpty(this.apiUrl))
+            {
+                try
+                {
+                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create(this.apiUrl + "/pos/inmate/" + Uri.EscapeDataString(query));
+                    req.Method = "GET";
+                    req.Timeout = 4000;
+                    using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
+                    using (StreamReader r = new StreamReader(res.GetResponseStream()))
+                    {
+                        string json = r.ReadToEnd();
+                        var ser = new JavaScriptSerializer();
+                        var resp = ser.Deserialize<Dictionary<string, object>>(json);
+                        if (resp != null && resp.ContainsKey("success") && Convert.ToBoolean(resp["success"]) && resp.ContainsKey("data"))
+                        {
+                            match = (Dictionary<string, object>)resp["data"];
+                        }
+                    }
+                }
+                catch { }
+            }
+
             if (match != null)
             {
                 lblNama.Text = match.ContainsKey("nama") ? match["nama"].ToString() : "-";
@@ -3978,7 +4698,7 @@ namespace UangPasDesktop
                 lblKamar.Text = "Lokasi: " + (match.ContainsKey("blok_kamar") ? match["blok_kamar"].ToString() : "-") + " • Lapas: " + (match.ContainsKey("lapas_asal") ? match["lapas_asal"].ToString() : "-");
 
                 decimal saldo = match.ContainsKey("saldo") ? Convert.ToDecimal(match["saldo"]) : 0;
-                decimal limit = match.ContainsKey("remaining_limit") ? Convert.ToDecimal(match["remaining_limit"]) : 0;
+                decimal limit = match.ContainsKey("remaining_limit") ? Convert.ToDecimal(match["remaining_limit"]) : (match.ContainsKey("limit_harian") ? Convert.ToDecimal(match["limit_harian"]) : 0);
                 string status = match.ContainsKey("status") ? match["status"].ToString().ToLower() : "aktif";
 
                 lblSaldo.Text = "Rp " + saldo.ToString("N0");
@@ -4002,7 +4722,7 @@ namespace UangPasDesktop
             }
             else
             {
-                MessageBox.Show("Warga Binaan dengan kata kunci '" + query + "' tidak ditemukan.", "Pencarian WBP", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Warga Binaan dengan kata kunci '" + query + "' tidak ditemukan di database Lapas.", "Pencarian WBP", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }

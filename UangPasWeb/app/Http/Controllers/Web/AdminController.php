@@ -8,6 +8,7 @@ use App\Models\Inmate;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\InmateTransfer;
+use App\Services\InmateExcelService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -480,4 +481,56 @@ class AdminController extends Controller
 
         return view('admin.transactions', compact('transactions', 'totalBelanja', 'totalTopup'));
     }
+
+    /**
+     * Download Microsoft Excel (.xlsx) Template for Inmates Import
+     */
+    public function downloadInmateExcelTemplate(InmateExcelService $excelService)
+    {
+        $filename = 'Template_Import_WBP_' . date('Ymd') . '.xlsx';
+        $tempPath = storage_path('app/' . $filename);
+
+        $excelService->generateTemplate($tempPath);
+
+        return response()->download($tempPath, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Import Inmates from Uploaded Microsoft Excel (.xlsx) File
+     */
+    public function importInmateExcel(Request $request, InmateExcelService $excelService)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|max:10240', // 10MB max
+        ], [
+            'excel_file.required' => 'Silakan pilih file Excel (.xlsx) yang akan diimpor.',
+            'excel_file.file' => 'File yang diunggah tidak valid.',
+            'excel_file.max' => 'Ukuran file maksimal adalah 10MB.',
+        ]);
+
+        $file = $request->file('excel_file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        if (!in_array($extension, ['xlsx', 'xls'])) {
+            return back()->with('error', 'Format file harus berupa Microsoft Excel (.xlsx atau .xls). CSV tidak diperbolehkan.');
+        }
+
+        $result = $excelService->importInmates($file->getRealPath());
+
+        if (!$result['success'] && $result['imported'] === 0) {
+            return back()->with('error', $result['message']);
+        }
+
+        if (!empty($result['errors'])) {
+            $msg = $result['message'] . ' Catatan: ' . implode(' | ', array_slice($result['errors'], 0, 5));
+            if (count($result['errors']) > 5) {
+                $msg .= ' dan ' . (count($result['errors']) - 5) . ' lainnya.';
+            }
+            return back()->with('success', $msg);
+        }
+
+        return back()->with('success', $result['message']);
+    }
 }
+

@@ -12,8 +12,10 @@ use App\Http\Controllers\Api\PaymentGatewayController;
 
 Route::get('/', [AdminController::class, 'index'])->name('admin.dashboard');
 
-// Warga Binaan (Full CRUD, Sanksi Register F, Pembebasan, ID Card)
+// Warga Binaan (Full CRUD, Sanksi Register F, Pembebasan, ID Card, Import Excel)
 Route::get('/inmates', [AdminController::class, 'inmates'])->name('admin.inmates');
+Route::get('/inmates/template-excel', [AdminController::class, 'downloadInmateExcelTemplate'])->name('admin.inmates.template_excel');
+Route::post('/inmates/import-excel', [AdminController::class, 'importInmateExcel'])->name('admin.inmates.import_excel');
 Route::get('/inmates/{id}', [AdminController::class, 'inmateDetail'])->name('admin.inmates.detail');
 Route::get('/inmates/{id}/card', [AdminController::class, 'inmateCard'])->name('admin.inmates.card');
 Route::post('/inmates', [AdminController::class, 'storeInmate'])->name('admin.inmates.store');
