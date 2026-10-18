@@ -38,7 +38,7 @@ namespace UangPasDesktop
         private List<CartItem> cart = new List<CartItem>();
 
         // UI Controls - Kasir
-        private FlowLayoutPanel flowProducts;
+        private DataGridView gridProducts;
         private DataGridView gridCart;
         private Label lblTotal;
         private Label lblScannerStatus;
@@ -107,16 +107,43 @@ namespace UangPasDesktop
             // Right Status Indicators
             Panel topStatusRight = new Panel {
                 Dock = DockStyle.Right,
-                Width = 270,
+                Width = 440,
                 BackColor = Color.Transparent
             };
+
+            Button btnRefreshScanner = new Button {
+                Text = "🔄 Refresh Finger",
+                Width = 145,
+                Height = 36,
+                BackColor = Color.FromArgb(30, 41, 59),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Location = new Point(10, 14)
+            };
+            btnRefreshScanner.FlatAppearance.BorderColor = Color.FromArgb(71, 85, 105);
+            btnRefreshScanner.Click += (s, e) => {
+                btnRefreshScanner.Text = "⏳ Mendeteksi...";
+                btnRefreshScanner.Enabled = false;
+                InitializeBiometrics();
+                Timer t = new Timer { Interval = 600 };
+                t.Tick += (ts, te) => {
+                    btnRefreshScanner.Text = "🔄 Refresh Finger";
+                    btnRefreshScanner.Enabled = true;
+                    t.Stop();
+                    t.Dispose();
+                };
+                t.Start();
+            };
+            topStatusRight.Controls.Add(btnRefreshScanner);
 
             lblScannerStatus = new Label {
                 Text = "Scanner: Memeriksa...",
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(10, 14),
+                Location = new Point(165, 14),
                 Cursor = Cursors.Hand
             };
             lblScannerStatus.Click += (s, e) => {
@@ -131,7 +158,7 @@ namespace UangPasDesktop
                 ForeColor = Color.FromArgb(52, 211, 153),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(10, 36)
+                Location = new Point(165, 36)
             };
             topStatusRight.Controls.Add(lblApiStatus);
             topBar.Controls.Add(topStatusRight);
@@ -385,14 +412,96 @@ namespace UangPasDesktop
             searchTable.Controls.Add(btnRefresh, 2, 0);
             leftPanel.Controls.Add(searchTable);
 
-            flowProducts = new FlowLayoutPanel {
+            // Excel-style Products Grid with Alternating Row Colors
+            gridProducts = new DataGridView {
                 Dock = DockStyle.Fill,
-                AutoScroll = true,
-                BackColor = Color.White,
+                BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(12)
+                GridColor = Color.FromArgb(226, 232, 240),
+                RowHeadersVisible = false,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                EnableHeadersVisualStyles = false
             };
-            leftPanel.Controls.Add(flowProducts);
+
+            gridProducts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
+            gridProducts.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(51, 65, 85);
+            gridProducts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            gridProducts.ColumnHeadersHeight = 36;
+            gridProducts.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+
+            // Excel-like Zebra Striping (Alternating row colors)
+            gridProducts.RowsDefaultCellStyle.BackColor = Color.White;
+            gridProducts.RowsDefaultCellStyle.Font = new Font("Segoe UI", 9.5f);
+            gridProducts.RowsDefaultCellStyle.ForeColor = Color.FromArgb(15, 23, 42);
+            gridProducts.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(224, 242, 254);
+            gridProducts.RowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(3, 105, 161);
+
+            gridProducts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+            gridProducts.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(224, 242, 254);
+            gridProducts.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(3, 105, 161);
+            gridProducts.RowTemplate.Height = 36;
+
+            gridProducts.Columns.Add("barcode", "Barcode / Kode");
+            gridProducts.Columns["barcode"].Width = 130;
+            gridProducts.Columns["barcode"].DefaultCellStyle.Font = new Font("Consolas", 9.5f, FontStyle.Bold);
+
+            gridProducts.Columns.Add("nama", "Nama Barang");
+            gridProducts.Columns["nama"].FillWeight = 160;
+
+            gridProducts.Columns.Add("kategori", "Kategori");
+            gridProducts.Columns["kategori"].Width = 130;
+
+            gridProducts.Columns.Add("harga", "Harga Satuan");
+            gridProducts.Columns["harga"].Width = 110;
+            gridProducts.Columns["harga"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            gridProducts.Columns["harga"].DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            gridProducts.Columns["harga"].DefaultCellStyle.ForeColor = Color.FromArgb(2, 132, 199);
+
+            gridProducts.Columns.Add("stok", "Sisa Stok");
+            gridProducts.Columns["stok"].Width = 85;
+            gridProducts.Columns["stok"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            DataGridViewButtonColumn colBtn = new DataGridViewButtonColumn {
+                Name = "aksi",
+                HeaderText = "Aksi",
+                Text = "➕ Tambah",
+                UseColumnTextForButtonValue = true,
+                Width = 90,
+                FlatStyle = FlatStyle.Flat
+            };
+            colBtn.DefaultCellStyle.BackColor = Color.FromArgb(16, 185, 129);
+            colBtn.DefaultCellStyle.ForeColor = Color.White;
+            colBtn.DefaultCellStyle.Font = new Font("Segoe UI", 8.5f, FontStyle.Bold);
+            gridProducts.Columns.Add(colBtn);
+
+            gridProducts.CellContentClick += (s, e) => {
+                if (e.RowIndex >= 0 && e.ColumnIndex == gridProducts.Columns["aksi"].Index)
+                {
+                    AddSelectedGridProductToCart(e.RowIndex);
+                }
+            };
+
+            gridProducts.CellDoubleClick += (s, e) => {
+                if (e.RowIndex >= 0)
+                {
+                    AddSelectedGridProductToCart(e.RowIndex);
+                }
+            };
+
+            gridProducts.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter && gridProducts.CurrentRow != null && gridProducts.CurrentRow.Index >= 0)
+                {
+                    AddSelectedGridProductToCart(gridProducts.CurrentRow.Index);
+                    e.SuppressKeyPress = true;
+                }
+            };
+
+            leftPanel.Controls.Add(gridProducts);
             searchTable.BringToFront();
 
             split.Panel1.Controls.Add(leftPanel);
@@ -1103,7 +1212,7 @@ namespace UangPasDesktop
                     {
                         productList.Add(it);
                     }
-                    RenderProductCards();
+                    RenderProductGrid();
                 }
 
                 // 2. Fetch Inmates
@@ -1134,86 +1243,60 @@ namespace UangPasDesktop
             }
         }
 
-        private void RenderProductCards()
+        private void RenderProductGrid()
         {
-            flowProducts.SuspendLayout();
-            flowProducts.Controls.Clear();
+            if (gridProducts == null) return;
+            gridProducts.Rows.Clear();
+
+            string keyword = (txtSearchProduct != null) ? txtSearchProduct.Text.Trim().ToLowerInvariant() : "";
 
             foreach (var p in productList)
             {
-                Panel card = new Panel {
-                    Width = 180,
-                    Height = 110,
-                    BackColor = Color.FromArgb(248, 250, 252),
-                    BorderStyle = BorderStyle.FixedSingle,
-                    Margin = new Padding(6),
-                    Cursor = Cursors.Hand
-                };
+                string barcode = p.ContainsKey("barcode") && p["barcode"] != null ? p["barcode"].ToString() : "";
+                string nama = p.ContainsKey("nama_barang") && p["nama_barang"] != null ? p["nama_barang"].ToString() : "";
+                string kategori = p.ContainsKey("kategori") && p["kategori"] != null ? p["kategori"].ToString() : "Umum";
+                decimal harga = p.ContainsKey("harga") ? Convert.ToDecimal(p["harga"]) : 0;
+                int stok = p.ContainsKey("stok") ? Convert.ToInt32(p["stok"]) : 0;
 
-                Label name = new Label {
-                    Text = p["nama_barang"].ToString(),
-                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                    Location = new Point(8, 8),
-                    Width = 160,
-                    Height = 36
-                };
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    bool match = barcode.ToLowerInvariant().Contains(keyword) ||
+                                 nama.ToLowerInvariant().Contains(keyword) ||
+                                 kategori.ToLowerInvariant().Contains(keyword);
+                    if (!match) continue;
+                }
 
-                decimal harga = Convert.ToDecimal(p["harga"]);
-                Label price = new Label {
-                    Text = "Rp " + harga.ToString("N0"),
-                    Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(2, 132, 199),
-                    Location = new Point(8, 48),
-                    AutoSize = true
-                };
+                int rowIdx = gridProducts.Rows.Add(
+                    barcode,
+                    nama,
+                    kategori,
+                    "Rp " + harga.ToString("N0"),
+                    stok.ToString() + " pcs"
+                );
 
-                int stok = Convert.ToInt32(p["stok"]);
-                Label stock = new Label {
-                    Text = "Stok: " + stok + " pcs",
-                    Font = new Font("Segoe UI", 8.5f),
-                    ForeColor = stok <= 20 ? Color.FromArgb(239, 68, 68) : Color.FromArgb(100, 116, 139),
-                    Location = new Point(8, 76),
-                    AutoSize = true
-                };
+                gridProducts.Rows[rowIdx].Tag = p;
 
-                card.Controls.Add(name);
-                card.Controls.Add(price);
-                card.Controls.Add(stock);
-
-                // Click to add to cart
-                Action addToCart = () => {
-                    AddProductToCart(p);
-                };
-                card.Click += (s, e) => addToCart();
-                name.Click += (s, e) => addToCart();
-                price.Click += (s, e) => addToCart();
-                stock.Click += (s, e) => addToCart();
-
-                flowProducts.Controls.Add(card);
+                if (stok <= 10)
+                {
+                    gridProducts.Rows[rowIdx].Cells["stok"].Style.ForeColor = Color.FromArgb(239, 68, 68);
+                    gridProducts.Rows[rowIdx].Cells["stok"].Style.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+                }
             }
-
-            flowProducts.ResumeLayout();
         }
 
         private void FilterProducts()
         {
-            string keyword = txtSearchProduct.Text.Trim().ToLowerInvariant();
-            foreach (Control c in flowProducts.Controls)
+            RenderProductGrid();
+        }
+
+        private void AddSelectedGridProductToCart(int rowIndex)
+        {
+            if (rowIndex >= 0 && rowIndex < gridProducts.Rows.Count)
             {
-                Panel p = c as Panel;
+                var p = gridProducts.Rows[rowIndex].Tag as Dictionary<string, object>;
                 if (p != null)
                 {
-                    bool match = string.IsNullOrEmpty(keyword);
-                    foreach (Control child in p.Controls)
-                    {
-                        Label lbl = child as Label;
-                        if (lbl != null && lbl.Text.ToLowerInvariant().Contains(keyword))
-                        {
-                            match = true;
-                            break;
-                        }
-                    }
-                    p.Visible = match;
+                    AddProductToCart(p);
                 }
             }
         }
