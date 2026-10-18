@@ -64,6 +64,14 @@ namespace UangPasDesktop
         private PictureBox picKioskFinger;
         private Button btnStartKioskScan;
 
+        // UI Controls - Navigation Header
+        private Button btnTopKasir;
+        private Button btnTopEnroll;
+        private Button btnTopKiosk;
+        private Button btnTopSettings;
+        private Button btnTopUji;
+        private Timer timerScannerPoll;
+
         // UI Settings
         private TextBox txtSettingApiUrl;
         private TabControl tabs;
@@ -99,7 +107,7 @@ namespace UangPasDesktop
             // Right Status Indicators
             Panel topStatusRight = new Panel {
                 Dock = DockStyle.Right,
-                Width = 260,
+                Width = 270,
                 BackColor = Color.Transparent
             };
 
@@ -108,7 +116,13 @@ namespace UangPasDesktop
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(10, 14)
+                Location = new Point(10, 14),
+                Cursor = Cursors.Hand
+            };
+            lblScannerStatus.Click += (s, e) => {
+                lblScannerStatus.Text = "Scanner: Memeriksa...";
+                lblScannerStatus.ForeColor = Color.FromArgb(251, 191, 36);
+                InitializeBiometrics();
             };
             topStatusRight.Controls.Add(lblScannerStatus);
 
@@ -142,7 +156,7 @@ namespace UangPasDesktop
             topFlowLeft.Controls.Add(lblBrand);
 
             // Fast Switch Buttons in Header
-            Button btnTopKasir = new Button {
+            btnTopKasir = new Button {
                 Text = "🛒 Kasir POS",
                 Width = 110,
                 Height = 34,
@@ -153,58 +167,75 @@ namespace UangPasDesktop
                 Cursor = Cursors.Hand,
                 Margin = new Padding(3, 0, 4, 0)
             };
-            btnTopKasir.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 1) tabs.SelectedIndex = 0; };
+            btnTopKasir.Click += (s, e) => SwitchTab(0);
             topFlowLeft.Controls.Add(btnTopKasir);
 
-            Button btnTopEnroll = new Button {
+            btnTopEnroll = new Button {
                 Text = "👆 Rekam Sidik Jari WBP",
                 Width = 175,
                 Height = 34,
-                BackColor = Color.FromArgb(99, 102, 241),
+                BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(3, 0, 4, 0)
             };
-            btnTopEnroll.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 2) tabs.SelectedIndex = 1; };
+            btnTopEnroll.Click += (s, e) => SwitchTab(1);
             topFlowLeft.Controls.Add(btnTopEnroll);
 
-            Button btnTopKiosk = new Button {
+            btnTopKiosk = new Button {
                 Text = "🔍 Cek Saldo WBP",
                 Width = 140,
                 Height = 34,
-                BackColor = Color.FromArgb(14, 165, 233),
+                BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(3, 0, 4, 0)
             };
-            btnTopKiosk.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 3) tabs.SelectedIndex = 2; };
+            btnTopKiosk.Click += (s, e) => SwitchTab(2);
             topFlowLeft.Controls.Add(btnTopKiosk);
 
-            Button btnTopUji = new Button {
+            btnTopSettings = new Button {
+                Text = "⚙️ Pengaturan",
+                Width = 125,
+                Height = 34,
+                BackColor = Color.FromArgb(30, 41, 59),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(3, 0, 4, 0)
+            };
+            btnTopSettings.Click += (s, e) => SwitchTab(3);
+            topFlowLeft.Controls.Add(btnTopSettings);
+
+            btnTopUji = new Button {
                 Text = "🔬 Uji Alat U.are.U",
                 Width = 140,
                 Height = 34,
-                BackColor = Color.FromArgb(71, 85, 105),
+                BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(3, 0, 4, 0)
             };
-            btnTopUji.Click += (s, e) => {
-                if (tabs != null && tabs.TabPages.Count >= 5) tabs.SelectedIndex = 4;
-            };
+            btnTopUji.Click += (s, e) => SwitchTab(4);
             topFlowLeft.Controls.Add(btnTopUji);
 
             topBar.Controls.Add(topFlowLeft);
-            this.Controls.Add(topBar);
 
-            // Tab Control
-            tabs = new TabControl { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 10f, FontStyle.Bold), Padding = new Point(16, 8) };
+            // Tab Control (Flat mode without redundant tabs)
+            tabs = new TabControl { 
+                Dock = DockStyle.Fill, 
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Appearance = TabAppearance.FlatButtons,
+                ItemSize = new Size(0, 1),
+                SizeMode = TabSizeMode.Fixed
+            };
 
             // TAB 1: KASIR KOPERASI
             TabPage tabKasir = new TabPage("🛒 Kasir Belanja Koperasi");
@@ -237,10 +268,59 @@ namespace UangPasDesktop
             tabs.TabPages.Add(tabDiagnostic);
 
             tabs.SelectedIndexChanged += (s, e) => {
+                UpdateNavButtonStyles(tabs.SelectedIndex);
                 if (tabs.SelectedIndex != 4) StopDiagCapture();
             };
 
+            // IMPORTANT WINFORMS DOCK ORDER: Add tabs first, topBar second, then topBar.SendToBack()
+            // This ensures topBar reserves the top 64px and tabs strictly fills the space beneath it without overlapping!
             this.Controls.Add(tabs);
+            this.Controls.Add(topBar);
+            topBar.SendToBack();
+            tabs.BringToFront();
+
+            UpdateNavButtonStyles(0);
+
+            // Scanner Auto-Poller: Keep checking in background so status automatically turns green
+            timerScannerPoll = new Timer { Interval = 2500 };
+            timerScannerPoll.Tick += (s, e) => {
+                try
+                {
+                    if (currentReader == null || !lblScannerStatus.Text.Contains("Siap"))
+                    {
+                        ReaderCollection readers = ReaderCollection.GetReaders();
+                        if (readers != null && readers.Count > 0)
+                        {
+                            currentReader = readers[0];
+                            string prodName = currentReader.Description.Id.ProductName;
+                            if (string.IsNullOrEmpty(prodName)) prodName = "U.are.U 4500";
+                            lblScannerStatus.Text = "Scanner: " + prodName + " (Siap)";
+                            lblScannerStatus.ForeColor = Color.FromArgb(52, 211, 153);
+                        }
+                    }
+                }
+                catch { }
+            };
+            timerScannerPoll.Start();
+        }
+
+        private void SwitchTab(int index)
+        {
+            if (tabs != null && tabs.TabPages.Count > index)
+            {
+                tabs.SelectedIndex = index;
+                UpdateNavButtonStyles(index);
+            }
+        }
+
+        private void UpdateNavButtonStyles(int selectedIndex)
+        {
+            Color dark = Color.FromArgb(30, 41, 59);
+            if (btnTopKasir != null) btnTopKasir.BackColor = (selectedIndex == 0) ? Color.FromArgb(16, 185, 129) : dark;
+            if (btnTopEnroll != null) btnTopEnroll.BackColor = (selectedIndex == 1) ? Color.FromArgb(99, 102, 241) : dark;
+            if (btnTopKiosk != null) btnTopKiosk.BackColor = (selectedIndex == 2) ? Color.FromArgb(14, 165, 233) : dark;
+            if (btnTopSettings != null) btnTopSettings.BackColor = (selectedIndex == 3) ? Color.FromArgb(245, 158, 11) : dark;
+            if (btnTopUji != null) btnTopUji.BackColor = (selectedIndex == 4) ? Color.FromArgb(139, 92, 246) : dark;
         }
 
         #region TAB 1: KASIR POS
@@ -265,7 +345,7 @@ namespace UangPasDesktop
             };
 
             // LEFT PANEL: Product Grid & Search
-            Panel leftPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14) };
+            Panel leftPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 20, 16, 16) };
             
             TableLayoutPanel searchTable = new TableLayoutPanel {
                 Dock = DockStyle.Top,
@@ -318,7 +398,7 @@ namespace UangPasDesktop
             split.Panel1.Controls.Add(leftPanel);
 
             // RIGHT PANEL: Cart & Fingerprint Checkout
-            Panel rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14), BackColor = Color.White };
+            Panel rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 20, 16, 16), BackColor = Color.White };
             
             Label lblCartTitle = new Label {
                 Text = "📋 Keranjang Belanja Koperasi",
@@ -972,23 +1052,35 @@ namespace UangPasDesktop
         {
             try
             {
-                ReaderCollection readers = ReaderCollection.GetReaders();
+                ReaderCollection readers = null;
+                // Retry up to 5 times to handle RTE background service enumeration
+                for (int i = 0; i < 5; i++)
+                {
+                    readers = ReaderCollection.GetReaders();
+                    if (readers != null && readers.Count > 0) break;
+                    System.Threading.Thread.Sleep(150);
+                }
+
                 if (readers != null && readers.Count > 0)
                 {
-                    lblScannerStatus.Text = "Scanner: U.are.U 4500 (Siap)";
+                    currentReader = readers[0];
+                    string prodName = currentReader.Description.Id.ProductName;
+                    if (string.IsNullOrEmpty(prodName)) prodName = "U.are.U 4500";
+                    lblScannerStatus.Text = "Scanner: " + prodName + " (Siap)";
                     lblScannerStatus.ForeColor = Color.FromArgb(52, 211, 153);
-                    if (lblDiagDevice != null) lblDiagDevice.Text = "Perangkat: " + readers[0].Description.Id.ProductName;
-                    if (lblDiagSerial != null) lblDiagSerial.Text = "Serial ID: " + readers[0].Description.SerialNumber;
+                    if (lblDiagDevice != null) lblDiagDevice.Text = "Perangkat: " + prodName;
+                    if (lblDiagSerial != null) lblDiagSerial.Text = "Serial ID: " + currentReader.Description.SerialNumber;
                 }
                 else
                 {
                     currentReader = null;
-                    lblScannerStatus.Text = "Scanner: Tidak Terdeteksi";
+                    lblScannerStatus.Text = "Scanner: Belum Terbaca (Klik Uji)";
                     lblScannerStatus.ForeColor = Color.FromArgb(248, 113, 113);
                 }
             }
             catch (Exception ex)
             {
+                currentReader = null;
                 lblScannerStatus.Text = "Scanner Error: " + ex.Message;
                 lblScannerStatus.ForeColor = Color.FromArgb(248, 113, 113);
             }
