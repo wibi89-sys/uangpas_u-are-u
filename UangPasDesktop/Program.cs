@@ -71,9 +71,11 @@ namespace UangPasDesktop
         public MainForm()
         {
             this.Text = "UangPas Lapas - Terminal Kasir POS & Biometrik U.are.U 4500";
-            this.Size = new Size(1200, 780);
+            this.Size = new Size(1280, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.MinimumSize = new Size(1000, 680);
+            this.WindowState = FormWindowState.Maximized;
+            this.MinimumSize = new Size(960, 580);
+            this.AutoScaleMode = AutoScaleMode.Dpi;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             this.BackColor = Color.FromArgb(248, 250, 252);
 
@@ -86,96 +88,119 @@ namespace UangPasDesktop
 
         private void InitializeUI()
         {
-            // Top Status Bar
-            Panel topBar = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.FromArgb(15, 23, 42), Padding = new Padding(20, 0, 20, 0) };
+            // Top Status Bar (Responsive Docking)
+            Panel topBar = new Panel { 
+                Dock = DockStyle.Top, 
+                Height = 64, 
+                BackColor = Color.FromArgb(15, 23, 42), 
+                Padding = new Padding(12, 0, 12, 0) 
+            };
             
-            Label lblBrand = new Label {
-                Text = "👆 UangPas Lapas",
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
-                AutoSize = true,
-                Location = new Point(20, 18)
+            // Right Status Indicators
+            Panel topStatusRight = new Panel {
+                Dock = DockStyle.Right,
+                Width = 260,
+                BackColor = Color.Transparent
             };
-            topBar.Controls.Add(lblBrand);
-
-            // Fast Switch Buttons in Header
-            Button btnTopKasir = new Button {
-                Text = "🛒 Kasir POS",
-                Location = new Point(200, 16),
-                Width = 110,
-                Height = 32,
-                BackColor = Color.FromArgb(16, 185, 129),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnTopKasir.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 1) tabs.SelectedIndex = 0; };
-            topBar.Controls.Add(btnTopKasir);
-
-            Button btnTopEnroll = new Button {
-                Text = "👆 Rekam Sidik Jari WBP",
-                Location = new Point(320, 16),
-                Width = 180,
-                Height = 32,
-                BackColor = Color.FromArgb(99, 102, 241),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnTopEnroll.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 2) tabs.SelectedIndex = 1; };
-            topBar.Controls.Add(btnTopEnroll);
-
-            Button btnTopKiosk = new Button {
-                Text = "🔍 Cek Saldo WBP",
-                Location = new Point(510, 16),
-                Width = 140,
-                Height = 32,
-                BackColor = Color.FromArgb(14, 165, 233),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnTopKiosk.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 3) tabs.SelectedIndex = 2; };
-            topBar.Controls.Add(btnTopKiosk);
-
-            Button btnTopUji = new Button {
-                Text = "🔬 Uji Alat U.are.U",
-                Location = new Point(660, 16),
-                Width = 140,
-                Height = 32,
-                BackColor = Color.FromArgb(71, 85, 105),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnTopUji.Click += (s, e) => {
-                if (tabs != null && tabs.TabPages.Count >= 5) tabs.SelectedIndex = 4;
-            };
-            topBar.Controls.Add(btnTopUji);
 
             lblScannerStatus = new Label {
                 Text = "Scanner: Memeriksa...",
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 AutoSize = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(840, 14)
+                Location = new Point(10, 14)
             };
-            topBar.Controls.Add(lblScannerStatus);
+            topStatusRight.Controls.Add(lblScannerStatus);
 
             lblApiStatus = new Label {
                 Text = "Server: Online",
                 ForeColor = Color.FromArgb(52, 211, 153),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 AutoSize = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(840, 36)
+                Location = new Point(10, 36)
             };
-            topBar.Controls.Add(lblApiStatus);
+            topStatusRight.Controls.Add(lblApiStatus);
+            topBar.Controls.Add(topStatusRight);
+
+            // Left Flow for Brand + Navigation
+            FlowLayoutPanel topFlowLeft = new FlowLayoutPanel {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Padding = new Padding(4, 14, 4, 8),
+                AutoScroll = false
+            };
+
+            Label lblBrand = new Label {
+                Text = "👆 UangPas Lapas",
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+                AutoSize = true,
+                Margin = new Padding(6, 4, 16, 0)
+            };
+            topFlowLeft.Controls.Add(lblBrand);
+
+            // Fast Switch Buttons in Header
+            Button btnTopKasir = new Button {
+                Text = "🛒 Kasir POS",
+                Width = 110,
+                Height = 34,
+                BackColor = Color.FromArgb(16, 185, 129),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(3, 0, 4, 0)
+            };
+            btnTopKasir.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 1) tabs.SelectedIndex = 0; };
+            topFlowLeft.Controls.Add(btnTopKasir);
+
+            Button btnTopEnroll = new Button {
+                Text = "👆 Rekam Sidik Jari WBP",
+                Width = 175,
+                Height = 34,
+                BackColor = Color.FromArgb(99, 102, 241),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(3, 0, 4, 0)
+            };
+            btnTopEnroll.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 2) tabs.SelectedIndex = 1; };
+            topFlowLeft.Controls.Add(btnTopEnroll);
+
+            Button btnTopKiosk = new Button {
+                Text = "🔍 Cek Saldo WBP",
+                Width = 140,
+                Height = 34,
+                BackColor = Color.FromArgb(14, 165, 233),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(3, 0, 4, 0)
+            };
+            btnTopKiosk.Click += (s, e) => { if (tabs != null && tabs.TabPages.Count >= 3) tabs.SelectedIndex = 2; };
+            topFlowLeft.Controls.Add(btnTopKiosk);
+
+            Button btnTopUji = new Button {
+                Text = "🔬 Uji Alat U.are.U",
+                Width = 140,
+                Height = 34,
+                BackColor = Color.FromArgb(71, 85, 105),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(3, 0, 4, 0)
+            };
+            btnTopUji.Click += (s, e) => {
+                if (tabs != null && tabs.TabPages.Count >= 5) tabs.SelectedIndex = 4;
+            };
+            topFlowLeft.Controls.Add(btnTopUji);
+
+            topBar.Controls.Add(topFlowLeft);
             this.Controls.Add(topBar);
 
             // Tab Control
@@ -224,32 +249,61 @@ namespace UangPasDesktop
             SplitContainer split = new SplitContainer {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 650,
                 IsSplitterFixed = false
             };
 
+            // Handle proportional splitter on resize
+            this.Resize += (s, e) => {
+                try {
+                    if (split != null && this.ClientSize.Width > 500)
+                    {
+                        int targetDist = (int)(this.ClientSize.Width * 0.58);
+                        if (targetDist > 300 && targetDist < this.ClientSize.Width - 250)
+                            split.SplitterDistance = targetDist;
+                    }
+                } catch { }
+            };
+
             // LEFT PANEL: Product Grid & Search
-            Panel leftPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16) };
+            Panel leftPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14) };
             
-            Panel searchPanel = new Panel { Dock = DockStyle.Top, Height = 48 };
-            Label lblSearch = new Label { Text = "Cari Barang / Barcode:", Location = new Point(0, 10), AutoSize = true, Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) };
-            txtSearchProduct = new TextBox { Location = new Point(160, 8), Width = 320 };
+            TableLayoutPanel searchTable = new TableLayoutPanel {
+                Dock = DockStyle.Top,
+                Height = 44,
+                RowCount = 1,
+                ColumnCount = 3,
+                Padding = new Padding(0, 0, 0, 6)
+            };
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155f));
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155f));
+
+            Label lblSearch = new Label { 
+                Text = "Cari Barang / Barcode:", 
+                Dock = DockStyle.Fill, 
+                TextAlign = ContentAlignment.MiddleLeft, 
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) 
+            };
+            txtSearchProduct = new TextBox { 
+                Dock = DockStyle.Fill, 
+                Font = new Font("Segoe UI", 10.5f) 
+            };
             txtSearchProduct.TextChanged += (s, e) => FilterProducts();
 
             Button btnRefresh = new Button {
                 Text = "🔄 Sinkron Database",
-                Location = new Point(490, 6),
-                Width = 140,
-                Height = 32,
+                Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(241, 245, 249),
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
             btnRefresh.Click += (s, e) => { SyncDataFromApi(); };
 
-            searchPanel.Controls.Add(lblSearch);
-            searchPanel.Controls.Add(txtSearchProduct);
-            searchPanel.Controls.Add(btnRefresh);
-            leftPanel.Controls.Add(searchPanel);
+            searchTable.Controls.Add(lblSearch, 0, 0);
+            searchTable.Controls.Add(txtSearchProduct, 1, 0);
+            searchTable.Controls.Add(btnRefresh, 2, 0);
+            leftPanel.Controls.Add(searchTable);
 
             flowProducts = new FlowLayoutPanel {
                 Dock = DockStyle.Fill,
@@ -259,12 +313,12 @@ namespace UangPasDesktop
                 Padding = new Padding(12)
             };
             leftPanel.Controls.Add(flowProducts);
-            searchPanel.BringToFront();
+            searchTable.BringToFront();
 
             split.Panel1.Controls.Add(leftPanel);
 
             // RIGHT PANEL: Cart & Fingerprint Checkout
-            Panel rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16), BackColor = Color.White };
+            Panel rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14), BackColor = Color.White };
             
             Label lblCartTitle = new Label {
                 Text = "📋 Keranjang Belanja Koperasi",
@@ -274,10 +328,27 @@ namespace UangPasDesktop
             };
             rightPanel.Controls.Add(lblCartTitle);
 
-            // Barcode input box
-            Panel barcodeBox = new Panel { Dock = DockStyle.Top, Height = 42 };
-            Label lblBc = new Label { Text = "Scan Barcode:", Location = new Point(0, 8), AutoSize = true };
-            txtBarcode = new TextBox { Location = new Point(100, 6), Width = 280 };
+            // Barcode input box (Responsive Table)
+            TableLayoutPanel barcodeTable = new TableLayoutPanel {
+                Dock = DockStyle.Top,
+                Height = 40,
+                RowCount = 1,
+                ColumnCount = 2,
+                Padding = new Padding(0, 0, 0, 6)
+            };
+            barcodeTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 105f));
+            barcodeTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+
+            Label lblBc = new Label { 
+                Text = "Scan Barcode:", 
+                Dock = DockStyle.Fill, 
+                TextAlign = ContentAlignment.MiddleLeft, 
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) 
+            };
+            txtBarcode = new TextBox { 
+                Dock = DockStyle.Fill, 
+                Font = new Font("Segoe UI", 10.5f) 
+            };
             txtBarcode.KeyDown += (s, e) => {
                 if (e.KeyCode == Keys.Enter)
                 {
@@ -286,9 +357,9 @@ namespace UangPasDesktop
                     e.SuppressKeyPress = true;
                 }
             };
-            barcodeBox.Controls.Add(lblBc);
-            barcodeBox.Controls.Add(txtBarcode);
-            rightPanel.Controls.Add(barcodeBox);
+            barcodeTable.Controls.Add(lblBc, 0, 0);
+            barcodeTable.Controls.Add(txtBarcode, 1, 0);
+            rightPanel.Controls.Add(barcodeTable);
 
             // Grid Cart
             gridCart = new DataGridView {
@@ -310,8 +381,13 @@ namespace UangPasDesktop
             gridCart.CellValueChanged += (s, e) => RecalculateCart();
             rightPanel.Controls.Add(gridCart);
 
-            // Bottom Summary & Checkout Button
-            Panel bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 170, BackColor = Color.FromArgb(248, 250, 252), Padding = new Padding(16) };
+            // Bottom Summary & Checkout Button (Fully Responsive Grid)
+            Panel bottomPanel = new Panel { 
+                Dock = DockStyle.Bottom, 
+                Height = 150, 
+                BackColor = Color.FromArgb(248, 250, 252), 
+                Padding = new Padding(12) 
+            };
             
             lblTotal = new Label {
                 Text = "TOTAL: Rp 0",
@@ -323,35 +399,41 @@ namespace UangPasDesktop
             };
             bottomPanel.Controls.Add(lblTotal);
 
-            Panel btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 80 };
+            TableLayoutPanel btnTable = new TableLayoutPanel {
+                Dock = DockStyle.Bottom,
+                Height = 72,
+                RowCount = 1,
+                ColumnCount = 2,
+                Padding = new Padding(0, 6, 0, 0)
+            };
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             
             Button btnClear = new Button {
-                Text = "Batal / Reset",
-                Width = 110,
-                Height = 56,
+                Text = "Batal",
+                Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                Location = new Point(0, 10)
+                Cursor = Cursors.Hand
             };
             btnClear.Click += (s, e) => { cart.Clear(); RefreshCartGrid(); };
-            btnPanel.Controls.Add(btnClear);
+            btnTable.Controls.Add(btnClear, 0, 0);
 
             btnCheckoutFingerprint = new Button {
                 Text = "👆 BAYAR DENGAN SIDIK JARI WBP",
-                Width = 330,
-                Height = 56,
+                Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
-                Location = new Point(120, 10)
+                Cursor = Cursors.Hand
             };
             btnCheckoutFingerprint.Click += (s, e) => ProcessCheckoutFingerprint();
-            btnPanel.Controls.Add(btnCheckoutFingerprint);
+            btnTable.Controls.Add(btnCheckoutFingerprint, 1, 0);
 
-            bottomPanel.Controls.Add(btnPanel);
+            bottomPanel.Controls.Add(btnTable);
             rightPanel.Controls.Add(bottomPanel);
 
             gridCart.BringToFront();
@@ -364,7 +446,7 @@ namespace UangPasDesktop
         #region TAB 2: ENROLLMENT
         private void BuildEnrollmentTab(TabPage page)
         {
-            Panel panel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32) };
+            Panel panel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32), AutoScroll = true };
 
             Label lblTitle = new Label {
                 Text = "Pendaftaran Sidik Jari Warga Binaan Pemasyarakatan",
@@ -434,7 +516,7 @@ namespace UangPasDesktop
         #region TAB 3: KIOSK CEK SALDO MANDIRI
         private void BuildKioskTab(TabPage page)
         {
-            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32) };
+            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32), AutoScroll = true };
 
             Label lblTitle = new Label {
                 Text = "Kios Pengecekan Saldo Mandiri WBP (Self-Service)",
@@ -505,7 +587,7 @@ namespace UangPasDesktop
         #region TAB 4: SETTINGS
         private void BuildSettingsTab(TabPage page)
         {
-            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32) };
+            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32), AutoScroll = true };
 
             Label lblTitle = new Label { Text = "Pengaturan Server API & Hardware", Font = new Font("Segoe UI", 14f, FontStyle.Bold), AutoSize = true, Location = new Point(32, 24) };
             p.Controls.Add(lblTitle);

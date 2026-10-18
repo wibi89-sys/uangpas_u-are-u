@@ -47,7 +47,7 @@
 
         /* Sidebar */
         aside {
-            width: 270px;
+            width: 260px;
             background-color: var(--sidebar-bg);
             color: #fff;
             display: flex;
@@ -57,6 +57,41 @@
             position: sticky;
             top: 0;
             height: 100vh;
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+        }
+
+        body.sidebar-collapsed aside {
+            width: 76px;
+        }
+
+        body.sidebar-collapsed .brand-text,
+        body.sidebar-collapsed .nav-label,
+        body.sidebar-collapsed .nav-item span:not(.nav-icon),
+        body.sidebar-collapsed .sidebar-footer p,
+        body.sidebar-collapsed .sidebar-footer .status-pill span:not(.dot-green) {
+            display: none;
+        }
+
+        body.sidebar-collapsed .sidebar-brand {
+            padding: 20px 14px;
+            justify-content: center;
+        }
+
+        body.sidebar-collapsed .nav-item {
+            justify-content: center;
+            padding: 12px;
+        }
+
+        body.sidebar-collapsed .nav-icon {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        body.sidebar-collapsed .sidebar-footer {
+            padding: 16px 12px;
+            display: flex;
+            justify-content: center;
         }
 
         .sidebar-brand {
@@ -176,11 +211,32 @@
             min-width: 0;
         }
 
+        .btn-toggle-sidebar {
+            background: #f1f5f9;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-dark);
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .btn-toggle-sidebar:hover {
+            background: #e2e8f0;
+            color: var(--primary);
+        }
+
         /* Top Header */
         header {
             background: var(--surface);
             border-bottom: 1px solid var(--card-border);
-            padding: 16px 32px;
+            padding: 16px 28px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -223,10 +279,15 @@
 
         /* Body container */
         .content-wrapper {
-            padding: 32px;
-            max-width: 1400px;
+            padding: 24px 28px;
+            max-width: 100%;
             width: 100%;
             margin: 0 auto;
+        }
+
+        @media (max-width: 1366px) {
+            header { padding: 14px 20px; }
+            .content-wrapper { padding: 18px 16px; }
         }
 
         /* Alert notifications */
@@ -314,30 +375,49 @@
         .table-responsive {
             width: 100%;
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f8fafc;
+        }
+
+        .table-responsive::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f8fafc;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13.5px;
+            font-size: 13px;
+            min-width: 820px;
         }
 
         th {
             background: #f8fafc;
-            color: #64748b;
+            color: #475569;
             text-align: left;
-            padding: 12px 16px;
+            padding: 12px 14px;
             font-weight: 700;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 2px solid var(--card-border);
             text-transform: uppercase;
             font-size: 11.5px;
             letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         td {
-            padding: 14px 16px;
+            padding: 12px 14px;
             border-bottom: 1px solid #f1f5f9;
             color: #334155;
+            vertical-align: middle;
         }
 
         tr:hover td {
@@ -481,9 +561,14 @@
     <!-- Main Content -->
     <main>
         <header>
-            <div class="page-title">
-                <h1>@yield('page_title', 'Dashboard')</h1>
-                <p>@yield('page_desc', 'Sistem Pembayaran Bebas Uang Tunai (Zero Cash) Lapas')</p>
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <button type="button" id="btnToggleSidebar" class="btn-toggle-sidebar" title="Ciutkan / Lebarkan Menu Sidebar">
+                    <span>☰</span>
+                </button>
+                <div class="page-title">
+                    <h1>@yield('page_title', 'Dashboard')</h1>
+                    <p>@yield('page_desc', 'Sistem Pembayaran Bebas Uang Tunai (Zero Cash) Lapas')</p>
+                </div>
             </div>
             <div class="header-actions">
                 <div class="badge-live">
@@ -502,6 +587,22 @@
             @yield('content')
         </div>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnToggle = document.getElementById('btnToggleSidebar');
+            if (localStorage.getItem('uangpas_sidebar_collapsed') === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+            }
+
+            if (btnToggle) {
+                btnToggle.addEventListener('click', function() {
+                    document.body.classList.toggle('sidebar-collapsed');
+                    localStorage.setItem('uangpas_sidebar_collapsed', document.body.classList.contains('sidebar-collapsed'));
+                });
+            }
+        });
+    </script>
 
     @yield('scripts')
 </body>

@@ -8,12 +8,12 @@
 <!-- Filter Card -->
 <div class="card" style="margin-bottom: 24px;">
     <form method="GET" action="{{ route('admin.transactions') }}">
-        <div style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr 1fr auto; gap: 14px; align-items: flex-end;">
-            <div class="form-group" style="margin-bottom: 0;">
+        <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0; flex: 2; min-width: 220px;">
                 <label>Pencarian Invoice / Nama WBP</label>
                 <input type="text" name="search" placeholder="Cari nomor invoice atau nama WBP..." value="{{ request('search') }}">
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-group" style="margin-bottom: 0; flex: 1.2; min-width: 150px;">
                 <label>Tipe Transaksi</label>
                 <select name="type">
                     <option value="">Semua Tipe</option>
@@ -21,15 +21,15 @@
                     <option value="topup" {{ request('type') == 'topup' ? 'selected' : '' }}>Top-Up Saldo</option>
                 </select>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-group" style="margin-bottom: 0; flex: 1.2; min-width: 150px;">
                 <label>Dari Tanggal</label>
                 <input type="date" name="date_from" value="{{ request('date_from') }}">
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-group" style="margin-bottom: 0; flex: 1.2; min-width: 150px;">
                 <label>Sampai Tanggal</label>
                 <input type="date" name="date_to" value="{{ request('date_to') }}">
             </div>
-            <div>
+            <div style="flex-shrink: 0;">
                 <button type="submit" class="btn btn-primary" style="padding: 10px 18px;">
                     🔍 Terapkan Filter
                 </button>

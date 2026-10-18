@@ -101,7 +101,7 @@
 
 <!-- Modal Tambah WBP -->
 <div id="modalAddWbp" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 20px;">
-    <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 600px; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+    <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
             <h3 style="font-size: 17px; font-weight: 800;">➕ Pendaftaran Warga Binaan Baru</h3>
             <button onclick="closeModal('modalAddWbp')" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
@@ -162,7 +162,7 @@
 
 <!-- Modal Mutasi WBP -->
 <div id="modalTransferWbp" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 20px;">
-    <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 520px; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+    <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
             <h3 style="font-size: 17px; font-weight: 800;">🔄 Mutasi Perpindahan WBP</h3>
             <button onclick="closeModal('modalTransferWbp')" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
