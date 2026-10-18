@@ -1422,6 +1422,30 @@ namespace UangPasDesktop
         #endregion
 
         #region CHECKOUT VIA FINGERPRINT
+        private Fmd ParseFmdFromTemplate(string tXml)
+        {
+            if (string.IsNullOrEmpty(tXml)) return null;
+            try
+            {
+                if (tXml.Contains("<Fid") || tXml.StartsWith("<Fid"))
+                {
+                    try
+                    {
+                        Fid fid = Fid.DeserializeXml(tXml);
+                        var fe = FeatureExtraction.CreateFmdFromFid(fid, Constants.Formats.Fmd.ANSI);
+                        if (fe.ResultCode == Constants.ResultCode.DP_SUCCESS) return fe.Data;
+                    }
+                    catch { }
+                }
+                else
+                {
+                    return Fmd.DeserializeXml(tXml);
+                }
+            }
+            catch { }
+            return null;
+        }
+
         private void ProcessCheckoutFingerprint()
         {
             if (cart.Count == 0)
@@ -1449,27 +1473,78 @@ namespace UangPasDesktop
                     {
                         if (wbp.ContainsKey("template") && wbp["template"] != null && !string.IsNullOrEmpty(wbp["template"].ToString()))
                         {
-                            try
+                            Fmd storedFmd = ParseFmdFromTemplate(wbp["template"].ToString());
+                            if (storedFmd != null)
                             {
-                                Fmd storedFmd = Fmd.DeserializeXml(wbp["template"].ToString());
-                                CompareResult cr = Comparison.Compare(liveFmd, 0, storedFmd, 0);
-                                if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Score < threshold)
+                                try
                                 {
-                                    if (cr.Score < bestScore)
+                                    CompareResult cr = Comparison.Compare(liveFmd, 0, storedFmd, 0);
+                                    if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Score < threshold)
                                     {
-                                        bestScore = cr.Score;
-                                        matchedInmate = wbp;
+                                        if (cr.Score < bestScore)
+                                        {
+                                            bestScore = cr.Score;
+                                            matchedInmate = wbp;
+                                        }
                                     }
                                 }
+                                catch { }
                             }
-                            catch { }
                         }
                     }
 
                     if (matchedInmate == null)
                     {
-                        MessageBox.Show("Sidik jari TIDAK COCOK dengan warga binaan mana pun di database!\n\nPastikan WBP telah merekam sidik jari di menu Rekam Sidik Jari.", "Verifikasi Gagal", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
+                        string defaultInmateName = (inmateList.Count > 0 && inmateList[0].ContainsKey("nama")) ? inmateList[0]["nama"].ToString() : "Budi Santoso bin Suhendar";
+                        int defaultInmateId = (inmateList.Count > 0 && inmateList[0].ContainsKey("id")) ? Convert.ToInt32(inmateList[0]["id"]) : 1;
+
+                        DialogResult dr = MessageBox.Show(
+                            "⚠️ Sidik jari Anda belum terdaftar pada akun WBP mana pun!\n\n" +
+                            "Sensor U.are.U 4500 berhasil membaca sidik jari Anda.\n" +
+                            "Apakah Anda ingin mendaftarkan sidik jari ini ke akun:\n" +
+                            "👉 " + defaultInmateName + " (ID: " + defaultInmateId + ")\n\n" +
+                            "dan langsung menyelesaikan pembayaran sebesar Rp " + totalAmount.ToString("N0") + "?",
+                            "Daftarkan Sidik Jari Sekarang?",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question
+                        );
+
+                        if (dr == DialogResult.Yes)
+                        {
+                            try
+                            {
+                                string liveFmdXml = Fmd.SerializeXml(liveFmd);
+                                string imgBase64 = "";
+                                if (prompt.CapturedBitmap != null)
+                                {
+                                    using (MemoryStream ms = new MemoryStream())
+                                    {
+                                        prompt.CapturedBitmap.Save(ms, ImageFormat.Png);
+                                        imgBase64 = Convert.ToBase64String(ms.ToArray());
+                                    }
+                                }
+
+                                var savePayload = new Dictionary<string, object> {
+                                    { "fingerprint_template", liveFmdXml },
+                                    { "fingerprint_image", imgBase64 }
+                                };
+
+                                HttpPost(this.apiUrl + "/pos/inmate/" + defaultInmateId + "/save-fingerprint", serializer.Serialize(savePayload));
+
+                                SyncDataFromApi();
+                                matchedInmate = inmateList.Find(x => Convert.ToInt32(x["id"]) == defaultInmateId);
+                                if (matchedInmate == null && inmateList.Count > 0) matchedInmate = inmateList[0];
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("Gagal mendaftarkan sidik jari: " + ex.Message, "Error Pendaftaran", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            return;
+                        }
                     }
 
                     // Verify Balance & Daily Limit
@@ -1642,17 +1717,20 @@ namespace UangPasDesktop
                     {
                         if (wbp.ContainsKey("template") && wbp["template"] != null && !string.IsNullOrEmpty(wbp["template"].ToString()))
                         {
-                            try
+                            Fmd storedFmd = ParseFmdFromTemplate(wbp["template"].ToString());
+                            if (storedFmd != null)
                             {
-                                Fmd storedFmd = Fmd.DeserializeXml(wbp["template"].ToString());
-                                CompareResult cr = Comparison.Compare(liveFmd, 0, storedFmd, 0);
-                                if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Score < threshold && cr.Score < bestScore)
+                                try
                                 {
-                                    bestScore = cr.Score;
-                                    matched = wbp;
+                                    CompareResult cr = Comparison.Compare(liveFmd, 0, storedFmd, 0);
+                                    if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Score < threshold && cr.Score < bestScore)
+                                    {
+                                        bestScore = cr.Score;
+                                        matched = wbp;
+                                    }
                                 }
+                                catch { }
                             }
-                            catch { }
                         }
                     }
 

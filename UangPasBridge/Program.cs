@@ -475,15 +475,35 @@ namespace UangPasBridge
                 return result;
             }
 
-            Fmd storedFmd;
+            Fmd storedFmd = null;
             try
             {
-                storedFmd = Fmd.DeserializeXml(storedTemplateXml);
+                if (storedTemplateXml.Contains("<Fid") || storedTemplateXml.StartsWith("<Fid"))
+                {
+                    try
+                    {
+                        Fid fid = Fid.DeserializeXml(storedTemplateXml);
+                        var fe = FeatureExtraction.CreateFmdFromFid(fid, Constants.Formats.Fmd.ANSI);
+                        if (fe.ResultCode == Constants.ResultCode.DP_SUCCESS) storedFmd = fe.Data;
+                    }
+                    catch { }
+                }
+                else
+                {
+                    storedFmd = Fmd.DeserializeXml(storedTemplateXml);
+                }
             }
             catch (Exception ex)
             {
                 result["success"] = false;
                 result["message"] = "Template sidik jari tersimpan tidak valid: " + ex.Message;
+                return result;
+            }
+
+            if (storedFmd == null)
+            {
+                result["success"] = false;
+                result["message"] = "Gagal memproses template sidik jari tersimpan.";
                 return result;
             }
 
@@ -573,58 +593,99 @@ namespace UangPasBridge
         private static Dictionary<string, object> HandleIdentify(string body)
         {
             var result = new Dictionary<string, object>();
-            if (string.IsNullOrEmpty(body))
+            int timeout = 10000;
+            System.Collections.ArrayList candidateList = null;
+
+            if (!string.IsNullOrEmpty(body))
             {
-                result["success"] = false;
-                result["message"] = "Request body kosong.";
-                return result;
+                try
+                {
+                    var req = serializer.Deserialize<Dictionary<string, object>>(body);
+                    if (req != null)
+                    {
+                        if (req.ContainsKey("timeout")) timeout = Convert.ToInt32(req["timeout"]);
+                        if (req.ContainsKey("candidates") && req["candidates"] is System.Collections.ArrayList)
+                        {
+                            candidateList = (System.Collections.ArrayList)req["candidates"];
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            // Auto-fetch active inmates from Laravel API if candidates list is missing or empty
+            if (candidateList == null || candidateList.Count == 0)
+            {
+                try
+                {
+                    using (var wc = new WebClient())
+                    {
+                        wc.Encoding = Encoding.UTF8;
+                        string json = wc.DownloadString("http://127.0.0.1:8000/api/v1/pos/inmates");
+                        var apiResp = serializer.Deserialize<Dictionary<string, object>>(json);
+                        if (apiResp != null && apiResp.ContainsKey("data") && apiResp["data"] is System.Collections.ArrayList)
+                        {
+                            candidateList = (System.Collections.ArrayList)apiResp["data"];
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            if (candidateList == null) candidateList = new System.Collections.ArrayList();
+
+            List<Fmd> fmdCandidates = new List<Fmd>();
+            List<object> candidateMeta = new List<object>();
+
+            foreach (object item in candidateList)
+            {
+                if (item is Dictionary<string, object>)
+                {
+                    var c = (Dictionary<string, object>)item;
+                    if (c.ContainsKey("template") && c["template"] != null)
+                    {
+                        string tXml = c["template"].ToString();
+                        if (!string.IsNullOrEmpty(tXml))
+                        {
+                            try
+                            {
+                                Fmd fmd = null;
+                                if (tXml.Contains("<Fid") || tXml.StartsWith("<Fid"))
+                                {
+                                    try
+                                    {
+                                        Fid fid = Fid.DeserializeXml(tXml);
+                                        var fe = FeatureExtraction.CreateFmdFromFid(fid, Constants.Formats.Fmd.ANSI);
+                                        if (fe.ResultCode == Constants.ResultCode.DP_SUCCESS) fmd = fe.Data;
+                                    }
+                                    catch { }
+                                }
+                                else
+                                {
+                                    fmd = Fmd.DeserializeXml(tXml);
+                                }
+
+                                if (fmd != null)
+                                {
+                                    fmdCandidates.Add(fmd);
+                                    candidateMeta.Add(c);
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
             }
 
             try
             {
-                var req = serializer.Deserialize<Dictionary<string, object>>(body);
-                if (!req.ContainsKey("candidates"))
-                {
-                    result["success"] = false;
-                    result["message"] = "Parameter 'candidates' array diperlukan.";
-                    return result;
-                }
-
-                System.Collections.ArrayList candidateList = (System.Collections.ArrayList)req["candidates"];
-                if (candidateList.Count == 0)
-                {
-                    result["success"] = false;
-                    result["message"] = "Daftar kandidat sidik jari kosong.";
-                    return result;
-                }
-
-                int timeout = 10000;
-                if (req.ContainsKey("timeout")) timeout = Convert.ToInt32(req["timeout"]);
-
-                List<Fmd> fmdCandidates = new List<Fmd>();
-                List<object> candidateMeta = new List<object>();
-
-                foreach (Dictionary<string, object> c in candidateList)
-                {
-                    if (c.ContainsKey("template"))
-                    {
-                        try
-                        {
-                            Fmd fmd = Fmd.DeserializeXml(c["template"].ToString());
-                            fmdCandidates.Add(fmd);
-                            candidateMeta.Add(c);
-                        }
-                        catch { }
-                    }
-                }
-
                 lock (syncLock)
                 {
                     Reader reader = GetPrimaryReader();
                     if (reader == null)
                     {
                         result["success"] = false;
-                        result["message"] = "Scanner U.are.U tidak terhubung.";
+                        result["message"] = "Scanner U.are.U tidak terhubung. Pastikan kabel USB terpasang.";
                         return result;
                     }
 
@@ -640,7 +701,7 @@ namespace UangPasBridge
                     try
                     {
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine("[IDENTIFIKASI 1:N] Tempelkan sidik jari nasabah untuk mendeteksi akun...");
+                        Console.WriteLine("[IDENTIFIKASI 1:N] Menunggu sidik jari ditempelkan pada sensor (kandidat database: {0})...", fmdCandidates.Count);
                         Console.ResetColor();
 
                         CaptureResult cr = DoCapture(reader, timeout);
@@ -658,39 +719,48 @@ namespace UangPasBridge
                         {
                             result["success"] = false;
                             result["identified"] = false;
-                            result["message"] = "Gagal membaca fitur sidik jari.";
+                            result["message"] = "Gagal mengekstrak fitur sidik jari.";
                             return result;
                         }
 
-                        int threshold = 2147483647 / 100000;
-                        IdentifyResult identRes = Comparison.Identify(liveFmdRes.Data, 0, fmdCandidates, threshold, 1);
-
                         string imageBase64 = FidToPngBase64(cr.Data);
+                        string liveFmdXml = Fmd.SerializeXml(liveFmdRes.Data);
                         result["image"] = "data:image/png;base64," + imageBase64;
+                        result["captured_template"] = liveFmdXml;
 
-                        if (identRes.ResultCode == Constants.ResultCode.DP_SUCCESS && identRes.Indexes.Length > 0 && identRes.Indexes[0].Length > 0)
+                        int threshold = 2147483647 / 100000;
+                        IdentifyResult identRes = null;
+
+                        if (fmdCandidates.Count > 0)
+                        {
+                            identRes = Comparison.Identify(liveFmdRes.Data, 0, fmdCandidates, threshold, 1);
+                        }
+
+                        if (identRes != null && identRes.ResultCode == Constants.ResultCode.DP_SUCCESS && identRes.Indexes.Length > 0 && identRes.Indexes[0].Length > 0)
                         {
                             int matchIndex = identRes.Indexes[0][0];
                             var matchedCandidate = (Dictionary<string, object>)candidateMeta[matchIndex];
 
                             Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine("[IDENTIFIKASI SUKSES] Akun ditemukan: Index {0}", matchIndex);
+                            Console.WriteLine("[IDENTIFIKASI SUKSES] WBP Ditemukan: {0}", matchedCandidate.ContainsKey("nama") ? matchedCandidate["nama"] : matchIndex.ToString());
                             Console.ResetColor();
 
                             result["success"] = true;
                             result["identified"] = true;
                             result["candidate"] = matchedCandidate;
-                            result["message"] = "Pengguna berhasil diidentifikasi.";
+                            if (matchedCandidate.ContainsKey("id")) result["inmate_id"] = matchedCandidate["id"];
+                            else if (matchedCandidate.ContainsKey("inmate_id")) result["inmate_id"] = matchedCandidate["inmate_id"];
+                            result["message"] = "Sidik jari cocok dengan WBP " + (matchedCandidate.ContainsKey("nama") ? matchedCandidate["nama"].ToString() : "");
                         }
                         else
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine("[IDENTIFIKASI GAGAL] Tidak ditemukan akun yang cocok.");
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine("[IDENTIFIKASI] Sidik jari terbaca, namun belum cocok dengan database.");
                             Console.ResetColor();
 
                             result["success"] = true;
                             result["identified"] = false;
-                            result["message"] = "Sidik jari tidak terdaftar pada akun mana pun.";
+                            result["message"] = "Sidik jari berhasil dibaca, namun belum terdaftar pada akun WBP manapun.";
                         }
                     }
                     finally

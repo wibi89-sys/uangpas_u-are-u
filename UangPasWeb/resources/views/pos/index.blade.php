@@ -667,6 +667,10 @@
                 <span id="scannerStatusText">Scanner: Memeriksa...</span>
             </div>
 
+            <button class="btn-header" onclick="openEnrollModal()" title="Daftarkan / Update Sidik Jari WBP">
+                <span>👆</span> Rekam Jari WBP
+            </button>
+
             <button class="btn-header" onclick="checkScannerBridge()" title="Deteksi Ulang Fingerprint">
                 <span>🔄</span> Refresh Finger
             </button>
@@ -830,6 +834,27 @@
                 </div>
             </div>
 
+            <!-- Unregistered Finger Prompt Box (Shown if finger scanned but not enrolled) -->
+            <div id="unregisteredFingerBox" style="display: none; background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 10px; padding: 14px; margin-bottom: 20px; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <span style="font-size: 18px;">⚠️</span>
+                    <strong style="color: #92400e; font-size: 13.5px;">Sidik Jari Belum Terdaftar!</strong>
+                </div>
+                <p style="color: #78350f; font-size: 12px; margin-bottom: 12px; line-height: 1.4;">
+                    Scanner U.are.U 4500 berhasil membaca sidik jari Anda. Pilih akun WBP di bawah untuk mendaftarkan sidik jari ini dan langsung menyelesaikan transaksi:
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <select id="quickEnrollInmateSelect" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600; background: #fff;">
+                        @foreach($inmates as $wbp)
+                            <option value="{{ $wbp->id }}">{{ $wbp->nama }} ({{ $wbp->no_registrasi }}) - Saldo: Rp {{ number_format($wbp->saldo, 0, ',', '.') }}</option>
+                        @endforeach
+                    </select>
+                    <button type="button" class="btn-checkout" id="btnQuickEnrollAndPay" style="width: 100%; padding: 11px; font-size: 13px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);" onclick="handleQuickEnrollAndPay()">
+                        ✅ Daftarkan Jari ke WBP & Bayar Sekarang
+                    </button>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 10px;">
                 <button class="btn-alt" style="flex: 1; padding: 12px;" onclick="closeModal('biometricModal')">Batal</button>
                 <button class="btn-alt" style="flex: 1; padding: 12px; background: #0284c7; color: #fff; border: none;" onclick="retryBiometricScan()">Scan Ulang</button>
@@ -878,6 +903,35 @@
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn-alt" style="flex: 1; padding: 12px;" onclick="closeModal('receiptModal')">Tutup</button>
                 <button class="btn-checkout" style="flex: 1; padding: 12px; font-size: 13px;" onclick="printReceipt()">🖨️ Cetak Struk</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: ENROLLMENT FINGERPRINT WBP -->
+    <div class="modal-overlay" id="enrollModal">
+        <div class="modal-card" style="max-width: 440px; text-align: center;">
+            <div class="scanner-visual" id="enrollScannerVisual">👆</div>
+            <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px;" id="enrollModalTitle">Perekaman Sidik Jari WBP</h2>
+            <p style="color: #64748b; font-size: 12.5px; margin-bottom: 16px;" id="enrollModalDesc">
+                Pilih Warga Binaan, lalu tempelkan jarinya pada scanner DigitalPersona U.are.U 4500.
+            </p>
+
+            <div style="text-align: left; margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">Pilih Warga Binaan:</label>
+                <select id="enrollTargetInmateSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600;">
+                    @foreach($inmates as $wbp)
+                        <option value="{{ $wbp->id }}">
+                            {{ $wbp->nama }} ({{ $wbp->no_registrasi }}) - {{ $wbp->fingerprint_template ? '🟢 Sudah Terdaftar' : '⚪ Belum Ada Finger' }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div id="enrollStatusBox" style="display: none; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 12.5px; font-weight: 600;"></div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-alt" style="flex: 1; padding: 12px;" onclick="closeModal('enrollModal')">Tutup</button>
+                <button class="btn-checkout" id="btnStartEnrollWeb" style="flex: 1; padding: 12px; font-size: 13px;" onclick="startEnrollWebScan()">⚡ Mulai Rekam Jari</button>
             </div>
         </div>
     </div>
@@ -1071,6 +1125,8 @@
         // 5. Checkout Modal & Biometric Flow
         let currentInmate = null;
         let scanAbortController = null;
+        let lastCapturedTemplate = null;
+        let lastCapturedImage = null;
 
         function openCheckoutModal() {
             const total = cart.reduce((sum, it) => sum + (it.harga * it.qty), 0);
@@ -1079,6 +1135,7 @@
             document.getElementById('modalTotalTagihan').innerText = 'Rp ' + total.toLocaleString('id-ID');
             document.getElementById('modalItemCount').innerText = totalQty + ' pcs';
             document.getElementById('inmateIdentifiedBox').style.display = 'none';
+            document.getElementById('unregisteredFingerBox').style.display = 'none';
 
             openModal('biometricModal');
             startBiometricScan();
@@ -1088,10 +1145,14 @@
             const visual = document.getElementById('modalScannerVisual');
             const title = document.getElementById('modalBiometricTitle');
             const desc = document.getElementById('modalBiometricDesc');
+            const unregBox = document.getElementById('unregisteredFingerBox');
+            const identBox = document.getElementById('inmateIdentifiedBox');
 
-            visual.innerText = '👆';
+            unregBox.style.display = 'none';
+            identBox.style.display = 'none';
+            visual.innerHTML = '👆';
             title.innerText = 'Tempelkan Sidik Jari WBP';
-            desc.innerText = 'Silakan tempelkan jari WBP pada alat scanner DigitalPersona U.are.U 4500...';
+            desc.innerHTML = 'Silakan tempelkan jari WBP pada alat scanner <strong>DigitalPersona U.are.U 4500</strong>...';
 
             if (!bridgeOnline) {
                 desc.innerHTML = `<span style="color: #ef4444; font-weight: 700;">Hardware Bridge Offline!</span><br>Pastikan UangPasBridge berjalan di port 8080. Atau gunakan tombol <strong>"Pilih WBP Manual"</strong> di bawah.`;
@@ -1099,24 +1160,57 @@
             }
 
             try {
+                if (scanAbortController) {
+                    try { scanAbortController.abort(); } catch(e){}
+                }
                 scanAbortController = new AbortController();
+
+                // Build candidate list with valid templates
+                const candidates = inmatesData.map(wbp => ({
+                    id: wbp.id,
+                    inmate_id: wbp.id,
+                    nama: wbp.nama,
+                    no_registrasi: wbp.no_registrasi,
+                    saldo: wbp.saldo,
+                    template: wbp.fingerprint_template
+                }));
+
                 const res = await fetch('http://localhost:8080/api/identify', {
                     method: 'POST',
                     signal: scanAbortController.signal,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ timeout: 15000 })
+                    body: JSON.stringify({
+                        timeout: 20000,
+                        candidates: candidates
+                    })
                 });
                 const data = await res.json();
 
-                if (data.success && data.inmate_id) {
-                    const inmate = inmatesData.find(x => x.id == data.inmate_id);
+                if (data.image) {
+                    lastCapturedImage = data.image;
+                    visual.innerHTML = `<img src="${data.image}" style="width: 72px; height: 92px; object-fit: contain; border-radius: 8px; border: 2px solid #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);" />`;
+                }
+
+                if (data.captured_template) {
+                    lastCapturedTemplate = data.captured_template;
+                }
+
+                if (data.success && data.identified) {
+                    const inmateId = data.inmate_id || (data.candidate && data.candidate.id) || (data.candidate && data.candidate.inmate_id);
+                    const inmate = inmatesData.find(x => x.id == inmateId);
                     if (inmate) {
+                        title.innerText = '✅ Teridentifikasi!';
+                        desc.innerText = 'Sidik jari terverifikasi cocok dengan data WBP: ' + inmate.nama;
                         onInmateIdentified(inmate, 'fingerprint');
                     } else {
-                        alert('Sidik jari cocok, namun data WBP tidak terdaftar di UPT ini.');
+                        desc.innerText = 'Sidik jari cocok dengan ID ' + inmateId + ', namun status WBP tidak aktif.';
                     }
+                } else if (data.success && !data.identified && data.captured_template) {
+                    title.innerText = '⚠️ Jari Terbaca (Belum Terdaftar)';
+                    desc.innerText = 'Sensor berhasil membaca sidik jari, namun belum terhubung ke akun WBP.';
+                    unregBox.style.display = 'block';
                 } else {
-                    desc.innerText = data.message || 'Sidik jari tidak cocok atau waktu habis. Silakan coba lagi.';
+                    desc.innerText = data.message || 'Waktu pembacaan habis atau scanner dibatalkan.';
                 }
             } catch (err) {
                 if (err.name !== 'AbortError') {
@@ -1125,8 +1219,142 @@
             }
         }
 
+        async function handleQuickEnrollAndPay() {
+            const select = document.getElementById('quickEnrollInmateSelect');
+            const inmateId = select.value;
+            const btn = document.getElementById('btnQuickEnrollAndPay');
+
+            if (!lastCapturedTemplate) {
+                alert('Belum ada template sidik jari yang terbaca. Silakan klik Scan Ulang.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = '⏳ Menyimpan Sidik Jari ke Server...';
+
+            try {
+                // Save to Laravel API
+                const saveRes = await fetch(`/api/v1/pos/inmate/${inmateId}/save-fingerprint`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fingerprint_template: lastCapturedTemplate,
+                        fingerprint_image: lastCapturedImage || ''
+                    })
+                });
+
+                const saveJson = await saveRes.json();
+                if (!saveJson.success) {
+                    alert('Gagal menyimpan sidik jari: ' + saveJson.message);
+                    btn.disabled = false;
+                    btn.innerText = '✅ Daftarkan Jari ke WBP & Bayar Sekarang';
+                    return;
+                }
+
+                // Update local inmate data so subsequent scans match immediately!
+                const inmate = inmatesData.find(x => x.id == inmateId);
+                if (inmate) {
+                    inmate.fingerprint_template = lastCapturedTemplate;
+                }
+
+                btn.innerText = '⚡ Memproses Pembayaran...';
+                onInmateIdentified(inmate, 'fingerprint');
+            } catch (err) {
+                alert('Error: ' + err.message);
+                btn.disabled = false;
+                btn.innerText = '✅ Daftarkan Jari ke WBP & Bayar Sekarang';
+            }
+        }
+
         function retryBiometricScan() {
             startBiometricScan();
+        }
+
+        // 6. Direct Enrollment Modal Functions
+        function openEnrollModal() {
+            document.getElementById('enrollScannerVisual').innerHTML = '👆';
+            document.getElementById('enrollModalTitle').innerText = 'Perekaman Sidik Jari WBP';
+            document.getElementById('enrollModalDesc').innerText = 'Pilih Warga Binaan, lalu klik Mulai Rekam Jari.';
+            const statusBox = document.getElementById('enrollStatusBox');
+            statusBox.style.display = 'none';
+            openModal('enrollModal');
+        }
+
+        async function startEnrollWebScan() {
+            const select = document.getElementById('enrollTargetInmateSelect');
+            const inmateId = select.value;
+            const visual = document.getElementById('enrollScannerVisual');
+            const title = document.getElementById('enrollModalTitle');
+            const desc = document.getElementById('enrollModalDesc');
+            const statusBox = document.getElementById('enrollStatusBox');
+            const btn = document.getElementById('btnStartEnrollWeb');
+
+            visual.innerHTML = '🔴';
+            title.innerText = 'Menunggu Jari Ditempelkan...';
+            desc.innerText = 'Tempelkan jari WBP pada alat scanner U.are.U 4500 sekarang...';
+            btn.disabled = true;
+            statusBox.style.display = 'none';
+
+            try {
+                const res = await fetch('http://localhost:8080/api/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeout: 15000 })
+                });
+                const data = await res.json();
+
+                if (data.success && data.template) {
+                    if (data.image) {
+                        visual.innerHTML = `<img src="${data.image}" style="width: 72px; height: 92px; object-fit: contain; border-radius: 8px; border: 2px solid #10b981;" />`;
+                    } else {
+                        visual.innerHTML = '🟢';
+                    }
+
+                    title.innerText = 'Sidik Jari Terbaca!';
+                    desc.innerText = 'Menyimpan template ke server database...';
+
+                    // Save to Laravel
+                    const saveRes = await fetch(`/api/v1/pos/inmate/${inmateId}/save-fingerprint`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fingerprint_template: data.template,
+                            fingerprint_image: data.image || ''
+                        })
+                    });
+                    const saveJson = await saveRes.json();
+
+                    if (saveJson.success) {
+                        statusBox.style.display = 'block';
+                        statusBox.style.background = '#ecfdf5';
+                        statusBox.style.color = '#065f46';
+                        statusBox.style.border = '1px solid #a7f3d0';
+                        statusBox.innerText = '✅ Berhasil! Template sidik jari WBP tersimpan di database.';
+
+                        // Update local cache
+                        const wbp = inmatesData.find(x => x.id == inmateId);
+                        if (wbp) wbp.fingerprint_template = data.template;
+                    } else {
+                        statusBox.style.display = 'block';
+                        statusBox.style.background = '#fef2f2';
+                        statusBox.style.color = '#991b1b';
+                        statusBox.style.border = '1px solid #fecaca';
+                        statusBox.innerText = '❌ Gagal simpan: ' + saveJson.message;
+                    }
+                } else {
+                    visual.innerHTML = '⚠️';
+                    title.innerText = 'Perekaman Gagal';
+                    desc.innerText = data.message || 'Waktu habis atau scanner dibatalkan.';
+                }
+            } catch (err) {
+                visual.innerHTML = '❌';
+                title.innerText = 'Koneksi Error';
+                desc.innerText = err.message;
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         function onInmateIdentified(inmate, paymentMethod) {
