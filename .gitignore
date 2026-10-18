@@ -1,0 +1,42 @@
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+UangPasDesktop/diag_run.log
+
+# Laravel Framework & Dependencies (UangPasWeb)
+UangPasWeb/vendor/
+UangPasWeb/node_modules/
+UangPasWeb/.env
+UangPasWeb/.env.backup
+UangPasWeb/.env.production
+UangPasWeb/public/build/
+UangPasWeb/public/hot
+UangPasWeb/public/storage
+UangPasWeb/storage/*.key
+UangPasWeb/storage/logs/*.log
+UangPasWeb/storage/framework/cache/data/*
+UangPasWeb/storage/framework/sessions/*
+UangPasWeb/storage/framework/views/*
+!UangPasWeb/storage/framework/cache/.gitignore
+!UangPasWeb/storage/framework/sessions/.gitignore
+!UangPasWeb/storage/framework/views/.gitignore
+
+# Database file (keep schema in migrations)
+UangPasWeb/database/database.sqlite
+UangPasWeb/database/database.sqlite-journal
+
+# Temporary / Package Manager Cache
+composer.phar
+.phpunit.result.cache

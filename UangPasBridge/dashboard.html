@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UangPas Hardware Bridge - U.are.U 4500 Portal Diagnostik</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-dark: #0369a1;
+            --primary-light: #e0f2fe;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-card: #182234;
+            --border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            padding: 20px 28px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        }
+
+        .brand-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+        }
+
+        .brand-title h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-title p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--success);
+            transition: all 0.3s ease;
+        }
+
+        .header-status.disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: currentColor;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .col-8 { grid-column: span 8; }
+        .col-4 { grid-column: span 4; }
+        .col-12 { grid-column: span 12; }
+
+        @media (max-width: 900px) {
+            .col-8, .col-4 { grid-column: span 12; }
+        }
+
+        /* Card */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-badge {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            background: var(--surface-card);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        /* Info Items */
+        .info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: var(--surface-card);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+        }
+
+        .info-val {
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        /* Scanner Test Area */
+        .test-wrapper {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            background: var(--surface-card);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px dashed var(--border);
+        }
+
+        @media (max-width: 600px) {
+            .test-wrapper { flex-direction: column; }
+        }
+
+        .finger-preview-box {
+            width: 170px;
+            height: 220px;
+            background: #0b1120;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .finger-preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .scanner-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 12px;
+        }
+
+        .scanner-placeholder span {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        .scanner-placeholder p {
+            font-size: 12px;
+        }
+
+        .scan-beam {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #38bdf8;
+            box-shadow: 0 0 16px #38bdf8, 0 0 30px #0284c7;
+            display: none;
+            animation: scanMotion 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes scanMotion {
+            0% { top: 0%; }
+            100% { top: 96%; }
+        }
+
+        .test-controls {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            box-shadow: none;
+        }
+
+        .btn-outline:hover {
+            background: var(--surface-card);
+            filter: none;
+        }
+
+        .test-result-box {
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #0b1120;
+            border: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-muted);
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Checklist */
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: var(--surface-card);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .check-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            flex-shrink: 0;
+        }
+
+        .check-badge.fail {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        /* Verification Test Area */
+        .verify-steps {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 14px;
+        }
+
+        .step-card {
+            background: var(--surface-card);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .step-card h3 {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #e2e8f0;
+        }
+
+        .step-card p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* FAQ Accordion */
+        details {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 12px 16px;
+        }
+
+        summary {
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #f1f5f9;
+        }
+
+        details p {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="brand-wrapper">
+                <div class="logo-icon">👆</div>
+                <div class="brand-title">
+                    <h1>UangPas Hardware Bridge</h1>
+                    <p>DigitalPersona U.are.U 4500 Biometric Driver Service (Port 8080)</p>
+                </div>
+            </div>
+            <div id="statusBadge" class="header-status">
+                <span class="status-dot"></span>
+                <span id="statusText">Memeriksa Perangkat...</span>
+            </div>
+        </header>
+
+        <!-- Grid Content -->
+        <div class="grid">
+            <!-- Left Column: Test & Diagnostics -->
+            <div class="col-8">
+                <!-- Scanner Test Card -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h2>🔍 Uji Coba Pindai Langsung (Live Scan Test)</h2>
+                        <span class="card-badge">Interaktif</span>
+                    </div>
+
+                    <div class="test-wrapper">
+                        <div class="finger-preview-box" id="previewBox">
+                            <div class="scan-beam" id="scanBeam"></div>
+                            <div class="scanner-placeholder" id="placeholder">
+                                <span>👆</span>
+                                <p>Sidik jari akan muncul di sini</p>
+                            </div>
+                            <img id="fingerImg" alt="Hasil Pindai Sidik Jari">
+                        </div>
+
+                        <div class="test-controls">
+                            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                                Klik tombol di bawah ini, lalu tempelkan jari Anda pada sensor <strong>U.are.U 4500</strong>. Sistem akan mengambil gambar sidik jari dan mengekstrak template biometrik (FMD).
+                            </p>
+                            <button id="btnCapture" class="btn" onclick="startCapture()">
+                                <span>▶️</span> Mulai Uji Pindai (Test Scan)
+                            </button>
+                            <div id="testResult" class="test-result-box">
+                                Status: Menunggu perintah uji coba.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1:1 Verification Test Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>⚖️ Simulasi Verifikasi Transaksi (1:1 Matching)</h2>
+                        <span class="card-badge">Algoritma FingerJet</span>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-muted);">
+                        Uji apakah sidik jari yang ditempelkan cocok dengan sidik jari nasabah terdaftar saat transaksi pembayaran UangPas.
+                    </p>
+
+                    <div class="verify-steps">
+                        <div class="step-card">
+                            <h3>Langkah 1: Rekam Jari Acuan</h3>
+                            <p>Tempelkan jari pertama sebagai acuan nasabah terdaftar.</p>
+                            <button id="btnEnrollTest" class="btn btn-outline" style="width: 100%;" onclick="enrollReference()">
+                                📥 Rekam Referensi
+                            </button>
+                            <div id="enrollStatus" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                                Belum ada acuan tersimpan.
+                            </div>
+                        </div>
+
+                        <div class="step-card">
+                            <h3>Langkah 2: Uji Verifikasi</h3>
+                            <p>Tempelkan jari untuk otorisasi transaksi.</p>
+                            <button id="btnVerifyTest" class="btn" style="width: 100%;" onclick="verifyFinger()" disabled>
+                                🔒 Uji Verifikasi Transaksi
+                            </button>
+                            <div id="verifyStatus" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                                Selesaikan Langkah 1 terlebih dahulu.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Specs & Checklist -->
+            <div class="col-4">
+                <!-- Device Details -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h2>ℹ️ Informasi Hardware</h2>
+                        <span class="card-badge">USB Biometric</span>
+                    </div>
+                    <div class="info-list">
+                        <div class="info-row">
+                            <span class="info-label">Tipe Perangkat</span>
+                            <span class="info-val" id="infoModel">U.are.U 4500</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Nomor Seri</span>
+                            <span class="info-val" id="infoSerial" style="font-size: 11px;">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Port HTTP</span>
+                            <span class="info-val">8080 (REST API)</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">CORS</span>
+                            <span class="info-val" style="color: var(--success);">Aktif (*)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Readiness Checklist -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h2>✅ Checklist Komputer Baru</h2>
+                        <span class="card-badge">Troubleshooting</span>
+                    </div>
+                    <div id="checkDriver" class="checklist-item">
+                        <div class="check-badge">✓</div>
+                        <div>
+                            <strong>Driver / RTE DigitalPersona</strong>
+                            <p style="font-size: 11px; color: var(--text-muted);">Pustaka dpfpdd & dpfj terdeteksi</p>
+                        </div>
+                    </div>
+                    <div id="checkUsb" class="checklist-item">
+                        <div class="check-badge">✓</div>
+                        <div>
+                            <strong>Kabel USB Terhubung</strong>
+                            <p style="font-size: 11px; color: var(--text-muted);">Scanner U.are.U 4500 aktif</p>
+                        </div>
+                    </div>
+                    <div id="checkPort" class="checklist-item">
+                        <div class="check-badge">✓</div>
+                        <div>
+                            <strong>Port 8080 Berjalan</strong>
+                            <p style="font-size: 11px; color: var(--text-muted);">Dapat diakses oleh Web Laravel</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick FAQ -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>❓ Panduan Cepat Teknisi</h2>
+                    </div>
+                    <details>
+                        <summary>Lampu U.are.U 4500 tidak menyala?</summary>
+                        <p>Lampu scanner secara normal memang mati saat standby untuk menghemat daya. Lampu merah/biru akan otomatis menyala ketika web meminta verifikasi.</p>
+                    </details>
+                    <details>
+                        <summary>Status "Scanner Terlepas"?</summary>
+                        <p>Cabut kabel USB scanner, tunggu 3 detik, lalu colokkan kembali ke port USB yang berbeda. Halaman ini akan mendeteksi ulang otomatis.</p>
+                    </details>
+                    <details>
+                        <summary>Port 8080 bentrok dengan aplikasi lain?</summary>
+                        <p>Pastikan tidak ada web server lain yang menggunakan port 8080. Port dapat disesuaikan pada file konfigurasi jika diperlukan.</p>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            UangPas Biometric Dompet Digital &bull; DigitalPersona U.are.U 4500 Bridge Engine v1.0 &bull; Ready for Laravel Integration
+        </footer>
+    </div>
+
+    <script>
+        let referenceTemplate = null;
+        let isBusy = false;
+
+        // Auto Poll status every 3 seconds
+        async function checkStatus() {
+            if (isBusy) return; // Jangan mengganggu saat sensor sedang aktif membaca jari
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                const badge = document.getElementById('statusBadge');
+                const text = document.getElementById('statusText');
+                const checkUsb = document.getElementById('checkUsb');
+                const infoSerial = document.getElementById('infoSerial');
+                const infoModel = document.getElementById('infoModel');
+
+                if (data.readerConnected) {
+                    badge.className = 'header-status';
+                    text.textContent = 'Scanner Siap Digunakan';
+                    checkUsb.querySelector('.check-badge').className = 'check-badge';
+                    checkUsb.querySelector('.check-badge').textContent = '✓';
+                    infoSerial.textContent = data.serialNumber || 'Tersambung';
+                    infoModel.textContent = data.productName || 'U.are.U 4500';
+                } else {
+                    badge.className = 'header-status disconnected';
+                    text.textContent = 'Scanner Belum Terdeteksi';
+                    checkUsb.querySelector('.check-badge').className = 'check-badge fail';
+                    checkUsb.querySelector('.check-badge').textContent = '✕';
+                    infoSerial.textContent = 'Tidak Ada';
+                }
+            } catch (err) {
+                const badge = document.getElementById('statusBadge');
+                const text = document.getElementById('statusText');
+                badge.className = 'header-status disconnected';
+                text.textContent = 'Bridge Offline / Gagal';
+            }
+        }
+
+        setInterval(checkStatus, 3000);
+        checkStatus();
+
+        // Live Capture Test
+        async function startCapture() {
+            const btn = document.getElementById('btnCapture');
+            const resultBox = document.getElementById('testResult');
+            const beam = document.getElementById('scanBeam');
+            const placeholder = document.getElementById('placeholder');
+            const img = document.getElementById('fingerImg');
+
+            isBusy = true;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Menunggu Jari Ditempelkan...';
+            resultBox.innerHTML = '<span style="color: #38bdf8;">⚠️ Sensor aktif (20 detik). Tempelkan jari Anda tepat di tengah permukaan kaca sensor U.are.U 4500 sekarang...</span>';
+            beam.style.display = 'block';
+
+            try {
+                const res = await fetch('/api/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeout: 20000 })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    resultBox.innerHTML = '<span style="color: #10b981; font-weight: 600;">✓ Berhasil! Kualitas: <strong>' + data.quality + '</strong>. Template FMD siap.</span>';
+                    if (data.image) {
+                        img.src = data.image;
+                        img.style.display = 'block';
+                        placeholder.style.display = 'none';
+                    }
+                } else {
+                    resultBox.innerHTML = '<span style="color: #ef4444;">✕ Gagal: ' + data.message + '</span>';
+                }
+            } catch (err) {
+                resultBox.innerHTML = '<span style="color: #ef4444;">✕ Terjadi kesalahan koneksi bridge: ' + err.message + '</span>';
+            } finally {
+                beam.style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = '<span>▶️</span> Mulai Uji Pindai (Test Scan)';
+                isBusy = false;
+            }
+        }
+
+        // 1:1 Reference Enrollment
+        async function enrollReference() {
+            const btn = document.getElementById('btnEnrollTest');
+            const status = document.getElementById('enrollStatus');
+            isBusy = true;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Menempelkan Jari...';
+            status.innerHTML = '<span style="color: #38bdf8;">Sensor aktif (20 detik). Tempelkan jari acuan...</span>';
+
+            try {
+                const res = await fetch('/api/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeout: 20000 })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    referenceTemplate = data.template;
+                    status.innerHTML = '<span style="color: #10b981; font-weight: 600;">✓ Jari acuan tersimpan. Siap diverifikasi!</span>';
+                    document.getElementById('btnVerifyTest').disabled = false;
+                    document.getElementById('verifyStatus').innerHTML = 'Silakan klik tombol di atas untuk menguji kecocokan.';
+                } else {
+                    status.innerHTML = '<span style="color: #ef4444;">Gagal merekam acuan: ' + data.message + '</span>';
+                }
+            } catch (err) {
+                status.innerHTML = '<span style="color: #ef4444;">Error: ' + err.message + '</span>';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '📥 Rekam Ulang Referensi';
+                isBusy = false;
+            }
+        }
+
+        // 1:1 Verification Test
+        async function verifyFinger() {
+            if (!referenceTemplate) return;
+            const btn = document.getElementById('btnVerifyTest');
+            const status = document.getElementById('verifyStatus');
+
+            isBusy = true;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Menunggu Jari Verifikasi...';
+            status.innerHTML = '<span style="color: #38bdf8;">Sensor aktif (20 detik). Tempelkan jari untuk dicocokkan...</span>';
+
+            try {
+                const res = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ template: referenceTemplate, timeout: 20000 })
+                });
+                const data = await res.json();
+                if (data.success && data.verified) {
+                    status.innerHTML = '<span style="color: #10b981; font-weight: 700; font-size: 13px;">🎉 COCOK! Transaksi Diizinkan (Score: ' + data.score + ')</span>';
+                } else if (data.success && !data.verified) {
+                    status.innerHTML = '<span style="color: #ef4444; font-weight: 700; font-size: 13px;">❌ TIDAK COCOK! Sidik jari berbeda (Score: ' + data.score + ')</span>';
+                } else {
+                    status.innerHTML = '<span style="color: #ef4444;">Gagal verifikasi: ' + data.message + '</span>';
+                }
+            } catch (err) {
+                status.innerHTML = '<span style="color: #ef4444;">Error: ' + err.message + '</span>';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔒 Uji Verifikasi Transaksi';
+                isBusy = false;
+            }
+        }
+    </script>
+</body>
+</html>
