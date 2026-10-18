@@ -253,6 +253,26 @@ namespace UangPasDesktop
             btnTopUji.Click += (s, e) => SwitchTab(4);
             topFlowLeft.Controls.Add(btnTopUji);
 
+            Button btnOpenWebPos = new Button {
+                Text = "⚡ Web POS Modern",
+                Width = 150,
+                Height = 34,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(3, 0, 4, 0)
+            };
+            btnOpenWebPos.Click += (s, e) => {
+                try {
+                    System.Diagnostics.Process.Start("http://localhost:8000/pos");
+                } catch (Exception ex) {
+                    MessageBox.Show("Gagal membuka browser: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+            topFlowLeft.Controls.Add(btnOpenWebPos);
+
             topBar.Controls.Add(topFlowLeft);
 
             // Tab Control (Flat mode without redundant tabs)

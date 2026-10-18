@@ -30,3 +30,16 @@ Route::put('/products/{id}', [AdminController::class, 'updateProduct'])->name('a
 
 // Laporan Transaksi Kasir
 Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
+
+// Multi-UPT Synchronization & Backup Antar-Server
+use App\Http\Controllers\Web\SyncController;
+Route::get('/sync', [SyncController::class, 'index'])->name('admin.sync');
+Route::post('/sync/backup', [SyncController::class, 'triggerBackup'])->name('admin.sync.backup');
+Route::post('/sync/pull-mutasi', [SyncController::class, 'pullMutation'])->name('admin.sync.pull');
+Route::post('/sync/settings', [SyncController::class, 'updateSettings'])->name('admin.sync.settings');
+
+// Web POS Modern (CSS-based Point of Sale)
+use App\Http\Controllers\Web\PosWebController;
+Route::get('/pos', [PosWebController::class, 'index'])->name('pos.index');
+Route::post('/pos/checkout', [PosWebController::class, 'checkout'])->name('pos.checkout');
+

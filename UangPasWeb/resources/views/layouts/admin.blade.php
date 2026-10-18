@@ -537,6 +537,10 @@
             </a>
 
             <div class="nav-label">Koperasi & Kasir</div>
+            <a href="{{ route('pos.index') }}" target="_blank" class="nav-item">
+                <span class="nav-icon">⚡</span>
+                <span>Buka Kasir POS Modern</span>
+            </a>
             <a href="{{ route('admin.products') }}" class="nav-item {{ request()->routeIs('admin.products*') ? 'active' : '' }}">
                 <span class="nav-icon">🛒</span>
                 <span>Katalog Barang Koperasi</span>
@@ -544,6 +548,12 @@
             <a href="{{ route('admin.transactions') }}" class="nav-item {{ request()->routeIs('admin.transactions*') ? 'active' : '' }}">
                 <span class="nav-icon">📑</span>
                 <span>Laporan & Mutasi Kasir</span>
+            </a>
+
+            <div class="nav-label">Jaringan & Sinkronisasi</div>
+            <a href="{{ route('admin.sync') }}" class="nav-item {{ request()->routeIs('admin.sync*') ? 'active' : '' }}">
+                <span class="nav-icon">🔄</span>
+                <span>Sinkron & Mutasi Antar-UPT</span>
             </a>
         </nav>
 
