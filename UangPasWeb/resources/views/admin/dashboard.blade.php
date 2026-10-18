@@ -97,6 +97,31 @@
     </div>
 </div>
 
+<!-- Quick Financial & Retail Action Strip -->
+<div class="card" style="margin-bottom: 24px; padding: 14px 20px; background: #ffffff; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">🏛️</span>
+        <div>
+            <div style="font-size: 13px; font-weight: 800; color: #0f172a;">Manajemen & Audit Koperasi Pengayoman</div>
+            <div style="font-size: 11px; color: #64748b;">Pantau kinerja laba rugi, HPP barang, dan peredaran dana non-tunai WBP</div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="{{ route('admin.reports.profit_loss') }}" class="btn" style="background: #0284c7; color: #fff; font-size: 12px; padding: 7px 14px;">
+            <span>📈</span> Laba Rugi & Gross Margin
+        </a>
+        <a href="{{ route('admin.reports.cashflow') }}" class="btn" style="background: #10b981; color: #fff; font-size: 12px; padding: 7px 14px;">
+            <span>💰</span> Arus Kas & Titipan WBP
+        </a>
+        <a href="{{ route('admin.inventory.restock') }}" class="btn btn-outline" style="font-size: 12px; padding: 7px 14px;">
+            <span>📥</span> Restock Masuk
+        </a>
+        <a href="{{ route('admin.inventory.opname') }}" class="btn btn-outline" style="font-size: 12px; padding: 7px 14px;">
+            <span>📋</span> Audit Opname
+        </a>
+    </div>
+</div>
+
 <!-- Main Row: Transaksi Kasir & Mutasi WBP -->
 <div class="grid-2">
     <!-- Transaksi Terakhir -->

@@ -58,8 +58,13 @@ Route::get('/inventory/suppliers', [InventoryController::class, 'suppliers'])->n
 Route::post('/inventory/suppliers', [InventoryController::class, 'storeSupplier'])->name('admin.inventory.suppliers.store');
 Route::put('/inventory/suppliers/{id}', [InventoryController::class, 'updateSupplier'])->name('admin.inventory.suppliers.update');
 
-// Laporan Transaksi Kasir
+// Laporan Transaksi Kasir & Keuangan Retail Koperasi
+use App\Http\Controllers\Web\FinancialReportController;
 Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
+Route::get('/reports/profit-loss', [FinancialReportController::class, 'profitLoss'])->name('admin.reports.profit_loss');
+Route::get('/reports/cashflow', [FinancialReportController::class, 'cashflow'])->name('admin.reports.cashflow');
+Route::get('/reports/profit-loss/print', [FinancialReportController::class, 'printProfitLoss'])->name('admin.reports.print');
+Route::get('/reports/profit-loss/export-excel', [FinancialReportController::class, 'exportExcel'])->name('admin.reports.export_excel');
 
 // Multi-UPT Synchronization & Backup Antar-Server
 use App\Http\Controllers\Web\SyncController;

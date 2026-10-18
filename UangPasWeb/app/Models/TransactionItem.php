@@ -13,6 +13,7 @@ class TransactionItem extends Model
 
     protected $casts = [
         'harga_satuan' => 'decimal:2',
+        'harga_beli' => 'decimal:2',
         'subtotal' => 'decimal:2',
     ];
 

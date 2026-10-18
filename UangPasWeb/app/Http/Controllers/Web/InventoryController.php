@@ -543,6 +543,7 @@ class InventoryController extends Controller
                     'product_id' => $it['product']->id,
                     'nama_barang' => $it['product']->nama_barang,
                     'harga_satuan' => $it['price'],
+                    'harga_beli' => $it['product']->harga_beli ?? 0.00,
                     'qty' => $it['qty'],
                     'subtotal' => $it['subtotal'],
                 ]);

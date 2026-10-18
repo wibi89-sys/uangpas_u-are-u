@@ -557,9 +557,18 @@
                 <span class="nav-icon">🏭</span>
                 <span>Supplier Rekanan</span>
             </a>
+            <div class="nav-label">Keuangan & Audit Koperasi</div>
+            <a href="{{ route('admin.reports.profit_loss') }}" class="nav-item {{ request()->routeIs('admin.reports.profit_loss*') ? 'active' : '' }}">
+                <span class="nav-icon">📈</span>
+                <span>Laba Rugi & Gross Margin</span>
+            </a>
+            <a href="{{ route('admin.reports.cashflow') }}" class="nav-item {{ request()->routeIs('admin.reports.cashflow*') ? 'active' : '' }}">
+                <span class="nav-icon">💰</span>
+                <span>Arus Kas & Titipan WBP</span>
+            </a>
             <a href="{{ route('admin.transactions') }}" class="nav-item {{ request()->routeIs('admin.transactions*') ? 'active' : '' }}">
                 <span class="nav-icon">📑</span>
-                <span>Laporan Mutasi Kasir</span>
+                <span>Buku Transaksi Kasir</span>
             </a>
             <div style="padding: 10px 14px; margin: 8px 12px; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 8px; font-size: 11px; color: #0369a1; line-height: 1.4;">
                 <div style="font-weight: 700; display: flex; align-items: center; gap: 5px; margin-bottom: 2px;">
