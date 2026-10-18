@@ -1,16 +1,38 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
+using System.Net.NetworkInformation;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Text;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
+using Timer = System.Windows.Forms.Timer;
 using System.Collections.Generic;
 using System.Web.Script.Serialization;
 using DPUruNet;
 
 namespace UangPasDesktop
 {
+    public class DiscoveredServer
+    {
+        public string Ip { get; set; }
+        public int Port { get; set; }
+        public string Url { get; set; }
+        public string UptName { get; set; }
+        public string UptCode { get; set; }
+        public long LatencyMs { get; set; }
+
+        public override string ToString()
+        {
+            string name = string.IsNullOrEmpty(UptName) ? "Server UangPas" : UptName;
+            return name + " (" + Ip + ":" + Port + ") - " + LatencyMs + " ms";
+        }
+    }
+
     static class Program
     {
         [MTAThread]
@@ -74,9 +96,23 @@ namespace UangPasDesktop
         private Button btnTopUji;
         private Timer timerScannerPoll;
 
-        // UI Settings
+        // UI Settings & Splitter Persistence
         private TextBox txtSettingApiUrl;
         private TabControl tabs;
+        private double savedSplitterRatio = 0.48; // Default 48% left, 52% right (keranjang belanja lebih lega & tidak perlu digeser)
+        private SplitContainer splitKasir;
+        private bool isApplyingSplitter = false;
+
+        // UI Controls - LAN Discovery & Settings Tab
+        private List<DiscoveredServer> lastDiscoveredServers = new List<DiscoveredServer>();
+        private ComboBox cmbDiscoveredServers;
+        private Label lblLanScanStatus;
+        private Label lblCurrentServerInfo;
+        private Button btnScanLan;
+        private Button btnApplyDiscovered;
+        private TextBox txtManualIp;
+        private TextBox txtManualPort;
+        private Label lblSplitterInfo;
 
         public MainForm()
         {
@@ -89,8 +125,11 @@ namespace UangPasDesktop
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             this.BackColor = Color.FromArgb(248, 250, 252);
 
+            LoadLocalSettings();
             InitializeUI();
+
             this.Shown += (s, e) => {
+                ApplySplitterRatio();
                 InitializeBiometrics();
                 SyncDataFromApi();
             };
@@ -401,22 +440,29 @@ namespace UangPasDesktop
         #region TAB 1: KASIR POS
         private void BuildKasirTab(TabPage page)
         {
-            SplitContainer split = new SplitContainer {
+            splitKasir = new SplitContainer {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                IsSplitterFixed = false
+                IsSplitterFixed = false,
+                SplitterWidth = 6
+            };
+
+            // Capture when user manually drags splitter to persist their custom layout preference
+            splitKasir.SplitterMoved += (s, e) => {
+                if (splitKasir.Width > 0 && !isApplyingSplitter)
+                {
+                    double ratio = (double)splitKasir.SplitterDistance / splitKasir.Width;
+                    if (ratio >= 0.25 && ratio <= 0.75)
+                    {
+                        this.savedSplitterRatio = ratio;
+                        SaveLocalSettings();
+                    }
+                }
             };
 
             // Handle proportional splitter on resize
             this.Resize += (s, e) => {
-                try {
-                    if (split != null && this.ClientSize.Width > 500)
-                    {
-                        int targetDist = (int)(this.ClientSize.Width * 0.58);
-                        if (targetDist > 300 && targetDist < this.ClientSize.Width - 250)
-                            split.SplitterDistance = targetDist;
-                    }
-                } catch { }
+                ApplySplitterRatio();
             };
 
             // LEFT PANEL: Product Grid & Search
@@ -585,7 +631,7 @@ namespace UangPasDesktop
             searchTable.SendToBack();
             gridProducts.BringToFront();
 
-            split.Panel1.Controls.Add(leftPanel);
+            splitKasir.Panel1.Controls.Add(leftPanel);
 
             // RIGHT PANEL: Cart & Fingerprint Checkout
             Panel rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 20, 16, 16), BackColor = Color.White };
@@ -657,9 +703,14 @@ namespace UangPasDesktop
             gridCart.Columns.Add("harga", "Harga");
             gridCart.Columns.Add("qty", "Qty");
             gridCart.Columns.Add("subtotal", "Subtotal");
-            gridCart.Columns["harga"].Width = 90;
-            gridCart.Columns["qty"].Width = 60;
-            gridCart.Columns["subtotal"].Width = 100;
+            gridCart.Columns["nama"].FillWeight = 160;
+            gridCart.Columns["nama"].MinimumWidth = 130;
+            gridCart.Columns["harga"].FillWeight = 80;
+            gridCart.Columns["harga"].MinimumWidth = 90;
+            gridCart.Columns["qty"].FillWeight = 50;
+            gridCart.Columns["qty"].MinimumWidth = 55;
+            gridCart.Columns["subtotal"].FillWeight = 90;
+            gridCart.Columns["subtotal"].MinimumWidth = 100;
             gridCart.Columns["harga"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             gridCart.Columns["qty"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             gridCart.Columns["subtotal"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
@@ -668,12 +719,12 @@ namespace UangPasDesktop
             gridCart.CellValueChanged += (s, e) => RecalculateCart();
             rightPanel.Controls.Add(gridCart);
 
-            // Bottom Summary & Checkout Button (Fully Responsive Grid)
+            // Bottom Summary & Checkout Button (2-Tier Layout: Row 1 = Biometric primary, Row 2 = Manual & Clear)
             Panel bottomPanel = new Panel { 
                 Dock = DockStyle.Bottom, 
-                Height = 150, 
+                Height = 165, 
                 BackColor = Color.FromArgb(248, 250, 252), 
-                Padding = new Padding(12) 
+                Padding = new Padding(12, 8, 12, 10) 
             };
             
             lblTotal = new Label {
@@ -681,24 +732,38 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 18f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(2, 132, 199),
                 Dock = DockStyle.Top,
-                Height = 44,
+                Height = 40,
                 TextAlign = ContentAlignment.MiddleRight
             };
             bottomPanel.Controls.Add(lblTotal);
 
             TableLayoutPanel btnTable = new TableLayoutPanel {
-                Dock = DockStyle.Bottom,
-                Height = 72,
-                RowCount = 1,
-                ColumnCount = 3,
-                Padding = new Padding(0, 6, 0, 0)
+                Dock = DockStyle.Fill,
+                RowCount = 2,
+                ColumnCount = 2,
+                Padding = new Padding(0, 4, 0, 0)
             };
-            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90f));
-            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42f));
-            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58f));
+            btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 52f));
+            btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             
+            btnCheckoutFingerprint = new Button {
+                Text = "👆 BAYAR SIDIK JARI WBP (U.ARE.U 4500)",
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(16, 185, 129),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCheckoutFingerprint.FlatAppearance.BorderSize = 0;
+            btnCheckoutFingerprint.Click += (s, e) => ProcessCheckoutFingerprint();
+            btnTable.Controls.Add(btnCheckoutFingerprint, 0, 0);
+            btnTable.SetColumnSpan(btnCheckoutFingerprint, 2);
+
             Button btnClear = new Button {
-                Text = "Batal",
+                Text = "🗑️ Batal",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White,
@@ -706,40 +771,31 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
+            btnClear.FlatAppearance.BorderSize = 0;
             btnClear.Click += (s, e) => { cart.Clear(); RefreshCartGrid(); };
-            btnTable.Controls.Add(btnClear, 0, 0);
+            btnTable.Controls.Add(btnClear, 0, 1);
 
             btnCheckoutManual = new Button {
-                Text = "👤 BAYAR MANUAL (WBP)",
+                Text = "👤 Bayar Manual (Ketik No. Reg / Nama)",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
+            btnCheckoutManual.FlatAppearance.BorderSize = 0;
             btnCheckoutManual.Click += (s, e) => ProcessCheckoutManual();
-            btnTable.Controls.Add(btnCheckoutManual, 1, 0);
-
-            btnCheckoutFingerprint = new Button {
-                Text = "👆 BAYAR SIDIK JARI WBP",
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(16, 185, 129),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnCheckoutFingerprint.Click += (s, e) => ProcessCheckoutFingerprint();
-            btnTable.Controls.Add(btnCheckoutFingerprint, 2, 0);
+            btnTable.Controls.Add(btnCheckoutManual, 1, 1);
 
             bottomPanel.Controls.Add(btnTable);
+            btnTable.BringToFront();
             rightPanel.Controls.Add(bottomPanel);
 
             gridCart.BringToFront();
-            split.Panel2.Controls.Add(rightPanel);
+            splitKasir.Panel2.Controls.Add(rightPanel);
 
-            page.Controls.Add(split);
+            page.Controls.Add(splitKasir);
         }
         #endregion
 
@@ -884,38 +940,667 @@ namespace UangPasDesktop
         }
         #endregion
 
-        #region TAB 4: SETTINGS
+        #region TAB 4: SETTINGS & LAN AUTO-DISCOVERY
         private void BuildSettingsTab(TabPage page)
         {
-            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32), AutoScroll = true };
+            Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), AutoScroll = true, BackColor = Color.FromArgb(248, 250, 252) };
 
-            Label lblTitle = new Label { Text = "Pengaturan Server API & Hardware", Font = new Font("Segoe UI", 14f, FontStyle.Bold), AutoSize = true, Location = new Point(32, 24) };
+            Label lblTitle = new Label { 
+                Text = "⚙️ Pengaturan Server & Koneksi Jaringan", 
+                Font = new Font("Segoe UI", 14f, FontStyle.Bold), 
+                ForeColor = Color.FromArgb(15, 23, 42),
+                AutoSize = true, 
+                Location = new Point(24, 20) 
+            };
             p.Controls.Add(lblTitle);
 
-            Label lblUrl = new Label { Text = "Alamat Backend API Laravel (Hosting / Lokal):", Location = new Point(32, 80), AutoSize = true, Font = new Font("Segoe UI", 10f, FontStyle.Bold) };
-            p.Controls.Add(lblUrl);
+            Label lblSub = new Label { 
+                Text = "Konfigurasikan koneksi Terminal Kasir POS ke Server Lokal UangPas Lapas (LAN/WiFi).\nGunakan Pencarian Otomatis LAN untuk setup cepat tanpa mengetik.", 
+                Font = new Font("Segoe UI", 9.5f), 
+                ForeColor = Color.FromArgb(100, 116, 139),
+                AutoSize = true, 
+                Location = new Point(24, 50) 
+            };
+            p.Controls.Add(lblSub);
 
-            txtSettingApiUrl = new TextBox { Location = new Point(32, 110), Width = 480, Text = this.apiUrl, Font = new Font("Segoe UI", 10.5f) };
-            p.Controls.Add(txtSettingApiUrl);
+            int cardTop = 96;
 
-            Button btnSave = new Button {
-                Text = "💾 Simpan & Uji Koneksi API",
-                Location = new Point(32, 160),
-                Width = 220,
+            // CARD 1: Status Server Saat Ini
+            GroupBox grpStatus = new GroupBox {
+                Text = " 📡 Status Server Saat Ini ",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Location = new Point(24, cardTop),
+                Width = 820,
+                Height = 115,
+                BackColor = Color.White
+            };
+
+            lblCurrentServerInfo = new Label {
+                Text = "Alamat Aktif: " + this.apiUrl + "\nStatus: Menunggu pengujian...",
+                Font = new Font("Segoe UI", 9.5f),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Location = new Point(16, 26),
+                Width = 590,
+                Height = 68
+            };
+            grpStatus.Controls.Add(lblCurrentServerInfo);
+
+            Button btnTestConn = new Button {
+                Text = "🔄 Uji Koneksi Sekarang",
+                Location = new Point(620, 32),
+                Width = 180,
                 Height = 40,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnTestConn.Click += (s, e) => {
+                btnTestConn.Text = "⏳ Menguji...";
+                btnTestConn.Enabled = false;
+                ThreadPool.QueueUserWorkItem(_ => {
+                    TestCurrentConnection();
+                    try
+                    {
+                        this.BeginInvoke((Action)(() => {
+                            btnTestConn.Text = "🔄 Uji Koneksi Sekarang";
+                            btnTestConn.Enabled = true;
+                        }));
+                    }
+                    catch { }
+                });
+            };
+            grpStatus.Controls.Add(btnTestConn);
+            p.Controls.Add(grpStatus);
+
+            cardTop += 130;
+
+            // CARD 2: CARI SERVER OTOMATIS (SCAN LAN)
+            GroupBox grpLan = new GroupBox {
+                Text = " 🚀 Pencarian Server Otomatis via Jaringan LAN (Paling Mudah) ",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Location = new Point(24, cardTop),
+                Width = 820,
+                Height = 190,
+                BackColor = Color.White
+            };
+
+            Label lblLanDesc = new Label {
+                Text = "Memindai komputer di jaringan LAN / WiFi lokal untuk mendeteksi Server UangPas yang aktif secara otomatis.",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(16, 26),
+                Width = 780,
+                Height = 22
+            };
+            grpLan.Controls.Add(lblLanDesc);
+
+            btnScanLan = new Button {
+                Text = "🔍 Cari Server Otomatis di Jaringan LAN",
+                Location = new Point(16, 54),
+                Width = 330,
+                Height = 44,
+                BackColor = Color.FromArgb(16, 185, 129),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnScanLan.FlatAppearance.BorderSize = 0;
+            btnScanLan.Click += (s, e) => StartLanAutoDiscovery();
+            grpLan.Controls.Add(btnScanLan);
+
+            lblLanScanStatus = new Label {
+                Text = "Klik tombol di atas untuk memulai pencarian otomatis di LAN.",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Italic),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(358, 54),
+                Width = 440,
+                Height = 44,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            grpLan.Controls.Add(lblLanScanStatus);
+
+            Label lblResultPrompt = new Label {
+                Text = "Daftar Server Ditemukan di LAN:",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Location = new Point(16, 110),
+                Width = 260,
+                Height = 20
+            };
+            grpLan.Controls.Add(lblResultPrompt);
+
+            cmbDiscoveredServers = new ComboBox {
+                Location = new Point(16, 134),
+                Width = 550,
+                Height = 32,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9.5f),
+                BackColor = Color.White
+            };
+            grpLan.Controls.Add(cmbDiscoveredServers);
+
+            btnApplyDiscovered = new Button {
+                Text = "🔌 Gunakan Server Ini",
+                Location = new Point(580, 132),
+                Width = 220,
+                Height = 35,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Enabled = false
             };
-            btnSave.Click += (s, e) => {
-                this.apiUrl = txtSettingApiUrl.Text.Trim();
-                SyncDataFromApi();
-                MessageBox.Show("Pengaturan URL API berhasil disimpan dan database telah disinkronkan.", "Sukses", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            btnApplyDiscovered.FlatAppearance.BorderSize = 0;
+            btnApplyDiscovered.Click += (s, e) => {
+                if (cmbDiscoveredServers.SelectedIndex >= 0 && cmbDiscoveredServers.SelectedIndex < lastDiscoveredServers.Count)
+                {
+                    var srv = lastDiscoveredServers[cmbDiscoveredServers.SelectedIndex];
+                    ApplyNewServerUrl(srv.Url, srv.UptName);
+                }
             };
-            p.Controls.Add(btnSave);
+            grpLan.Controls.Add(btnApplyDiscovered);
+            p.Controls.Add(grpLan);
+
+            cardTop += 205;
+
+            // CARD 3: PENGATURAN MANUAL RINGKAS (INPUT IP ATAU URL LENGKAP)
+            GroupBox grpManual = new GroupBox {
+                Text = " ✍️ Pengaturan Manual (Input IP Server) ",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Location = new Point(24, cardTop),
+                Width = 820,
+                Height = 175,
+                BackColor = Color.White
+            };
+
+            Label lblManualDesc = new Label {
+                Text = "Cukup masukkan Alamat IP Server saja (contoh: 192.168.1.50 atau localhost), sistem otomatis melengkapi port & path API:",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(16, 26),
+                Width = 780,
+                Height = 22
+            };
+            grpManual.Controls.Add(lblManualDesc);
+
+            Label lblIpTag = new Label { Text = "IP / Host Server:", Location = new Point(16, 56), Width = 130, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+            grpManual.Controls.Add(lblIpTag);
+
+            txtManualIp = new TextBox {
+                Location = new Point(16, 78),
+                Width = 280,
+                Font = new Font("Segoe UI", 10.5f),
+                Text = ExtractHostFromUrl(this.apiUrl)
+            };
+            grpManual.Controls.Add(txtManualIp);
+
+            Label lblPortTag = new Label { Text = "Port:", Location = new Point(306, 56), Width = 60, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+            grpManual.Controls.Add(lblPortTag);
+
+            txtManualPort = new TextBox {
+                Location = new Point(306, 78),
+                Width = 80,
+                Font = new Font("Segoe UI", 10.5f),
+                Text = "8000"
+            };
+            grpManual.Controls.Add(txtManualPort);
+
+            Button btnSaveManualIp = new Button {
+                Text = "💾 Simpan & Sambungkan",
+                Location = new Point(400, 75),
+                Width = 220,
+                Height = 34,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSaveManualIp.FlatAppearance.BorderSize = 0;
+            btnSaveManualIp.Click += (s, e) => {
+                string ip = txtManualIp.Text.Trim();
+                string port = txtManualPort.Text.Trim();
+                if (string.IsNullOrEmpty(ip)) { MessageBox.Show("Silakan masukkan alamat IP server.", "Perhatian", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                if (string.IsNullOrEmpty(port)) port = "8000";
+                string constructed = "http://" + ip + ":" + port + "/api/v1";
+                ApplyNewServerUrl(constructed, "Manual Config");
+            };
+            grpManual.Controls.Add(btnSaveManualIp);
+
+            Label lblFullUrl = new Label { Text = "Atau URL Lengkap:", Location = new Point(16, 122), Width = 120, Font = new Font("Segoe UI", 8.5f) };
+            grpManual.Controls.Add(lblFullUrl);
+
+            txtSettingApiUrl = new TextBox { Location = new Point(140, 120), Width = 470, Text = this.apiUrl, Font = new Font("Segoe UI", 9f) };
+            grpManual.Controls.Add(txtSettingApiUrl);
+
+            Button btnSaveFullUrl = new Button {
+                Text = "Simpan URL",
+                Location = new Point(620, 118),
+                Width = 120,
+                Height = 28,
+                BackColor = Color.FromArgb(241, 245, 249),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSaveFullUrl.Click += (s, e) => {
+                ApplyNewServerUrl(txtSettingApiUrl.Text.Trim(), "Manual Full URL");
+            };
+            grpManual.Controls.Add(btnSaveFullUrl);
+
+            p.Controls.Add(grpManual);
+
+            cardTop += 190;
+
+            // CARD 4: PENGATURAN TATA LETAK KERANJANG BELANJA
+            GroupBox grpLayout = new GroupBox {
+                Text = " 🛒 Pengaturan Tampilan & Lebar Keranjang Belanja ",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Location = new Point(24, cardTop),
+                Width = 820,
+                Height = 115,
+                BackColor = Color.White
+            };
+
+            lblSplitterInfo = new Label {
+                Text = "Porsi Pembagian Layar: " + (int)((1 - this.savedSplitterRatio) * 100) + "% untuk Keranjang Belanja.\n(Posisi pemisah disimpan otomatis saat Anda menggesernya di Tab Kasir).",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Location = new Point(16, 28),
+                Width = 550,
+                Height = 45
+            };
+            grpLayout.Controls.Add(lblSplitterInfo);
+
+            Button btnResetSplitter = new Button {
+                Text = "⚖️ Reset Lebar Seimbang (50% : 50%)",
+                Location = new Point(580, 32),
+                Width = 220,
+                Height = 38,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnResetSplitter.Click += (s, e) => {
+                this.savedSplitterRatio = 0.48; // 48% left, 52% right
+                SaveLocalSettings();
+                ApplySplitterRatio();
+                lblSplitterInfo.Text = "Porsi Pembagian Layar: 52% untuk Keranjang Belanja.\n(Posisi pemisah disimpan otomatis saat Anda menggesernya di Tab Kasir).";
+                MessageBox.Show("Lebar keranjang belanja telah dikembalikan ke ukuran seimbang (52% lebar layar).", "Sukses", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            grpLayout.Controls.Add(btnResetSplitter);
+
+            p.Controls.Add(grpLayout);
 
             page.Controls.Add(p);
+        }
+        #endregion
+
+        #region SETTINGS & LAN DISCOVERY METHODS
+        private void LoadLocalSettings()
+        {
+            try
+            {
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+                if (File.Exists(path))
+                {
+                    string json = File.ReadAllText(path);
+                    var dict = serializer.Deserialize<Dictionary<string, object>>(json);
+                    if (dict != null)
+                    {
+                        if (dict.ContainsKey("api_url") && dict["api_url"] != null && !string.IsNullOrEmpty(dict["api_url"].ToString()))
+                        {
+                            this.apiUrl = NormalizeApiUrl(dict["api_url"].ToString().Trim());
+                        }
+                        if (dict.ContainsKey("splitter_ratio") && dict["splitter_ratio"] != null)
+                        {
+                            double r;
+                            if (double.TryParse(dict["splitter_ratio"].ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out r))
+                            {
+                                if (r >= 0.25 && r <= 0.75) this.savedSplitterRatio = r;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void SaveLocalSettings()
+        {
+            try
+            {
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+                Dictionary<string, object> dict = new Dictionary<string, object>();
+                dict["api_url"] = this.apiUrl;
+                dict["splitter_ratio"] = this.savedSplitterRatio;
+                File.WriteAllText(path, serializer.Serialize(dict));
+            }
+            catch { }
+        }
+
+        private void ApplySplitterRatio()
+        {
+            try
+            {
+                if (splitKasir != null && splitKasir.Width > 500)
+                {
+                    isApplyingSplitter = true;
+                    double ratio = (this.savedSplitterRatio >= 0.25 && this.savedSplitterRatio <= 0.75)
+                        ? this.savedSplitterRatio
+                        : 0.48; // 48% left, 52% right -> shopping cart gets plenty of room!
+                    int targetDist = (int)(splitKasir.Width * ratio);
+                    int minLeft = 360;
+                    int minRight = 500;
+                    if (targetDist < minLeft) targetDist = minLeft;
+                    if (splitKasir.Width - targetDist < minRight) targetDist = Math.Max(minLeft, splitKasir.Width - minRight);
+                    if (targetDist > 0 && targetDist < splitKasir.Width)
+                    {
+                        splitKasir.SplitterDistance = targetDist;
+                    }
+                }
+            }
+            catch { }
+            finally
+            {
+                isApplyingSplitter = false;
+            }
+        }
+
+        private string NormalizeApiUrl(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return "http://127.0.0.1:8000/api/v1";
+            string s = input.Trim().TrimEnd('/');
+            if (!s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !s.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                s = "http://" + s;
+            }
+            try
+            {
+                Uri uri = new Uri(s);
+                string host = uri.Host;
+                int port = uri.Port > 0 ? uri.Port : 8000;
+                if (uri.IsDefaultPort && !s.Contains(":" + port))
+                {
+                    port = 8000;
+                }
+                string path = uri.AbsolutePath.TrimEnd('/');
+                if (string.IsNullOrEmpty(path) || path == "/")
+                {
+                    path = "/api/v1";
+                }
+                else if (!path.EndsWith("/api/v1", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (path.EndsWith("/api", StringComparison.OrdinalIgnoreCase)) path += "/v1";
+                    else path += "/api/v1";
+                }
+                return uri.Scheme + "://" + host + ":" + port + path;
+            }
+            catch
+            {
+                return s;
+            }
+        }
+
+        private string ExtractHostFromUrl(string url)
+        {
+            try
+            {
+                Uri uri = new Uri(url);
+                return uri.Host;
+            }
+            catch
+            {
+                return "127.0.0.1";
+            }
+        }
+
+        private void ApplyNewServerUrl(string rawUrl, string sourceName)
+        {
+            string normalized = NormalizeApiUrl(rawUrl);
+            this.apiUrl = normalized;
+            if (txtSettingApiUrl != null) txtSettingApiUrl.Text = normalized;
+            if (txtManualIp != null) txtManualIp.Text = ExtractHostFromUrl(normalized);
+            SaveLocalSettings();
+
+            if (lblCurrentServerInfo != null)
+            {
+                lblCurrentServerInfo.Text = "Alamat Aktif: " + this.apiUrl + "\nStatus: Menghubungkan & menyinkronkan data...";
+                lblCurrentServerInfo.ForeColor = Color.FromArgb(2, 132, 199);
+            }
+
+            SyncDataFromApi();
+
+            MessageBox.Show("Alamat Server UangPas berhasil diperbarui ke:\n" + this.apiUrl + "\n\nDatabase produk dan data WBP telah disinkronkan.", "Koneksi Berhasil", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void TestCurrentConnection()
+        {
+            try
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                string pingUrl = this.apiUrl.TrimEnd('/') + "/sync/ping";
+                string json = HttpGet(pingUrl);
+                sw.Stop();
+
+                string uptName = "Server UangPas";
+                try
+                {
+                    var data = serializer.Deserialize<Dictionary<string, object>>(json);
+                    if (data != null && data.ContainsKey("upt_name") && data["upt_name"] != null)
+                        uptName = data["upt_name"].ToString();
+                }
+                catch { }
+
+                this.BeginInvoke((Action)(() => {
+                    if (lblCurrentServerInfo != null)
+                    {
+                        lblCurrentServerInfo.Text = "Alamat Aktif: " + this.apiUrl + "\n✅ Terhubung ke " + uptName + " (" + sw.ElapsedMilliseconds + " ms latency)";
+                        lblCurrentServerInfo.ForeColor = Color.FromArgb(16, 185, 129);
+                    }
+                    lblApiStatus.Text = "Server: Online (" + productList.Count + " Produk)";
+                    lblApiStatus.ForeColor = Color.FromArgb(52, 211, 153);
+                }));
+            }
+            catch (Exception ex)
+            {
+                this.BeginInvoke((Action)(() => {
+                    if (lblCurrentServerInfo != null)
+                    {
+                        lblCurrentServerInfo.Text = "Alamat Aktif: " + this.apiUrl + "\n❌ Tidak dapat terhubung: " + ex.Message;
+                        lblCurrentServerInfo.ForeColor = Color.FromArgb(239, 68, 68);
+                    }
+                }));
+            }
+        }
+
+        private DiscoveredServer ProbeServer(string host, int port = 8000, int connectTimeoutMs = 250)
+        {
+            try
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                using (TcpClient tcp = new TcpClient())
+                {
+                    IAsyncResult ar = tcp.BeginConnect(host, port, null, null);
+                    bool connected = ar.AsyncWaitHandle.WaitOne(connectTimeoutMs, false);
+                    if (!connected || !tcp.Connected) return null;
+                    tcp.EndConnect(ar);
+                }
+
+                // Port is open! Verify endpoint
+                string pingUrl = "http://" + host + ":" + port + "/api/v1/sync/ping";
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(pingUrl);
+                req.Method = "GET";
+                req.Timeout = 1200;
+                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
+                {
+                    string body = sr.ReadToEnd();
+                    sw.Stop();
+                    if (!string.IsNullOrEmpty(body) && (body.Contains("UangPas") || body.Contains("upt_name") || body.Contains("true")))
+                    {
+                        string uptName = "Server UangPas Lapas";
+                        string uptCode = "";
+                        try
+                        {
+                            var data = serializer.Deserialize<Dictionary<string, object>>(body);
+                            if (data != null)
+                            {
+                                if (data.ContainsKey("upt_name") && data["upt_name"] != null) uptName = data["upt_name"].ToString();
+                                if (data.ContainsKey("upt_code") && data["upt_code"] != null) uptCode = data["upt_code"].ToString();
+                            }
+                        }
+                        catch { }
+
+                        return new DiscoveredServer
+                        {
+                            Ip = host,
+                            Port = port,
+                            Url = "http://" + host + ":" + port + "/api/v1",
+                            UptName = uptName,
+                            UptCode = uptCode,
+                            LatencyMs = sw.ElapsedMilliseconds
+                        };
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private List<string> GetLocalLanIps()
+        {
+            List<string> candidateIps = new List<string>();
+            HashSet<string> subnets = new HashSet<string>();
+
+            // Always test loopback and current configured host first
+            candidateIps.Add("127.0.0.1");
+            string currHost = ExtractHostFromUrl(this.apiUrl);
+            if (!string.IsNullOrEmpty(currHost) && currHost != "127.0.0.1") candidateIps.Add(currHost);
+
+            try
+            {
+                foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+
+                    IPInterfaceProperties props = ni.GetIPProperties();
+                    foreach (UnicastIPAddressInformation ipInfo in props.UnicastAddresses)
+                    {
+                        if (ipInfo.Address.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            string ipStr = ipInfo.Address.ToString();
+                            string[] parts = ipStr.Split('.');
+                            if (parts.Length == 4)
+                            {
+                                string subnetPrefix = parts[0] + "." + parts[1] + "." + parts[2] + ".";
+                                subnets.Add(subnetPrefix);
+                            }
+                        }
+                    }
+
+                    foreach (GatewayIPAddressInformation gw in props.GatewayAddresses)
+                    {
+                        if (gw.Address.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            string gwStr = gw.Address.ToString();
+                            if (!candidateIps.Contains(gwStr)) candidateIps.Add(gwStr);
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            foreach (string sub in subnets)
+            {
+                for (int i = 1; i <= 254; i++)
+                {
+                    string target = sub + i;
+                    if (!candidateIps.Contains(target)) candidateIps.Add(target);
+                }
+            }
+
+            return candidateIps;
+        }
+
+        private void StartLanAutoDiscovery()
+        {
+            if (btnScanLan != null) btnScanLan.Enabled = false;
+            if (lblLanScanStatus != null)
+            {
+                lblLanScanStatus.Text = "⏳ Memindai jaringan LAN pada port 8000...";
+                lblLanScanStatus.ForeColor = Color.FromArgb(2, 132, 199);
+            }
+            if (cmbDiscoveredServers != null) cmbDiscoveredServers.Items.Clear();
+            if (btnApplyDiscovered != null) btnApplyDiscovered.Enabled = false;
+
+            ThreadPool.QueueUserWorkItem(_ => {
+                List<string> candidateIps = GetLocalLanIps();
+                List<DiscoveredServer> discovered = new List<DiscoveredServer>();
+                object lockObj = new object();
+
+                Parallel.ForEach(candidateIps, new ParallelOptions { MaxDegreeOfParallelism = 25 }, ip => {
+                    var srv = ProbeServer(ip, 8000, 250);
+                    if (srv != null)
+                    {
+                        lock (lockObj)
+                        {
+                            discovered.Add(srv);
+                        }
+                    }
+                });
+
+                try
+                {
+                    this.BeginInvoke((Action)(() => {
+                        lastDiscoveredServers = discovered;
+                        if (btnScanLan != null) btnScanLan.Enabled = true;
+
+                        if (discovered.Count > 0)
+                        {
+                            if (lblLanScanStatus != null)
+                            {
+                                lblLanScanStatus.Text = "🎉 Ditemukan " + discovered.Count + " server UangPas aktif!";
+                                lblLanScanStatus.ForeColor = Color.FromArgb(16, 185, 129);
+                            }
+
+                            if (cmbDiscoveredServers != null)
+                            {
+                                cmbDiscoveredServers.Items.Clear();
+                                foreach (var d in discovered)
+                                {
+                                    cmbDiscoveredServers.Items.Add(d.ToString());
+                                }
+                                cmbDiscoveredServers.SelectedIndex = 0;
+                            }
+
+                            if (btnApplyDiscovered != null) btnApplyDiscovered.Enabled = true;
+
+                            // If exactly 1 server found, auto-apply and inform user
+                            if (discovered.Count == 1)
+                            {
+                                ApplyNewServerUrl(discovered[0].Url, discovered[0].UptName);
+                            }
+                        }
+                        else
+                        {
+                            if (lblLanScanStatus != null)
+                            {
+                                lblLanScanStatus.Text = "❌ Tidak ada server UangPas yang ditemukan di LAN port 8000.";
+                                lblLanScanStatus.ForeColor = Color.FromArgb(239, 68, 68);
+                            }
+                            MessageBox.Show("Pencarian selesai. Tidak ditemukan server UangPas di jaringan lokal pada port 8000.\n\nPastikan komputer server sudah dinyalakan dan menjalankan launcher/artisan serve di jaringan yang sama.", "Server Tidak Ditemukan", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }));
+                }
+                catch { }
+            });
         }
         #endregion
 

@@ -11,9 +11,11 @@ desktop.ini
 *.userosscache
 *.sln.docstates
 
-# Logs
+# Logs & Desktop Caches
 *.log
 UangPasDesktop/diag_run.log
+UangPasDesktop/cache_*.json
+UangPasDesktop/offline_queue.json
 
 # Laravel Framework & Dependencies (UangPasWeb)
 UangPasWeb/vendor/
