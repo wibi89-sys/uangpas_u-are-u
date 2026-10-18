@@ -609,9 +609,14 @@
                 </div>
             </div>
 
-            <button type="button" onclick="closeSuccessModal()" style="width: 100%; padding: 14px; border-radius: 10px; background: #0f172a; color: #fff; border: none; font-weight: 800; font-size: 14px; cursor: pointer;">
-                Selesai & Transaksi Baru ➔
-            </button>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" onclick="printMobileReceipt()" style="flex: 1; padding: 14px; border-radius: 10px; background: #10b981; color: #fff; border: none; font-weight: 800; font-size: 13.5px; cursor: pointer;">
+                    🖨️ Cetak Struk
+                </button>
+                <button type="button" onclick="closeSuccessModal()" style="flex: 1; padding: 14px; border-radius: 10px; background: #0f172a; color: #fff; border: none; font-weight: 800; font-size: 13.5px; cursor: pointer;">
+                    Selesai ➔
+                </button>
+            </div>
         </div>
     </div>
 
@@ -833,6 +838,7 @@
                     cart = {};
                     updateCartUI();
 
+                    lastTransactionId = result.data.transaction_id;
                     document.getElementById('succInvText').innerText = 'No. Struk: ' + result.data.invoice_no;
                     document.getElementById('succWbpName').innerText = result.data.wbp_nama;
                     document.getElementById('succTotal').innerText = 'Rp ' + result.data.total_amount.toLocaleString('id-ID');
@@ -847,6 +853,16 @@
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.innerText = '⚡ Selesaikan Transaksi';
+            }
+        }
+
+        let lastTransactionId = null;
+
+        function printMobileReceipt() {
+            if (lastTransactionId) {
+                window.open('/transactions/' + lastTransactionId + '/receipt', '_blank');
+            } else {
+                alert('ID Transaksi tidak ditemukan.');
             }
         }
 

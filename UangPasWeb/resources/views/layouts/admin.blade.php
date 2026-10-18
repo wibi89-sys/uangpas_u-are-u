@@ -570,6 +570,10 @@
                 <span class="nav-icon">📑</span>
                 <span>Buku Transaksi Kasir</span>
             </a>
+            <a href="{{ route('admin.settings.receipt') }}" class="nav-item {{ request()->routeIs('admin.settings.receipt*') ? 'active' : '' }}">
+                <span class="nav-icon">🧾</span>
+                <span>Pengaturan Struk Kasir</span>
+            </a>
             <div style="padding: 10px 14px; margin: 8px 12px; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 8px; font-size: 11px; color: #0369a1; line-height: 1.4;">
                 <div style="font-weight: 700; display: flex; align-items: center; gap: 5px; margin-bottom: 2px;">
                     <span>🖥️</span> Terminal Kasir Lapas

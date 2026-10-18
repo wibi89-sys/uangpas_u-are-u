@@ -569,6 +569,7 @@ class InventoryController extends Controller
                 'success' => true,
                 'message' => 'Transaksi belanja mobile berhasil!',
                 'data' => [
+                    'transaction_id' => $transaction->id,
                     'invoice_no' => $invoiceNo,
                     'wbp_nama' => $inmate->nama,
                     'no_registrasi' => $inmate->no_registrasi,

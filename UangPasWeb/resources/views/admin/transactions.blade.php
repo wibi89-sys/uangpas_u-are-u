@@ -64,6 +64,7 @@
                     <th>Nominal</th>
                     <th>Saldo Akhir</th>
                     <th>Petugas / Kasir</th>
+                    <th style="text-align: center;">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -116,6 +117,15 @@
                     </td>
                     <td style="font-size: 12px; color: var(--text-muted);">
                         {{ $t->cashier_name }}
+                    </td>
+                    <td style="text-align: center;">
+                        @if($t->type === 'purchase')
+                            <a href="{{ route('admin.transactions.receipt', $t->id) }}" target="_blank" class="btn btn-outline" style="font-size: 11px; padding: 4px 10px; background: #f8fafc; border-color: #cbd5e1;" title="Cetak Ulang Struk Thermal">
+                                <span>🧾</span> Struk
+                            </a>
+                        @else
+                            <span style="color: #cbd5e1;">-</span>
+                        @endif
                     </td>
                 </tr>
                 @empty

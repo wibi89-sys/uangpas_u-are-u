@@ -16,6 +16,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/products', [PosApiController::class, 'getProducts']);
         Route::get('/inmates', [PosApiController::class, 'getInmates']);
         Route::get('/inmate/{identifier}', [PosApiController::class, 'lookupInmate']);
+        Route::get('/receipt-settings', [\App\Http\Controllers\Web\ReceiptSettingController::class, 'apiSettings']);
         Route::post('/checkout', [PosApiController::class, 'checkout']);
         Route::post('/inmate/{id}/save-fingerprint', [PosApiController::class, 'saveFingerprint']);
     });

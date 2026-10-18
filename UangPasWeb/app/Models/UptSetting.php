@@ -13,6 +13,8 @@ class UptSetting extends Model
 
     protected $casts = [
         'auto_sync' => 'boolean',
+        'receipt_auto_print' => 'boolean',
+        'receipt_show_inmate_balance' => 'boolean',
         'last_sync_at' => 'datetime',
         'last_backup_at' => 'datetime',
     ];

@@ -60,11 +60,17 @@ Route::put('/inventory/suppliers/{id}', [InventoryController::class, 'updateSupp
 
 // Laporan Transaksi Kasir & Keuangan Retail Koperasi
 use App\Http\Controllers\Web\FinancialReportController;
+use App\Http\Controllers\Web\ReceiptSettingController;
 Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
+Route::get('/transactions/{id}/receipt', [ReceiptSettingController::class, 'printReceipt'])->name('admin.transactions.receipt');
 Route::get('/reports/profit-loss', [FinancialReportController::class, 'profitLoss'])->name('admin.reports.profit_loss');
 Route::get('/reports/cashflow', [FinancialReportController::class, 'cashflow'])->name('admin.reports.cashflow');
 Route::get('/reports/profit-loss/print', [FinancialReportController::class, 'printProfitLoss'])->name('admin.reports.print');
 Route::get('/reports/profit-loss/export-excel', [FinancialReportController::class, 'exportExcel'])->name('admin.reports.export_excel');
+
+// Pengaturan Struk Kasir & Thermal Printer 58mm/80mm
+Route::get('/settings/receipt', [ReceiptSettingController::class, 'index'])->name('admin.settings.receipt');
+Route::post('/settings/receipt', [ReceiptSettingController::class, 'update'])->name('admin.settings.receipt.update');
 
 // Multi-UPT Synchronization & Backup Antar-Server
 use App\Http\Controllers\Web\SyncController;
