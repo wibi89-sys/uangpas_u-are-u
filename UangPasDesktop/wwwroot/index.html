@@ -830,7 +830,11 @@
                     renderProducts();
                 } else if (msg.action === "fingerprint_success") {
                     closeBiometricModal();
-                    showToast("✅ Sidik Jari Cocok: " + msg.inmate_name);
+                    cart = [];
+                    renderCart();
+                    showToast("✅ Pembayaran Berhasil: " + msg.inmate_name);
+                } else if (msg.action === "fingerprint_cancel") {
+                    closeBiometricModal();
                 } else if (msg.action === "scanner_status") {
                     updateScannerStatus(msg.online, msg.text);
                 }
