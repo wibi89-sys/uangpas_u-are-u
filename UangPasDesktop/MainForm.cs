@@ -193,8 +193,13 @@ namespace UangPasDesktop
             if (System.IO.File.Exists(logoPath))
             {
                 try {
-                    picBrandLogo.Image = Image.FromFile(logoPath);
-                    this.Icon = Icon.FromHandle(((Bitmap)picBrandLogo.Image).GetHicon());
+                    byte[] bytes = System.IO.File.ReadAllBytes(logoPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    {
+                        Bitmap bmp = new Bitmap(ms);
+                        picBrandLogo.Image = (Image)bmp.Clone();
+                        this.Icon = Icon.FromHandle(bmp.GetHicon());
+                    }
                 } catch { }
             }
             pnlBrand.Controls.Add(picBrandLogo);

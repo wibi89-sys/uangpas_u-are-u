@@ -403,7 +403,7 @@ namespace UangPasDesktop
             btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
             
             btnCheckoutFingerprint = new Button {
-                Text = "  BAYAR DENGAN SIDIK JARI WBP",
+                Text = "  Bayar dengan Sidik Jari",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
@@ -415,7 +415,9 @@ namespace UangPasDesktop
             if (System.IO.File.Exists(fpLogoPath))
             {
                 try {
-                    using (Bitmap orig = new Bitmap(fpLogoPath))
+                    byte[] bytes = System.IO.File.ReadAllBytes(fpLogoPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
                     {
                         btnCheckoutFingerprint.Image = new Bitmap(orig, new Size(24, 24));
                         btnCheckoutFingerprint.ImageAlign = ContentAlignment.MiddleLeft;

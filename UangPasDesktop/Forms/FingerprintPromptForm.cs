@@ -68,7 +68,11 @@ namespace UangPasDesktop
             if (System.IO.File.Exists(logoPath))
             {
                 try {
-                    picPreview.Image = Image.FromFile(logoPath);
+                    byte[] bytes = System.IO.File.ReadAllBytes(logoPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    {
+                        picPreview.Image = new Bitmap(ms);
+                    }
                 } catch { }
             }
             pnlPreviewBorder.Controls.Add(picPreview);
