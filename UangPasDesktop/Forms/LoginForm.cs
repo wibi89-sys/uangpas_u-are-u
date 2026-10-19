@@ -35,26 +35,27 @@ namespace UangPasDesktop.Forms
         private void InitializeComponent()
         {
             this.Text = "Login Petugas - Terminal Kasir POS UangPas";
-            this.Size = new Size(480, 560);
+            this.ClientSize = new Size(500, 460);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.BackColor = Color.FromArgb(248, 250, 252);
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            this.AutoScaleMode = AutoScaleMode.None;
 
             // 1. Top Header Banner
             Panel pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 110,
+                Height = 88,
                 BackColor = Color.FromArgb(15, 23, 42)
             };
 
             PictureBox picLogo = new PictureBox
             {
-                Size = new Size(42, 42),
-                Location = new Point(24, 20),
+                Size = new Size(44, 44),
+                Location = new Point(22, 16),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent
             };
@@ -81,7 +82,7 @@ namespace UangPasDesktop.Forms
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 13f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(74, 18)
+                Location = new Point(76, 12)
             };
             pnlHeader.Controls.Add(lblTitle);
 
@@ -91,29 +92,31 @@ namespace UangPasDesktop.Forms
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
                 AutoSize = true,
-                Location = new Point(76, 44)
+                Location = new Point(78, 38)
             };
             pnlHeader.Controls.Add(lblSubTitle);
 
             lblServerInfo = new Label
             {
-                Text = "● Server API: " + this.apiUrl,
+                Text = "● Server: " + this.apiUrl,
                 ForeColor = Color.FromArgb(56, 189, 248),
                 Font = new Font("Segoe UI", 8f, FontStyle.Regular),
                 AutoSize = true,
-                Location = new Point(76, 68)
+                Location = new Point(78, 60)
             };
             pnlHeader.Controls.Add(lblServerInfo);
             this.Controls.Add(pnlHeader);
 
-            // 2. Main Form Body
+            // 2. Main Form Body (Docked Fill with BringToFront so it never hides behind header)
             Panel pnlBody = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(32, 20, 32, 20),
-                BackColor = Color.FromArgb(248, 250, 252)
+                BackColor = Color.FromArgb(248, 250, 252),
+                AutoScroll = true
             };
 
+            int startX = 35;
+            int inputWidth = 430;
             int curY = 16;
 
             // Quick Role Demo Picker
@@ -122,18 +125,18 @@ namespace UangPasDesktop.Forms
                 Text = "Pilih Akun Cepat (Mode Uji Coba Role):",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(32, curY),
-                Size = new Size(400, 18)
+                Location = new Point(startX, curY),
+                Size = new Size(inputWidth, 18)
             };
             pnlBody.Controls.Add(lblDemo);
-            curY += 22;
+            curY += 20;
 
             cmbQuickDemo = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                Location = new Point(32, curY),
-                Size = new Size(400, 28),
+                Location = new Point(startX, curY),
+                Size = new Size(inputWidth, 28),
                 BackColor = Color.White
             };
             cmbQuickDemo.Items.Add("-- Masukkan NIP / Password Manual --");
@@ -145,7 +148,7 @@ namespace UangPasDesktop.Forms
             cmbQuickDemo.SelectedIndex = 1; // Default to Kasir
             cmbQuickDemo.SelectedIndexChanged += CmbQuickDemo_SelectedIndexChanged;
             pnlBody.Controls.Add(cmbQuickDemo);
-            curY += 40;
+            curY += 38;
 
             // Username / NIP Field
             Label lblUsername = new Label
@@ -153,21 +156,21 @@ namespace UangPasDesktop.Forms
                 Text = "NIP / Username / Email Petugas:",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
-                Location = new Point(32, curY),
-                Size = new Size(400, 20)
+                Location = new Point(startX, curY),
+                Size = new Size(inputWidth, 18)
             };
             pnlBody.Controls.Add(lblUsername);
-            curY += 22;
+            curY += 20;
 
             txtUsername = new TextBox
             {
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Regular),
-                Location = new Point(32, curY),
-                Size = new Size(400, 30),
+                Location = new Point(startX, curY),
+                Size = new Size(inputWidth, 28),
                 Text = "199511112019031005"
             };
             pnlBody.Controls.Add(txtUsername);
-            curY += 40;
+            curY += 38;
 
             // Password Field
             Label lblPassword = new Label
@@ -175,17 +178,17 @@ namespace UangPasDesktop.Forms
                 Text = "Password / PIN Petugas:",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
-                Location = new Point(32, curY),
-                Size = new Size(400, 20)
+                Location = new Point(startX, curY),
+                Size = new Size(inputWidth, 18)
             };
             pnlBody.Controls.Add(lblPassword);
-            curY += 22;
+            curY += 20;
 
             txtPassword = new TextBox
             {
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Regular),
-                Location = new Point(32, curY),
-                Size = new Size(400, 30),
+                Location = new Point(startX, curY),
+                Size = new Size(inputWidth, 28),
                 UseSystemPasswordChar = true,
                 Text = "password"
             };
@@ -197,7 +200,7 @@ namespace UangPasDesktop.Forms
                 }
             };
             pnlBody.Controls.Add(txtPassword);
-            curY += 36;
+            curY += 34;
 
             // Show password checkbox
             chkShowPassword = new CheckBox
@@ -205,15 +208,15 @@ namespace UangPasDesktop.Forms
                 Text = "Tampilkan Password",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(34, curY),
-                Size = new Size(200, 22),
+                Location = new Point(startX + 2, curY),
+                Size = new Size(200, 20),
                 Cursor = Cursors.Hand
             };
             chkShowPassword.CheckedChanged += (s, e) => {
                 txtPassword.UseSystemPasswordChar = !chkShowPassword.Checked;
             };
             pnlBody.Controls.Add(chkShowPassword);
-            curY += 30;
+            curY += 28;
 
             // Error / Feedback message
             lblError = new Label
@@ -221,12 +224,12 @@ namespace UangPasDesktop.Forms
                 Text = "",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(239, 68, 68),
-                Location = new Point(32, curY),
-                Size = new Size(400, 36),
+                Location = new Point(startX, curY),
+                Size = new Size(inputWidth, 30),
                 TextAlign = ContentAlignment.MiddleLeft
             };
             pnlBody.Controls.Add(lblError);
-            curY += 42;
+            curY += 34;
 
             // Buttons: Login and Cancel
             btnLogin = new Button
@@ -236,8 +239,8 @@ namespace UangPasDesktop.Forms
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(2, 132, 199),
                 FlatStyle = FlatStyle.Flat,
-                Location = new Point(32, curY),
-                Size = new Size(240, 42),
+                Location = new Point(startX, curY),
+                Size = new Size(260, 42),
                 Cursor = Cursors.Hand
             };
             btnLogin.FlatAppearance.BorderSize = 0;
@@ -246,13 +249,13 @@ namespace UangPasDesktop.Forms
 
             btnCancel = new Button
             {
-                Text = "Keluar",
+                Text = "Batal / Keluar",
                 Font = new Font("Segoe UI", 10f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(100, 116, 139),
+                ForeColor = Color.FromArgb(71, 85, 105),
                 BackColor = Color.FromArgb(226, 232, 240),
                 FlatStyle = FlatStyle.Flat,
-                Location = new Point(282, curY),
-                Size = new Size(150, 42),
+                Location = new Point(startX + 270, curY),
+                Size = new Size(160, 42),
                 Cursor = Cursors.Hand
             };
             btnCancel.FlatAppearance.BorderSize = 0;
@@ -263,6 +266,7 @@ namespace UangPasDesktop.Forms
             pnlBody.Controls.Add(btnCancel);
 
             this.Controls.Add(pnlBody);
+            pnlBody.BringToFront();
             this.AcceptButton = btnLogin;
         }
 

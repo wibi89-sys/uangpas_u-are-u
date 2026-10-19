@@ -132,10 +132,10 @@ namespace UangPasDesktop
                 Padding = new Padding(12, 0, 12, 0) 
             };
             
-            // Right Status Indicators & Authenticated User Profile
+            // Right Status Indicators & Authenticated User Profile (Compact to avoid covering buttons)
             Panel topStatusRight = new Panel {
                 Dock = DockStyle.Right,
-                Width = 490,
+                Width = 330,
                 BackColor = Color.Transparent
             };
 
@@ -143,12 +143,12 @@ namespace UangPasDesktop
                 Text = "● Scanner: Memeriksa...",
                 ForeColor = Color.FromArgb(148, 163, 184),
                 BackColor = Color.FromArgb(30, 41, 59),
-                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
                 AutoSize = false,
-                Size = new Size(200, 21),
+                Size = new Size(130, 20),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(6, 0, 0, 0),
-                Location = new Point(6, 10),
+                Padding = new Padding(4, 0, 0, 0),
+                Location = new Point(4, 10),
                 Cursor = Cursors.Hand
             };
             lblScannerStatus.Click += (s, e) => {
@@ -162,29 +162,29 @@ namespace UangPasDesktop
                 Text = "● Server: Online",
                 ForeColor = Color.FromArgb(52, 211, 153),
                 BackColor = Color.FromArgb(30, 41, 59),
-                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
                 AutoSize = false,
-                Size = new Size(200, 21),
+                Size = new Size(130, 20),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(6, 0, 0, 0),
-                Location = new Point(6, 33)
+                Padding = new Padding(4, 0, 0, 0),
+                Location = new Point(4, 33)
             };
             topStatusRight.Controls.Add(lblApiStatus);
 
             // User Profile Card & Ganti Shift / Logout Button
             Panel pnlUserCard = new Panel {
-                Location = new Point(216, 8),
-                Size = new Size(268, 48),
+                Location = new Point(136, 8),
+                Size = new Size(190, 48),
                 BackColor = Color.FromArgb(30, 41, 59)
             };
 
             string initialLetter = (AuthSession.CurrentUser != null && !string.IsNullOrEmpty(AuthSession.CurrentUser.Name)) ? AuthSession.CurrentUser.Name.Substring(0, 1).ToUpper() : "P";
             Label lblUserInitial = new Label {
-                Location = new Point(6, 7),
-                Size = new Size(34, 34),
+                Location = new Point(4, 8),
+                Size = new Size(32, 32),
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Text = initialLetter
             };
@@ -192,10 +192,10 @@ namespace UangPasDesktop
 
             string userNameStr = (AuthSession.CurrentUser != null) ? AuthSession.CurrentUser.Name : "Petugas Kasir";
             Label lblUserName = new Label {
-                Location = new Point(44, 5),
-                Size = new Size(140, 18),
+                Location = new Point(38, 6),
+                Size = new Size(92, 17),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
                 AutoEllipsis = true,
                 Text = userNameStr
             };
@@ -203,18 +203,18 @@ namespace UangPasDesktop
 
             string roleLabelStr = (AuthSession.CurrentUser != null) ? AuthSession.CurrentUser.RoleLabel : "Kasir POS";
             Label lblUserRole = new Label {
-                Location = new Point(44, 23),
-                Size = new Size(140, 16),
+                Location = new Point(38, 24),
+                Size = new Size(92, 15),
                 ForeColor = Color.FromArgb(56, 189, 248),
-                Font = new Font("Segoe UI", 7.5f, FontStyle.Regular),
+                Font = new Font("Segoe UI", 7f, FontStyle.Regular),
                 AutoEllipsis = true,
                 Text = roleLabelStr
             };
             pnlUserCard.Controls.Add(lblUserRole);
 
             Button btnGantiShift = new Button {
-                Location = new Point(188, 7),
-                Size = new Size(74, 34),
+                Location = new Point(132, 8),
+                Size = new Size(54, 32),
                 BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -252,14 +252,14 @@ namespace UangPasDesktop
             };
 
             Panel pnlBrand = new Panel {
-                Size = new Size(180, 48),
-                Margin = new Padding(2, 2, 8, 0),
+                Size = new Size(135, 48),
+                Margin = new Padding(2, 2, 2, 0),
                 BackColor = Color.Transparent
             };
 
             PictureBox picBrandLogo = new PictureBox {
-                Size = new Size(34, 34),
-                Location = new Point(0, 4),
+                Size = new Size(26, 26),
+                Location = new Point(0, 9),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent
             };
@@ -281,16 +281,16 @@ namespace UangPasDesktop
             Label lblBrand = new Label {
                 Text = "UangPas Lapas",
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(38, 4)
+                Location = new Point(30, 6)
             };
             Label lblSubBrand = new Label {
                 Text = "POS & BIOMETRIK",
                 ForeColor = Color.FromArgb(56, 189, 248),
-                Font = new Font("Segoe UI", 7f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 6.5f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(40, 24)
+                Location = new Point(32, 25)
             };
             pnlBrand.Controls.Add(lblBrand);
             pnlBrand.Controls.Add(lblSubBrand);
@@ -299,30 +299,30 @@ namespace UangPasDesktop
             // 1. KASIR POS BUTTON
             btnTopKasir = new Button {
                 Text = "🛒 Kasir POS",
-                Width = 105,
+                Width = 90,
                 Height = 36,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             btnTopKasir.FlatAppearance.BorderSize = 0;
             btnTopKasir.Click += (s, e) => SwitchTab(0);
             topFlowLeft.Controls.Add(btnTopKasir);
 
-            // 2. LAYAR PELANGGAN (DUAL SCREEN) BUTTON - Placed right next to Kasir POS!
+            // 2. LAYAR PELANGGAN (DUAL SCREEN) BUTTON
             btnTopDualScreen = new Button {
-                Text = "🖥️ Layar Pelanggan",
-                Width = 145,
+                Text = "🖥️ Layar 2",
+                Width = 105,
                 Height = 36,
                 BackColor = Color.FromArgb(14, 165, 233),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             btnTopDualScreen.FlatAppearance.BorderSize = 0;
             btnTopDualScreen.Click += (s, e) => ToggleCustomerDisplay();
@@ -332,14 +332,14 @@ namespace UangPasDesktop
             string walletPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wallet_logo.png");
             btnTopTopup = new Button {
                 Text = "  Top-Up",
-                Width = 105,
+                Width = 80,
                 Height = 36,
                 BackColor = Color.FromArgb(6, 78, 59),
                 ForeColor = Color.FromArgb(167, 243, 208),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             if (System.IO.File.Exists(walletPath))
             {
@@ -348,7 +348,7 @@ namespace UangPasDesktop
                     using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
                     using (Bitmap orig = new Bitmap(ms))
                     {
-                        btnTopTopup.Image = new Bitmap(orig, new Size(18, 18));
+                        btnTopTopup.Image = new Bitmap(orig, new Size(16, 16));
                         btnTopTopup.ImageAlign = ContentAlignment.MiddleLeft;
                         btnTopTopup.TextImageRelation = TextImageRelation.ImageBeforeText;
                     }
@@ -361,14 +361,14 @@ namespace UangPasDesktop
             // 4. CEK SALDO MANDIRI (KIOSK)
             btnTopKiosk = new Button {
                 Text = "  Cek Saldo",
-                Width = 110,
+                Width = 95,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.FromArgb(203, 213, 225),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             if (System.IO.File.Exists(walletPath))
             {
@@ -377,7 +377,7 @@ namespace UangPasDesktop
                     using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
                     using (Bitmap orig = new Bitmap(ms))
                     {
-                        btnTopKiosk.Image = new Bitmap(orig, new Size(18, 18));
+                        btnTopKiosk.Image = new Bitmap(orig, new Size(16, 16));
                         btnTopKiosk.ImageAlign = ContentAlignment.MiddleLeft;
                         btnTopKiosk.TextImageRelation = TextImageRelation.ImageBeforeText;
                     }
@@ -390,14 +390,14 @@ namespace UangPasDesktop
             // 5. REKAM SIDIK JARI
             btnTopEnroll = new Button {
                 Text = "  Rekam Jari",
-                Width = 115,
+                Width = 98,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.FromArgb(203, 213, 225),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             if (System.IO.File.Exists(logoPath))
             {
@@ -406,7 +406,7 @@ namespace UangPasDesktop
                     using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
                     using (Bitmap orig = new Bitmap(ms))
                     {
-                        btnTopEnroll.Image = new Bitmap(orig, new Size(18, 18));
+                        btnTopEnroll.Image = new Bitmap(orig, new Size(16, 16));
                         btnTopEnroll.ImageAlign = ContentAlignment.MiddleLeft;
                         btnTopEnroll.TextImageRelation = TextImageRelation.ImageBeforeText;
                     }
@@ -419,14 +419,14 @@ namespace UangPasDesktop
             // 6. PENGATURAN SENSOR
             btnTopSettings = new Button {
                 Text = "  Pengaturan",
-                Width = 115,
+                Width = 98,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.FromArgb(203, 213, 225),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             string gearPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "gear_logo.png");
             if (System.IO.File.Exists(gearPath))
@@ -436,7 +436,7 @@ namespace UangPasDesktop
                     using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
                     using (Bitmap orig = new Bitmap(ms))
                     {
-                        btnTopSettings.Image = new Bitmap(orig, new Size(18, 18));
+                        btnTopSettings.Image = new Bitmap(orig, new Size(16, 16));
                         btnTopSettings.ImageAlign = ContentAlignment.MiddleLeft;
                         btnTopSettings.TextImageRelation = TextImageRelation.ImageBeforeText;
                     }
@@ -449,14 +449,14 @@ namespace UangPasDesktop
             // 7. SINKRONISASI
             Button btnTopSync = new Button {
                 Text = "🔄",
-                Width = 42,
+                Width = 38,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             btnTopSync.Click += (s, e) => {
                 btnTopSync.Text = "⏳";
@@ -476,14 +476,14 @@ namespace UangPasDesktop
             // 8. PORTAL ADMIN WEB
             Button btnOpenPortalAdmin = new Button {
                 Text = "🌐 Admin",
-                Width = 85,
+                Width = 78,
                 Height = 36,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
+                Margin = new Padding(2, 0, 3, 0)
             };
             btnOpenPortalAdmin.Click += (s, e) => {
                 try {
@@ -495,6 +495,7 @@ namespace UangPasDesktop
             topFlowLeft.Controls.Add(btnOpenPortalAdmin);
 
             topBar.Controls.Add(topFlowLeft);
+            topFlowLeft.BringToFront();
 
             // Tab Control (Flat mode without redundant tabs)
             tabs = new TabControl { 

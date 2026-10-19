@@ -11,7 +11,7 @@ namespace UangPasDesktop
 {
     static class Program
     {
-        [MTAThread]
+        [STAThread]
         static void Main()
         {
             try
@@ -25,24 +25,36 @@ namespace UangPasDesktop
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            Application.ThreadException += delegate(object s, System.Threading.ThreadExceptionEventArgs e) {
+                MessageBox.Show("Terjadi kesalahan antarmuka: " + e.Exception.Message, "Peringatan Sistem", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            };
+
             while (true)
             {
-                string apiUrl = LoadApiUrlFromSettings();
-                using (LoginForm loginForm = new LoginForm(apiUrl))
+                try
                 {
-                    if (loginForm.ShowDialog() != DialogResult.OK)
+                    string apiUrl = LoadApiUrlFromSettings();
+                    using (LoginForm loginForm = new LoginForm(apiUrl))
                     {
-                        // User cancelled login or exited
+                        if (loginForm.ShowDialog() != DialogResult.OK)
+                        {
+                            // User cancelled login or exited
+                            break;
+                        }
+                    }
+
+                    // Launch main form with authenticated session
+                    MainForm mainForm = new MainForm();
+                    Application.Run(mainForm);
+
+                    if (!mainForm.WantsLogoutAndRelogin)
+                    {
                         break;
                     }
                 }
-
-                // Launch main form with authenticated session
-                MainForm mainForm = new MainForm();
-                Application.Run(mainForm);
-
-                if (!mainForm.WantsLogoutAndRelogin)
+                catch (Exception ex)
                 {
+                    MessageBox.Show("Terjadi kesalahan aplikasi: " + ex.Message, "Error Sistem POS", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     break;
                 }
             }
