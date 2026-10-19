@@ -317,6 +317,26 @@ namespace UangPasDesktop
             gridCart.Columns["subtotal"].DefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
             gridCart.Columns["subtotal"].DefaultCellStyle.ForeColor = Color.FromArgb(2, 132, 199);
             gridCart.CellValueChanged += (s, e) => RecalculateCart();
+            gridCart.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Add || (e.KeyCode == Keys.Oemplus && e.Modifiers == Keys.None))
+                {
+                    QuickIncrementCartQty(1);
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                }
+                else if (e.KeyCode == Keys.Subtract || (e.KeyCode == Keys.OemMinus && e.Modifiers == Keys.None))
+                {
+                    QuickIncrementCartQty(-1);
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                }
+                else if (e.KeyCode == Keys.Delete)
+                {
+                    DeleteSelectedCartItem();
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                }
+            };
             rightPanel.Controls.Add(gridCart);
 
             // Bottom Summary & Checkout Button (2-Tier Layout: Row 1 = Biometric primary, Row 2 = Manual & Clear)
@@ -417,6 +437,7 @@ namespace UangPasDesktop
                     Qty = 1
                 });
             }
+            SoundHelper.PlayBarcodeScan();
             RefreshCartGrid();
         }
 
@@ -601,12 +622,14 @@ namespace UangPasDesktop
 
             if (saldo < totalAmount)
             {
+                SoundHelper.PlayWarning();
                 MessageBox.Show("Saldo WBP " + matchedInmate["nama"] + " TIDAK MENCUKUPI!\n\nSisa Saldo: Rp " + saldo.ToString("N0") + "\nTotal Tagihan: Rp " + totalAmount.ToString("N0"), "Saldo Kurang", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (totalAmount > limit)
             {
+                SoundHelper.PlayWarning();
                 MessageBox.Show("Transaksi MELEBIHI LIMIT BELANJA HARIAN LAPAS!\n\nSisa Limit Hari Ini: Rp " + limit.ToString("N0") + "\nTotal Tagihan: Rp " + totalAmount.ToString("N0"), "Limit Terlampaui", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -680,10 +703,23 @@ namespace UangPasDesktop
             RefreshCartGrid();
             RenderProductGrid();
 
-            // Show Receipt Dialog
-            using (ReceiptForm rForm = new ReceiptForm(invNo, matchedInmate, paymentMethod, receiptCart, totalAmount, saldo, balanceAfter, !isOnlineSuccess, this.receiptConfig))
+            // Play Pleasant Success Chime & Show Interactive Dialog
+            SoundHelper.PlaySuccess();
+            string inmateNama = matchedInmate.ContainsKey("nama") ? matchedInmate["nama"].ToString() : "-";
+            string noReg = matchedInmate.ContainsKey("no_registrasi") ? matchedInmate["no_registrasi"].ToString() : "-";
+            string blokKamar = matchedInmate.ContainsKey("blok_kamar") ? matchedInmate["blok_kamar"].ToString() : "-";
+            decimal remainingLimit = Math.Max(0, limit - totalAmount);
+
+            using (TransactionSuccessDialog succDialog = new TransactionSuccessDialog(invNo, inmateNama, noReg, blokKamar, totalAmount, balanceAfter, remainingLimit))
             {
-                rForm.ShowDialog(this);
+                succDialog.ShowDialog(this);
+                if (succDialog.ShouldPrintReceipt)
+                {
+                    using (ReceiptForm rForm = new ReceiptForm(invNo, matchedInmate, paymentMethod, receiptCart, totalAmount, saldo, balanceAfter, !isOnlineSuccess, this.receiptConfig))
+                    {
+                        rForm.ShowDialog(this);
+                    }
+                }
             }
 
             if (isOnlineSuccess)
@@ -757,12 +793,64 @@ namespace UangPasDesktop
                 e.SuppressKeyPress = true;
                 ClearCartConfirm();
             }
+            else if (e.KeyCode == Keys.F10)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                SwitchTab(0);
+                ProcessCheckoutManual();
+            }
             else if (e.KeyCode == Keys.F12)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
                 SwitchTab(0);
                 ProcessCheckoutFingerprint();
+            }
+            else if (e.KeyCode == Keys.Add && (ActiveControl != txtSearchProduct))
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                QuickIncrementCartQty(1);
+            }
+            else if (e.KeyCode == Keys.Subtract && (ActiveControl != txtSearchProduct))
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                QuickIncrementCartQty(-1);
+            }
+        }
+
+        private void QuickIncrementCartQty(int delta)
+        {
+            SwitchTab(0);
+            if (cart.Count == 0) return;
+
+            int idx = (gridCart.CurrentRow != null && gridCart.CurrentRow.Index >= 0 && gridCart.CurrentRow.Index < cart.Count) 
+                ? gridCart.CurrentRow.Index 
+                : cart.Count - 1;
+
+            var item = cart[idx];
+            if (delta > 0)
+            {
+                item.Qty += delta;
+                SoundHelper.PlayBarcodeScan();
+                RefreshCartGrid();
+            }
+            else if (delta < 0)
+            {
+                if (item.Qty > 1)
+                {
+                    item.Qty += delta;
+                    SoundHelper.PlayTouch();
+                    RefreshCartGrid();
+                }
+                else
+                {
+                    cart.RemoveAt(idx);
+                    SoundHelper.PlayTouch();
+                    RefreshCartGrid();
+                }
             }
         }
 
@@ -861,6 +949,7 @@ namespace UangPasDesktop
                 : cart.Count - 1;
 
             cart.RemoveAt(idx);
+            SoundHelper.PlayTouch();
             RefreshCartGrid();
         }
 
@@ -869,6 +958,7 @@ namespace UangPasDesktop
             SwitchTab(0);
             if (cart.Count == 0)
             {
+                SoundHelper.PlayWarning();
                 MessageBox.Show("Keranjang belanja masih kosong! Tidak ada transaksi yang perlu ditahan.", "Hold Bill (F5)", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -887,6 +977,7 @@ namespace UangPasDesktop
             cart.Clear();
             RefreshCartGrid();
             UpdateHoldStatusUI();
+            SoundHelper.PlayTouch();
 
             MessageBox.Show(string.Format("Transaksi ({0} item, total Rp {1:N0}) berhasil DITAHAN [Antrean #{2}].\n\nTekan [F6] untuk memanggil kembali transaksi ini saat WBP siap bertransaksi.", hb.Items.Count, hb.TotalAmount, heldBills.Count), "Transaksi Ditahan (F5)", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -896,6 +987,7 @@ namespace UangPasDesktop
             SwitchTab(0);
             if (heldBills.Count == 0)
             {
+                SoundHelper.PlayWarning();
                 MessageBox.Show("Tidak ada antrean transaksi yang sedang ditahan.", "Recall Bill (F6)", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -920,6 +1012,7 @@ namespace UangPasDesktop
                 cart = new List<CartItem>(hb.Items);
                 RefreshCartGrid();
                 UpdateHoldStatusUI();
+                SoundHelper.PlaySuccess();
                 MessageBox.Show(string.Format("Transaksi Antrean {0} ({1} item, Rp {2:N0}) telah dimuat kembali ke keranjang belanja.", hb.Id, cart.Count, hb.TotalAmount), "Recall Berhasil", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -992,6 +1085,7 @@ namespace UangPasDesktop
                     cart = new List<CartItem>(hb.Items);
                     RefreshCartGrid();
                     UpdateHoldStatusUI();
+                    SoundHelper.PlaySuccess();
                 }
             }
         }

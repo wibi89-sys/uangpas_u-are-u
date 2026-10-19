@@ -410,6 +410,7 @@ namespace UangPasDesktop
 
                     lblEnrollStep.Text = "✅ SUKSES! Sidik jari " + inmateNama + " berhasil tersimpan di server.";
                     lblEnrollStep.ForeColor = Color.FromArgb(16, 185, 129);
+                    SoundHelper.PlaySuccess();
 
                     // Mark as enrolled locally
                     selectedEnrollInmate["has_fingerprint"] = true;
@@ -422,12 +423,14 @@ namespace UangPasDesktop
                 }
                 else
                 {
+                    SoundHelper.PlayError();
                     lblEnrollStep.Text = "❌ Gagal membuat master template: " + masterRes.ResultCode;
                     lblEnrollStep.ForeColor = Color.FromArgb(239, 68, 68);
                 }
             }
             catch (Exception ex)
             {
+                SoundHelper.PlayError();
                 lblEnrollStep.Text = "Error: " + ex.Message;
                 lblEnrollStep.ForeColor = Color.FromArgb(239, 68, 68);
             }

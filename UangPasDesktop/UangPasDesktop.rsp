@@ -6,6 +6,7 @@
 /r:System.Web.Extensions.dll
 /recurse:Models\*.cs
 /recurse:Forms\*.cs
+/recurse:Utils\*.cs
 Program.cs
 MainForm.cs
 MainForm.Kasir.cs

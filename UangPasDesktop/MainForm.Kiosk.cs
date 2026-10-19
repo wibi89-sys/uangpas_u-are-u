@@ -365,11 +365,13 @@ namespace UangPasDesktop
 
                     if (matched != null)
                     {
+                        SoundHelper.PlaySuccess();
                         DisplayKioskInmate(matched, true);
                         FetchFreshInmateBalance(matched);
                     }
                     else
                     {
+                        SoundHelper.PlayError();
                         if (totalWithTemplate == 0)
                         {
                             MessageBox.Show(

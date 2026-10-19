@@ -243,10 +243,12 @@ namespace UangPasDesktop
 
                     if (matched != null)
                     {
+                        SoundHelper.PlaySuccess();
                         DisplayInmate(matched);
                     }
                     else
                     {
+                        SoundHelper.PlayError();
                         MessageBox.Show(
                             "Sidik jari tidak cocok dengan " + withTemplate + " WBP terdaftar pada sistem.\nSilakan gunakan pencarian Nomor Registrasi atau daftarkan sidik jari di menu Rekam Jari.",
                             "Sidik Jari Tidak Dikenali",

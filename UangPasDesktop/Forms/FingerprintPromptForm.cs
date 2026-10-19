@@ -168,16 +168,17 @@ namespace UangPasDesktop
                 if (res.ResultCode == Constants.ResultCode.DP_SUCCESS && res.Data != null)
                 {
                     this.CapturedFmd = res.Data;
-                    System.Media.SystemSounds.Beep.Play();
+                    SoundHelper.PlayTouch();
                     lblStatusText.Text = "🟢 Sidik Jari Terverifikasi!";
                     lblStatusText.ForeColor = Color.FromArgb(52, 211, 153);
                     Application.DoEvents();
-                    System.Threading.Thread.Sleep(200);
+                    System.Threading.Thread.Sleep(150);
                     this.DialogResult = DialogResult.OK;
                     this.Close();
                 }
                 else
                 {
+                    SoundHelper.PlayWarning();
                     lblStatusText.Text = "Kualitas kurang jelas. Tempelkan jari lagi...";
                     lblStatusText.ForeColor = Color.FromArgb(248, 113, 113);
                     ReCapture();
@@ -185,6 +186,7 @@ namespace UangPasDesktop
             }
             else
             {
+                SoundHelper.PlayWarning();
                 lblStatusText.Text = "Kualitas: " + cr.Quality + ". Silakan tempelkan jari kembali.";
                 lblStatusText.ForeColor = Color.FromArgb(248, 113, 113);
                 ReCapture();
