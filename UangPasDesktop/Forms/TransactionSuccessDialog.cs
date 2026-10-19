@@ -7,9 +7,6 @@ namespace UangPasDesktop
     public class TransactionSuccessDialog : Form
     {
         public bool ShouldPrintReceipt { get; private set; }
-        private Timer autoCloseTimer;
-        private int secondsRemaining = 6;
-        private Label lblCountdown;
 
         public TransactionSuccessDialog(string invoiceNo, string inmateNama, string noReg, string blokKamar, decimal totalBelanja, decimal sisaSaldo, decimal sisaLimit)
         {
@@ -164,16 +161,16 @@ namespace UangPasDesktop
 
             this.Controls.Add(pnlCard);
 
-            // Bottom Buttons & Countdown
-            lblCountdown = new Label {
-                Text = "Menutup otomatis dalam " + secondsRemaining + " detik...",
+            // Bottom Buttons & Instruction
+            Label lblHint = new Label {
+                Text = "Tekan [Enter] untuk Cetak Struk, atau [Esc] untuk Selesai",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
-                ForeColor = Color.FromArgb(148, 163, 184),
+                ForeColor = Color.FromArgb(100, 116, 139),
                 Location = new Point(25, 385),
                 Size = new Size(434, 20),
                 TextAlign = ContentAlignment.MiddleCenter
             };
-            this.Controls.Add(lblCountdown);
+            this.Controls.Add(lblHint);
 
             Button btnPrint = new Button {
                 Text = "🖨️ Cetak Struk (Enter)",
@@ -209,23 +206,6 @@ namespace UangPasDesktop
             };
             this.Controls.Add(btnDone);
 
-            // Auto close timer
-            autoCloseTimer = new Timer();
-            autoCloseTimer.Interval = 1000;
-            autoCloseTimer.Tick += (s, e) => {
-                secondsRemaining--;
-                if (secondsRemaining <= 0)
-                {
-                    autoCloseTimer.Stop();
-                    CloseDialog();
-                }
-                else
-                {
-                    lblCountdown.Text = "Menutup otomatis dalam " + secondsRemaining + " detik...";
-                }
-            };
-            autoCloseTimer.Start();
-
             // Keyboard shortcut hooks
             this.KeyDown += (s, e) => {
                 if (e.KeyCode == Keys.Enter)
@@ -241,20 +221,10 @@ namespace UangPasDesktop
                     CloseDialog();
                 }
             };
-
-            this.FormClosing += (s, e) => {
-                if (autoCloseTimer != null)
-                {
-                    autoCloseTimer.Stop();
-                    autoCloseTimer.Dispose();
-                    autoCloseTimer = null;
-                }
-            };
         }
 
         private void CloseDialog()
         {
-            if (autoCloseTimer != null) autoCloseTimer.Stop();
             this.DialogResult = DialogResult.OK;
             this.Close();
         }
