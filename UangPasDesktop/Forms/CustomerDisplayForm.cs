@@ -95,6 +95,13 @@ namespace UangPasDesktop
                 autoResetTimer.Stop();
             };
 
+            this.Shown += (s, e) => {
+                CenterCard(idleCard, pnlIdle);
+                CenterCard(verifyCard, pnlVerify);
+                CenterCard(successCard, pnlSuccess);
+                CenterCard(saldoCard, pnlCekSaldo);
+            };
+
             ShowIdle();
         }
 
@@ -164,6 +171,20 @@ namespace UangPasDesktop
             this.Controls.Add(top);
         }
 
+        // Cards
+        private Panel idleCard;
+        private Panel verifyCard;
+        private Panel successCard;
+        private Panel saldoCard;
+
+        private void CenterCard(Control card, Control parent)
+        {
+            if (card == null || parent == null || parent.ClientSize.Width <= 0 || parent.ClientSize.Height <= 0) return;
+            int x = Math.Max(10, (parent.ClientSize.Width - card.Width) / 2);
+            int y = Math.Max(10, (parent.ClientSize.Height - card.Height) / 2);
+            card.Location = new Point(x, y);
+        }
+
         private void BuildPanels()
         {
             Panel body = new Panel {
@@ -175,19 +196,17 @@ namespace UangPasDesktop
             // 1. IDLE / WELCOME PANEL
             pnlIdle = new Panel { Dock = DockStyle.Fill, Visible = true, BackColor = Color.FromArgb(15, 23, 42) };
             
-            Panel idleCard = new Panel {
-                Width = 640,
-                Height = 360,
+            idleCard = new Panel {
+                Width = 680,
+                Height = 380,
                 BackColor = Color.FromArgb(30, 41, 59),
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(30)
+                Padding = new Padding(24)
             };
-            idleCard.Location = new Point((body.Width - idleCard.Width) / 2, 40);
-            idleCard.Anchor = AnchorStyles.None;
 
             PictureBox picIdleLogo = new PictureBox {
-                Location = new Point((idleCard.Width - 80) / 2, 20),
-                Size = new Size(80, 80),
+                Location = new Point((idleCard.Width - 84) / 2, 22),
+                Size = new Size(84, 84),
                 SizeMode = PictureBoxSizeMode.Zoom
             };
             string fpPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
@@ -207,50 +226,51 @@ namespace UangPasDesktop
 
             Label lblIdleWelcome = new Label {
                 Text = "SELAMAT DATANG DI KASIR KOPERASI",
-                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 18f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(20, 115),
-                Width = 600,
-                Height = 36,
+                Location = new Point(10, 118),
+                Width = idleCard.Width - 20,
+                Height = 38,
                 TextAlign = ContentAlignment.MiddleCenter
             };
             idleCard.Controls.Add(lblIdleWelcome);
 
             Label lblIdleSub = new Label {
                 Text = "Silakan letakkan barang belanjaan di meja kasir.\nSistem pembayaran menggunakan Sidik Jari Biometrik Resmi WBP.",
-                Font = new Font("Segoe UI", 11f),
+                Font = new Font("Segoe UI", 11.5f),
                 ForeColor = Color.FromArgb(203, 213, 225),
-                Location = new Point(20, 155),
-                Width = 600,
-                Height = 50,
+                Location = new Point(10, 164),
+                Width = idleCard.Width - 20,
+                Height = 52,
                 TextAlign = ContentAlignment.MiddleCenter
             };
             idleCard.Controls.Add(lblIdleSub);
 
             Label lblSensorStatus = new Label {
                 Text = "● SENSOR BIOMETRIK SIAGA",
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(52, 211, 153),
                 BackColor = Color.FromArgb(6, 78, 59),
-                Location = new Point(190, 220),
-                Width = 260,
-                Height = 36,
+                Location = new Point((idleCard.Width - 280) / 2, 228),
+                Width = 280,
+                Height = 38,
                 TextAlign = ContentAlignment.MiddleCenter
             };
             idleCard.Controls.Add(lblSensorStatus);
 
             Label lblTip = new Label {
                 Text = "💡 Anda juga dapat menempelkan jari Anda untuk cek sisa saldo dompet secara mandiri.",
-                Font = new Font("Segoe UI", 9f, FontStyle.Italic),
+                Font = new Font("Segoe UI", 10f, FontStyle.Italic),
                 ForeColor = Color.FromArgb(148, 163, 184),
-                Location = new Point(20, 275),
-                Width = 600,
+                Location = new Point(10, 282),
+                Width = idleCard.Width - 20,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleCenter
             };
             idleCard.Controls.Add(lblTip);
 
             pnlIdle.Controls.Add(idleCard);
+            pnlIdle.Resize += (s, e) => CenterCard(idleCard, pnlIdle);
             body.Controls.Add(pnlIdle);
 
             // 2. ACTIVE CART PANEL (LIVE MIRROR)
@@ -375,15 +395,13 @@ namespace UangPasDesktop
 
             // 3. BIOMETRIC VERIFICATION & SALDO CHECK PANEL
             pnlVerify = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(15, 23, 42) };
-            Panel verifyCard = new Panel {
-                Width = 620,
+            verifyCard = new Panel {
+                Width = 640,
                 Height = 410,
                 BackColor = Color.FromArgb(30, 41, 59),
                 BorderStyle = BorderStyle.FixedSingle,
                 Padding = new Padding(24)
             };
-            verifyCard.Location = new Point((body.Width - verifyCard.Width) / 2, 20);
-            verifyCard.Anchor = AnchorStyles.None;
 
             Label lblVerifyHeader = new Label {
                 Text = "IDENTIFIKASI BIOMETRIK WARGA BINAAN",
@@ -489,19 +507,18 @@ namespace UangPasDesktop
             verifyCard.Controls.Add(lblConfirmHint);
 
             pnlVerify.Controls.Add(verifyCard);
+            pnlVerify.Resize += (s, e) => CenterCard(verifyCard, pnlVerify);
             body.Controls.Add(pnlVerify);
 
             // 4. TRANSACTION SUCCESS PANEL
             pnlSuccess = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(15, 23, 42) };
-            Panel successCard = new Panel {
-                Width = 620,
-                Height = 380,
+            successCard = new Panel {
+                Width = 640,
+                Height = 390,
                 BackColor = Color.FromArgb(6, 78, 59),
                 BorderStyle = BorderStyle.FixedSingle,
                 Padding = new Padding(24)
             };
-            successCard.Location = new Point((body.Width - successCard.Width) / 2, 30);
-            successCard.Anchor = AnchorStyles.None;
 
             Label lblSuccessIcon = new Label {
                 Text = "✓",
@@ -581,19 +598,18 @@ namespace UangPasDesktop
             successCard.Controls.Add(lblThanks);
 
             pnlSuccess.Controls.Add(successCard);
+            pnlSuccess.Resize += (s, e) => CenterCard(successCard, pnlSuccess);
             body.Controls.Add(pnlSuccess);
 
             // 5. SELF-SERVICE CEK SALDO PANEL
             pnlCekSaldo = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(15, 23, 42) };
-            Panel saldoCard = new Panel {
-                Width = 620,
-                Height = 360,
+            saldoCard = new Panel {
+                Width = 640,
+                Height = 370,
                 BackColor = Color.FromArgb(30, 41, 59),
                 BorderStyle = BorderStyle.FixedSingle,
                 Padding = new Padding(24)
             };
-            saldoCard.Location = new Point((body.Width - saldoCard.Width) / 2, 40);
-            saldoCard.Anchor = AnchorStyles.None;
 
             Label lblKioskTitle = new Label {
                 Text = "PENGECEKAN SALDO MANDIRI (KIOSK)",
@@ -666,6 +682,7 @@ namespace UangPasDesktop
             saldoCard.Controls.Add(lblKioskLimit);
 
             pnlCekSaldo.Controls.Add(saldoCard);
+            pnlCekSaldo.Resize += (s, e) => CenterCard(saldoCard, pnlCekSaldo);
             body.Controls.Add(pnlCekSaldo);
 
             this.Controls.Add(body);
@@ -683,6 +700,7 @@ namespace UangPasDesktop
                 return;
             }
             autoResetTimer.Stop();
+            CenterCard(idleCard, pnlIdle);
             pnlIdle.Visible = true;
             pnlCart.Visible = false;
             pnlVerify.Visible = false;
@@ -740,6 +758,7 @@ namespace UangPasDesktop
             }
 
             autoResetTimer.Stop();
+            CenterCard(verifyCard, pnlVerify);
             pnlIdle.Visible = false;
             pnlCart.Visible = false;
             pnlVerify.Visible = true;
@@ -762,6 +781,7 @@ namespace UangPasDesktop
                 return;
             }
 
+            CenterCard(successCard, pnlSuccess);
             pnlIdle.Visible = false;
             pnlCart.Visible = false;
             pnlVerify.Visible = false;
@@ -785,6 +805,7 @@ namespace UangPasDesktop
                 return;
             }
 
+            CenterCard(saldoCard, pnlCekSaldo);
             pnlIdle.Visible = false;
             pnlCart.Visible = false;
             pnlVerify.Visible = false;

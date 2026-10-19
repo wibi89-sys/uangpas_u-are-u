@@ -27,7 +27,9 @@ namespace UangPasDesktop
         private TextBox txtAmount;
         private TextBox txtPenyetor;
         private TextBox txtNotes;
+        private Button btnFingerAuth;
         private Button btnSubmit;
+        private Button btnCancel;
 
         private Dictionary<string, object> selectedInmate = null;
         private decimal currentAmount = 0;
@@ -40,7 +42,8 @@ namespace UangPasDesktop
             this.onBalanceUpdated = balanceCallback;
 
             this.Text = "Setor Tunai / Top-Up Saldo Dompet WBP";
-            this.Size = new Size(620, 720);
+            this.Size = new Size(600, 560);
+            this.MinimumSize = new Size(580, 500);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -67,55 +70,54 @@ namespace UangPasDesktop
 
         private void BuildUI()
         {
-            // HEADER BAR
+            // HEADER BAR (COMPACT 52px)
             Panel top = new Panel {
                 Dock = DockStyle.Top,
-                Height = 70,
-                Padding = new Padding(20, 12, 20, 10),
+                Height = 52,
+                Padding = new Padding(16, 8, 16, 6),
                 BackColor = Color.FromArgb(15, 23, 42)
             };
 
             Label lblHeaderTitle = new Label {
                 Text = "💰 SETOR TUNAI / TOP-UP SALDO DOMPET WBP",
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 Dock = DockStyle.Top,
-                Height = 24
+                Height = 20
             };
             top.Controls.Add(lblHeaderTitle);
 
             Label lblHeaderSub = new Label {
-                Text = "Scan sidik jari WBP atau cari nomor registrasi untuk mengisi saldo dompet digital.",
+                Text = "Otorisasi sidik jari WBP atau cari nomor registrasi untuk mengisi saldo dompet digital.",
                 ForeColor = Color.FromArgb(148, 163, 184),
-                Font = new Font("Segoe UI", 9f),
+                Font = new Font("Segoe UI", 8.5f),
                 Dock = DockStyle.Top,
-                Height = 22
+                Height = 18
             };
             top.Controls.Add(lblHeaderSub);
-            this.Controls.Add(top);
 
             // MAIN SCROLLABLE CONTAINER
             Panel main = new Panel {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(20, 14, 20, 14),
+                Padding = new Padding(14, 8, 14, 8),
                 AutoScroll = true
             };
 
             // 1. SEARCH SECTION
             GroupBox grpSearch = new GroupBox {
                 Text = " 1. Identifikasi Warga Binaan (WBP) ",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(20, 10),
-                Width = 560,
-                Height = 84,
+                Location = new Point(14, 6),
+                Width = 556,
+                Height = 64,
                 BackColor = Color.White
             };
 
             txtSearch = new TextBox {
-                Location = new Point(14, 30),
-                Width = 350,
-                Font = new Font("Segoe UI", 11.5f),
+                Location = new Point(12, 22),
+                Width = 345,
+                Font = new Font("Segoe UI", 11f),
                 ForeColor = Color.FromArgb(15, 23, 42)
             };
             txtSearch.KeyDown += (s, e) => {
@@ -128,14 +130,14 @@ namespace UangPasDesktop
             grpSearch.Controls.Add(txtSearch);
 
             Button btnScanFinger = new Button {
-                Text = "  Scan Sidik Jari",
-                Location = new Point(374, 28),
-                Width = 170,
-                Height = 35,
+                Text = "  👆 Scan Jari WBP",
+                Location = new Point(366, 20),
+                Width = 175,
+                Height = 32,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             string qkFpPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
@@ -147,7 +149,7 @@ namespace UangPasDesktop
                     using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
                     using (Bitmap orig = new Bitmap(ms))
                     {
-                        btnScanFinger.Image = new Bitmap(orig, new Size(18, 18));
+                        btnScanFinger.Image = new Bitmap(orig, new Size(16, 16));
                         btnScanFinger.ImageAlign = ContentAlignment.MiddleLeft;
                         btnScanFinger.TextImageRelation = TextImageRelation.ImageBeforeText;
                     }
@@ -161,41 +163,41 @@ namespace UangPasDesktop
 
             // 2. INMATE INFO CARD
             Panel pnlInmate = new Panel {
-                Location = new Point(20, 104),
-                Width = 560,
-                Height = 110,
+                Location = new Point(14, 76),
+                Width = 556,
+                Height = 74,
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(16, 12, 16, 12)
+                Padding = new Padding(12, 6, 12, 6)
             };
 
             lblNama = new Label {
                 Text = "Belum ada WBP dipilih. Silakan cari atau scan sidik jari...",
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(14, 10),
+                Location = new Point(10, 6),
                 Width = 530,
-                Height = 24
+                Height = 20
             };
             pnlInmate.Controls.Add(lblNama);
 
             lblNoReg = new Label {
-                Text = "No. Registrasi: -",
-                Font = new Font("Consolas", 10f, FontStyle.Bold),
+                Text = "No. Reg: -",
+                Font = new Font("Consolas", 9.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(2, 132, 199),
-                Location = new Point(14, 36),
-                Width = 260,
-                Height = 20
+                Location = new Point(10, 28),
+                Width = 250,
+                Height = 18
             };
             pnlInmate.Controls.Add(lblNoReg);
 
             lblKamar = new Label {
                 Text = "Kamar / Blok: -",
-                Font = new Font("Segoe UI", 9.5f),
+                Font = new Font("Segoe UI", 9f),
                 ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(280, 36),
-                Width = 260,
-                Height = 20
+                Location = new Point(270, 28),
+                Width = 265,
+                Height = 18
             };
             pnlInmate.Controls.Add(lblKamar);
 
@@ -203,19 +205,19 @@ namespace UangPasDesktop
                 Text = "Status: -",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(14, 60),
-                Width = 260,
-                Height = 20
+                Location = new Point(10, 48),
+                Width = 250,
+                Height = 18
             };
             pnlInmate.Controls.Add(lblStatus);
 
             lblCurrentSaldo = new Label {
                 Text = "Saldo Sekarang: Rp 0",
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(22, 101, 52),
-                Location = new Point(280, 58),
-                Width = 260,
-                Height = 22
+                Location = new Point(270, 48),
+                Width = 265,
+                Height = 20
             };
             pnlInmate.Controls.Add(lblCurrentSaldo);
 
@@ -224,28 +226,28 @@ namespace UangPasDesktop
             // 3. TOP-UP AMOUNT SECTION
             GroupBox grpAmount = new GroupBox {
                 Text = " 2. Nominal Top-Up & Setoran ",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
-                Location = new Point(20, 224),
-                Width = 560,
-                Height = 245,
+                Location = new Point(14, 156),
+                Width = 556,
+                Height = 210,
                 BackColor = Color.White
             };
 
             Label lblNominalTitle = new Label {
                 Text = "Nominal Setoran (Rp):",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(71, 85, 105),
-                Location = new Point(16, 26),
+                Location = new Point(14, 16),
                 Width = 200,
-                Height = 20
+                Height = 16
             };
             grpAmount.Controls.Add(lblNominalTitle);
 
             txtAmount = new TextBox {
-                Location = new Point(16, 48),
-                Width = 524,
-                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+                Location = new Point(14, 34),
+                Width = 526,
+                Font = new Font("Segoe UI", 15f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(16, 185, 129),
                 TextAlign = HorizontalAlignment.Right,
                 Text = "0"
@@ -263,13 +265,20 @@ namespace UangPasDesktop
                 }
                 UpdateCalculationPreview();
             };
+            txtAmount.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    ProcessTopupWithFingerprint();
+                }
+            };
             grpAmount.Controls.Add(txtAmount);
 
             // Quick Chips FlowLayoutPanel
             FlowLayoutPanel flowChips = new FlowLayoutPanel {
-                Location = new Point(16, 94),
-                Width = 524,
-                Height = 42
+                Location = new Point(14, 74),
+                Width = 526,
+                Height = 36
             };
             AddQuickChip(flowChips, "+20.000", 20000);
             AddQuickChip(flowChips, "+50.000", 50000);
@@ -284,14 +293,14 @@ namespace UangPasDesktop
                 Text = "Nama Penyetor:",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(71, 85, 105),
-                Location = new Point(16, 144),
+                Location = new Point(14, 114),
                 Width = 140,
-                Height = 18
+                Height = 16
             };
             grpAmount.Controls.Add(lblPenyetor);
 
             txtPenyetor = new TextBox {
-                Location = new Point(16, 164),
+                Location = new Point(14, 132),
                 Width = 250,
                 Font = new Font("Segoe UI", 9.5f),
                 Text = "Kasir POS / Loket"
@@ -302,15 +311,15 @@ namespace UangPasDesktop
                 Text = "Catatan Tambahan:",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(71, 85, 105),
-                Location = new Point(280, 144),
+                Location = new Point(274, 114),
                 Width = 140,
-                Height = 18
+                Height = 16
             };
             grpAmount.Controls.Add(lblNotes);
 
             txtNotes = new TextBox {
-                Location = new Point(280, 164),
-                Width = 260,
+                Location = new Point(274, 132),
+                Width = 266,
                 Font = new Font("Segoe UI", 9.5f),
                 Text = "Setor tunai loket kasir"
             };
@@ -319,12 +328,12 @@ namespace UangPasDesktop
             // Preview calculation card
             lblNewSaldoPreview = new Label {
                 Text = "Simulasi: Saldo Awal Rp 0 + Top-up Rp 0 = Saldo Baru Rp 0",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(5, 150, 105),
                 BackColor = Color.FromArgb(236, 253, 245),
                 BorderStyle = BorderStyle.FixedSingle,
-                Location = new Point(16, 200),
-                Width = 524,
+                Location = new Point(14, 166),
+                Width = 526,
                 Height = 32,
                 TextAlign = ContentAlignment.MiddleCenter
             };
@@ -332,44 +341,84 @@ namespace UangPasDesktop
 
             main.Controls.Add(grpAmount);
 
-            // 4. ACTION BUTTONS ROW
+            // 4. ACTION BUTTONS ROW (ALWAYS VISIBLE AT THE BOTTOM)
             Panel bottom = new Panel {
                 Dock = DockStyle.Bottom,
-                Height = 62,
-                Padding = new Padding(20, 12, 20, 12),
+                Height = 58,
+                Padding = new Padding(14, 10, 14, 10),
                 BackColor = Color.FromArgb(241, 245, 249)
             };
 
-            btnSubmit = new Button {
-                Text = "✓ Proses Setor Saldo [Enter]",
-                Dock = DockStyle.Right,
-                Width = 250,
-                BackColor = Color.FromArgb(16, 185, 129),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnSubmit.FlatAppearance.BorderSize = 0;
-            btnSubmit.Click += (s, e) => ProcessTopup();
-            bottom.Controls.Add(btnSubmit);
-
-            Button btnCancel = new Button {
+            btnCancel = new Button {
                 Text = "Batal [Esc]",
                 Dock = DockStyle.Left,
-                Width = 120,
-                BackColor = Color.FromArgb(203, 213, 225),
-                ForeColor = Color.FromArgb(30, 41, 59),
+                Width = 90,
+                BackColor = Color.FromArgb(226, 232, 240),
+                ForeColor = Color.FromArgb(51, 65, 85),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 DialogResult = DialogResult.Cancel
             };
             btnCancel.FlatAppearance.BorderSize = 0;
             bottom.Controls.Add(btnCancel);
 
+            btnFingerAuth = new Button {
+                Text = "  🔒 Otorisasi Sidik Jari & Setor",
+                Dock = DockStyle.Right,
+                Width = 245,
+                BackColor = Color.FromArgb(5, 150, 105),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnFingerAuth.FlatAppearance.BorderSize = 0;
+            if (System.IO.File.Exists(qkFpPath))
+            {
+                try
+                {
+                    byte[] bytes = System.IO.File.ReadAllBytes(qkFpPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnFingerAuth.Image = new Bitmap(orig, new Size(16, 16));
+                        btnFingerAuth.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnFingerAuth.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                }
+                catch { }
+            }
+            btnFingerAuth.Click += (s, e) => ProcessTopupWithFingerprint();
+            bottom.Controls.Add(btnFingerAuth);
+
+            Panel pnlBtnSpacer = new Panel {
+                Dock = DockStyle.Right,
+                Width = 8
+            };
+            bottom.Controls.Add(pnlBtnSpacer);
+
+            btnSubmit = new Button {
+                Text = "✓ Setor Langsung [Enter]",
+                Dock = DockStyle.Right,
+                Width = 165,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSubmit.FlatAppearance.BorderSize = 0;
+            btnSubmit.Click += (s, e) => ProcessTopupDirect();
+            bottom.Controls.Add(btnSubmit);
+
+            // DOCKING ORDER: Crucial for WinForms!
             this.Controls.Add(main);
             this.Controls.Add(bottom);
+            this.Controls.Add(top);
+            top.SendToBack();
+            bottom.SendToBack();
+            main.BringToFront();
 
             this.CancelButton = btnCancel;
             this.Shown += (s, e) => txtSearch.Focus();
@@ -562,7 +611,7 @@ namespace UangPasDesktop
             txtAmount.SelectAll();
         }
 
-        private void ProcessTopup()
+        private void ProcessTopupWithFingerprint()
         {
             if (selectedInmate == null)
             {
@@ -578,13 +627,99 @@ namespace UangPasDesktop
                 return;
             }
 
-            int inmateId = Convert.ToInt32(selectedInmate["id"]);
+            string wbpNama = selectedInmate.ContainsKey("nama") ? selectedInmate["nama"].ToString() : "";
+            string reg = selectedInmate.ContainsKey("no_registrasi") ? selectedInmate["no_registrasi"].ToString() : "-";
+            bool hasTemplate = selectedInmate.ContainsKey("template") && selectedInmate["template"] != null && !string.IsNullOrEmpty(selectedInmate["template"].ToString());
+
+            if (!hasTemplate)
+            {
+                string warnMsg = string.Format(
+                    "WBP {0} ({1}) belum memiliki rekaman sidik jari biometrik di sistem.\n\n" +
+                    "Apakah Anda ingin melanjutkan setor saldo secara manual (Kasir Override)?",
+                    wbpNama, reg);
+                if (MessageBox.Show(warnMsg, "Sidik Jari Belum Terdaftar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    ExecuteTopupApi(wbpNama);
+                }
+                return;
+            }
+
+            // Biometric reader check
+            if (this.reader == null)
+            {
+                ReaderCollection readers = ReaderCollection.GetReaders();
+                if (readers != null && readers.Count > 0) this.reader = readers[0];
+            }
+
+            if (this.reader == null)
+            {
+                MessageBox.Show("Sensor sidik jari belum terhubung.\nSilakan periksa koneksi USB scanner atau gunakan tombol 'Setor Langsung'.", "Sensor Tidak Terdeteksi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (FingerprintPromptForm prompt = new FingerprintPromptForm(this.reader, "Tempelkan jari WBP (" + wbpNama + ") untuk otorisasi setor saldo..."))
+            {
+                if (prompt.ShowDialog(this) == DialogResult.OK && prompt.CapturedFmd != null)
+                {
+                    Fmd liveFmd = prompt.CapturedFmd;
+                    Fmd storedFmd = MainForm.ParseFmdFromTemplate(selectedInmate["template"].ToString());
+                    bool isMatched = false;
+
+                    if (storedFmd != null)
+                    {
+                        try
+                        {
+                            CompareResult cr = Comparison.Compare(liveFmd, 0, storedFmd, 0);
+                            int threshold = 2147483647 / 10000;
+                            if (cr.ResultCode == Constants.ResultCode.DP_SUCCESS && cr.Score < threshold)
+                            {
+                                isMatched = true;
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (isMatched)
+                    {
+                        SoundHelper.PlaySuccess();
+                        ExecuteTopupApi(wbpNama);
+                    }
+                    else
+                    {
+                        SoundHelper.PlayError();
+                        MessageBox.Show(
+                            "Sidik jari TIDAK COCOK dengan data biometrik " + wbpNama + "!\n\nOtorisasi setor saldo dibatalkan demi keamanan dompet WBP.",
+                            "Verifikasi Biometrik Gagal",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+                    }
+                }
+            }
+        }
+
+        private void ProcessTopupDirect()
+        {
+            if (selectedInmate == null)
+            {
+                MessageBox.Show("Silakan pilih Warga Binaan terlebih dahulu.", "Peringatan", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtSearch.Focus();
+                return;
+            }
+
+            if (currentAmount < 1000)
+            {
+                MessageBox.Show("Nominal top-up minimal Rp 1.000.", "Nominal Kurang", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtAmount.Focus();
+                return;
+            }
+
             string wbpNama = selectedInmate.ContainsKey("nama") ? selectedInmate["nama"].ToString() : "";
             decimal before = Convert.ToDecimal(selectedInmate["saldo"]);
             decimal after = before + currentAmount;
 
             string confirmMsg = string.Format(
-                "Konfirmasi Setor Saldo Dompet Digital:\n\n" +
+                "Konfirmasi Setor Saldo Dompet Digital (Setor Langsung):\n\n" +
                 "Nama WBP: {0}\n" +
                 "No. Registrasi: {1}\n" +
                 "Saldo Saat Ini: Rp {2:N0}\n" +
@@ -603,7 +738,18 @@ namespace UangPasDesktop
                 return;
             }
 
+            ExecuteTopupApi(wbpNama);
+        }
+
+        private void ExecuteTopupApi(string wbpNama)
+        {
+            int inmateId = Convert.ToInt32(selectedInmate["id"]);
+            decimal before = Convert.ToDecimal(selectedInmate["saldo"]);
+            decimal after = before + currentAmount;
+
+            btnFingerAuth.Enabled = false;
             btnSubmit.Enabled = false;
+            btnFingerAuth.Text = "Memproses...";
             btnSubmit.Text = "Memproses...";
 
             try
@@ -684,8 +830,10 @@ namespace UangPasDesktop
             }
             finally
             {
+                btnFingerAuth.Enabled = true;
                 btnSubmit.Enabled = true;
-                btnSubmit.Text = "✓ Proses Setor Saldo [Enter]";
+                btnFingerAuth.Text = "  🔒 Otorisasi Sidik Jari & Setor";
+                btnSubmit.Text = "✓ Setor Langsung [Enter]";
             }
         }
     }
