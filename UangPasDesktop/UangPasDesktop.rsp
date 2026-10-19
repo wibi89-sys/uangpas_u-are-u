@@ -4,10 +4,13 @@
 /r:System.Windows.Forms.dll
 /r:System.Drawing.dll
 /r:System.Web.Extensions.dll
+/r:Microsoft.Web.WebView2.WinForms.dll
+/r:Microsoft.Web.WebView2.Core.dll
 /recurse:Models\*.cs
 /recurse:Forms\*.cs
 /recurse:Utils\*.cs
 Program.cs
+ModernMainForm.cs
 MainForm.cs
 MainForm.Kasir.cs
 MainForm.Enrollment.cs

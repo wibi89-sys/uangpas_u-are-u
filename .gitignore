@@ -13,6 +13,7 @@ desktop.ini
 
 # Logs & Desktop Caches
 *.log
+*.WebView2/
 UangPasDesktop/diag_run.log
 UangPasDesktop/cache_*.json
 UangPasDesktop/offline_queue.json
