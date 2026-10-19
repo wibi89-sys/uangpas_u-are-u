@@ -67,6 +67,7 @@ namespace UangPasDesktop
                 this.Size = new Size(880, 640);
                 this.FormBorderStyle = FormBorderStyle.Sizable;
                 this.MinimumSize = new Size(760, 500);
+                this.TopMost = true; // Stays on top during single monitor testing
             }
 
             BuildHeader();

@@ -219,10 +219,10 @@ namespace UangPasDesktop
                 }
             };
 
-            // Shortcut ribbon bar at bottom of product table
+            // Shortcut ribbon bar at bottom of product table (Guaranteed 52px height so scrollbar never covers chips)
             Panel pnlShortcutBar = new Panel {
                 Dock = DockStyle.Bottom,
-                Height = 34,
+                Height = 52,
                 BackColor = Color.FromArgb(248, 250, 252),
                 Padding = new Padding(2, 4, 2, 4)
             };
@@ -237,7 +237,7 @@ namespace UangPasDesktop
             flowShortcuts.Controls.Add(CreateShortcutChip("F1", "Cari Produk", () => FocusSearch()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F2", "Ubah Qty", () => EditSelectedCartQty()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F3", "Hapus Item", () => DeleteSelectedCartItem()));
-            flowShortcuts.Controls.Add(CreateShortcutChip("F4 / F12", "Bayar Jari", () => { SwitchTab(0); ProcessCheckoutFingerprint(); }));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F4", "Bayar Jari", () => { SwitchTab(0); ProcessCheckoutFingerprint(); }));
             flowShortcuts.Controls.Add(CreateShortcutChip("F5", "Tahan Nota", () => HoldCurrentBill()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F6", "Panggil Nota", () => RecallBill()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F7", "Top-Up Saldo", () => OpenTopupDialog()));
@@ -245,6 +245,7 @@ namespace UangPasDesktop
             flowShortcuts.Controls.Add(CreateShortcutChip("F9", "Batal", () => ClearCartConfirm()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F10", "Manual", () => { SwitchTab(0); ProcessCheckoutManual(); }));
             flowShortcuts.Controls.Add(CreateShortcutChip("F11", "Rekap Shift", () => ShowShiftRekap()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F12", "Layar Pelanggan", () => ToggleCustomerDisplay()));
             flowShortcuts.Controls.Add(CreateShortcutChip("+ / -", "Ubah Jumlah", null));
             pnlShortcutBar.Controls.Add(flowShortcuts);
 
@@ -291,11 +292,26 @@ namespace UangPasDesktop
                 Text = "(0 item)",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(170, 8),
+                Location = new Point(165, 8),
                 AutoSize = true
             };
             pnlCartHeader.Controls.Add(lblCartTitle);
             pnlCartHeader.Controls.Add(lblCartCountBadge);
+
+            Button btnHeaderCustomerDisplay = new Button {
+                Text = "🖥️ Layar Pelanggan [F12]",
+                Dock = DockStyle.Right,
+                Width = 168,
+                Height = 30,
+                BackColor = Color.FromArgb(240, 249, 255),
+                ForeColor = Color.FromArgb(2, 132, 199),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnHeaderCustomerDisplay.FlatAppearance.BorderColor = Color.FromArgb(186, 230, 253);
+            btnHeaderCustomerDisplay.Click += (s, e) => ToggleCustomerDisplay();
+            pnlCartHeader.Controls.Add(btnHeaderCustomerDisplay);
             rightPanel.Controls.Add(pnlCartHeader);
 
             // Barcode input box (Responsive Table)
@@ -553,7 +569,7 @@ namespace UangPasDesktop
             btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
             
             btnCheckoutFingerprint = new Button {
-                Text = "  Bayar dengan Sidik Jari (F4 / F12)",
+                Text = "  Bayar dengan Sidik Jari (F4)",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
@@ -1011,12 +1027,18 @@ namespace UangPasDesktop
                 e.SuppressKeyPress = true;
                 DeleteSelectedCartItem();
             }
-            else if (e.KeyCode == Keys.F4 || e.KeyCode == Keys.F12)
+            else if (e.KeyCode == Keys.F4)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
                 SwitchTab(0);
                 ProcessCheckoutFingerprint();
+            }
+            else if (e.KeyCode == Keys.F12)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                ToggleCustomerDisplay();
             }
             else if (e.KeyCode == Keys.F5)
             {

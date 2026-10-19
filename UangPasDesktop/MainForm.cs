@@ -181,13 +181,13 @@ namespace UangPasDesktop
             };
 
             Panel pnlBrand = new Panel {
-                Size = new Size(240, 48),
-                Margin = new Padding(4, 2, 14, 0),
+                Size = new Size(180, 48),
+                Margin = new Padding(2, 2, 8, 0),
                 BackColor = Color.Transparent
             };
 
             PictureBox picBrandLogo = new PictureBox {
-                Size = new Size(38, 38),
+                Size = new Size(34, 34),
                 Location = new Point(0, 4),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent
@@ -210,25 +210,25 @@ namespace UangPasDesktop
             Label lblBrand = new Label {
                 Text = "UangPas Lapas",
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(44, 4)
+                Location = new Point(38, 4)
             };
             Label lblSubBrand = new Label {
-                Text = "POS KOPERASI & BIOMETRIK",
+                Text = "POS & BIOMETRIK",
                 ForeColor = Color.FromArgb(56, 189, 248),
-                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 7f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(46, 26)
+                Location = new Point(40, 24)
             };
             pnlBrand.Controls.Add(lblBrand);
             pnlBrand.Controls.Add(lblSubBrand);
             topFlowLeft.Controls.Add(pnlBrand);
 
-            // Fast Switch Buttons in Header
+            // 1. KASIR POS BUTTON
             btnTopKasir = new Button {
                 Text = "🛒 Kasir POS",
-                Width = 115,
+                Width = 105,
                 Height = 36,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
@@ -241,141 +241,27 @@ namespace UangPasDesktop
             btnTopKasir.Click += (s, e) => SwitchTab(0);
             topFlowLeft.Controls.Add(btnTopKasir);
 
-            btnTopEnroll = new Button {
-                Text = "  Rekam Sidik Jari",
-                Width = 155,
+            // 2. LAYAR PELANGGAN (DUAL SCREEN) BUTTON - Placed right next to Kasir POS!
+            btnTopDualScreen = new Button {
+                Text = "🖥️ Layar Pelanggan",
+                Width = 145,
                 Height = 36,
-                BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.FromArgb(203, 213, 225),
+                BackColor = Color.FromArgb(14, 165, 233),
+                ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2, 0, 4, 0)
             };
-            if (System.IO.File.Exists(logoPath))
-            {
-                try {
-                    byte[] bytes = System.IO.File.ReadAllBytes(logoPath);
-                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
-                    using (Bitmap orig = new Bitmap(ms))
-                    {
-                        btnTopEnroll.Image = new Bitmap(orig, new Size(20, 20));
-                        btnTopEnroll.ImageAlign = ContentAlignment.MiddleLeft;
-                        btnTopEnroll.TextImageRelation = TextImageRelation.ImageBeforeText;
-                    }
-                } catch { }
-            }
-            btnTopEnroll.FlatAppearance.BorderSize = 0;
-            btnTopEnroll.Click += (s, e) => SwitchTab(1);
-            topFlowLeft.Controls.Add(btnTopEnroll);
+            btnTopDualScreen.FlatAppearance.BorderSize = 0;
+            btnTopDualScreen.Click += (s, e) => ToggleCustomerDisplay();
+            topFlowLeft.Controls.Add(btnTopDualScreen);
 
-            btnTopKiosk = new Button {
-                Text = "  Cek Saldo",
-                Width = 125,
-                Height = 36,
-                BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.FromArgb(203, 213, 225),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 4, 0)
-            };
+            // 3. TOP-UP SALDO BUTTON
             string walletPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wallet_logo.png");
-            if (System.IO.File.Exists(walletPath))
-            {
-                try {
-                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
-                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
-                    using (Bitmap orig = new Bitmap(ms))
-                    {
-                        btnTopKiosk.Image = new Bitmap(orig, new Size(20, 20));
-                        btnTopKiosk.ImageAlign = ContentAlignment.MiddleLeft;
-                        btnTopKiosk.TextImageRelation = TextImageRelation.ImageBeforeText;
-                    }
-                } catch { }
-            }
-            btnTopKiosk.FlatAppearance.BorderSize = 0;
-            btnTopKiosk.Click += (s, e) => SwitchTab(2);
-            topFlowLeft.Controls.Add(btnTopKiosk);
-
-            btnTopSettings = new Button {
-                Text = "  Pengaturan Sensor",
-                Width = 175,
-                Height = 36,
-                BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.FromArgb(203, 213, 225),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 6, 0)
-            };
-            string gearPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "gear_logo.png");
-            if (System.IO.File.Exists(gearPath))
-            {
-                try {
-                    byte[] bytes = System.IO.File.ReadAllBytes(gearPath);
-                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
-                    using (Bitmap orig = new Bitmap(ms))
-                    {
-                        btnTopSettings.Image = new Bitmap(orig, new Size(20, 20));
-                        btnTopSettings.ImageAlign = ContentAlignment.MiddleLeft;
-                        btnTopSettings.TextImageRelation = TextImageRelation.ImageBeforeText;
-                    }
-                } catch { }
-            }
-            btnTopSettings.FlatAppearance.BorderSize = 0;
-            btnTopSettings.Click += (s, e) => SwitchTab(3);
-            topFlowLeft.Controls.Add(btnTopSettings);
-
-            Button btnTopSync = new Button {
-                Text = "🔄 Sinkron",
-                Width = 100,
-                Height = 34,
-                BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 3, 0)
-            };
-            btnTopSync.Click += (s, e) => {
-                btnTopSync.Text = "⏳ Sinkron...";
-                btnTopSync.Enabled = false;
-                SyncDataFromApi();
-                Timer t = new Timer { Interval = 800 };
-                t.Tick += (ts, te) => {
-                    btnTopSync.Text = "🔄 Sinkron";
-                    btnTopSync.Enabled = true;
-                    t.Stop();
-                    t.Dispose();
-                };
-                t.Start();
-            };
-            topFlowLeft.Controls.Add(btnTopSync);
-
-            Button btnOpenPortalAdmin = new Button {
-                Text = "🌐 Portal Admin",
-                Width = 125,
-                Height = 34,
-                BackColor = Color.FromArgb(2, 132, 199),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 3, 0)
-            };
-            btnOpenPortalAdmin.Click += (s, e) => {
-                try {
-                    System.Diagnostics.Process.Start("http://uangpas.test");
-                } catch {
-                    try { System.Diagnostics.Process.Start("http://localhost:8000"); } catch { }
-                }
-            };
-            topFlowLeft.Controls.Add(btnOpenPortalAdmin);
-
             btnTopTopup = new Button {
-                Text = "  Top-Up Saldo",
-                Width = 140,
+                Text = "  Top-Up",
+                Width = 105,
                 Height = 36,
                 BackColor = Color.FromArgb(6, 78, 59),
                 ForeColor = Color.FromArgb(167, 243, 208),
@@ -391,7 +277,7 @@ namespace UangPasDesktop
                     using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
                     using (Bitmap orig = new Bitmap(ms))
                     {
-                        btnTopTopup.Image = new Bitmap(orig, new Size(20, 20));
+                        btnTopTopup.Image = new Bitmap(orig, new Size(18, 18));
                         btnTopTopup.ImageAlign = ContentAlignment.MiddleLeft;
                         btnTopTopup.TextImageRelation = TextImageRelation.ImageBeforeText;
                     }
@@ -401,9 +287,10 @@ namespace UangPasDesktop
             btnTopTopup.Click += (s, e) => OpenTopupDialog();
             topFlowLeft.Controls.Add(btnTopTopup);
 
-            btnTopDualScreen = new Button {
-                Text = "🖥️ Layar Pelanggan",
-                Width = 160,
+            // 4. CEK SALDO MANDIRI (KIOSK)
+            btnTopKiosk = new Button {
+                Text = "  Cek Saldo",
+                Width = 110,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.FromArgb(203, 213, 225),
@@ -412,9 +299,129 @@ namespace UangPasDesktop
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2, 0, 4, 0)
             };
-            btnTopDualScreen.FlatAppearance.BorderSize = 0;
-            btnTopDualScreen.Click += (s, e) => ToggleCustomerDisplay();
-            topFlowLeft.Controls.Add(btnTopDualScreen);
+            if (System.IO.File.Exists(walletPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnTopKiosk.Image = new Bitmap(orig, new Size(18, 18));
+                        btnTopKiosk.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnTopKiosk.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
+            btnTopKiosk.FlatAppearance.BorderSize = 0;
+            btnTopKiosk.Click += (s, e) => SwitchTab(2);
+            topFlowLeft.Controls.Add(btnTopKiosk);
+
+            // 5. REKAM SIDIK JARI
+            btnTopEnroll = new Button {
+                Text = "  Rekam Jari",
+                Width = 115,
+                Height = 36,
+                BackColor = Color.FromArgb(30, 41, 59),
+                ForeColor = Color.FromArgb(203, 213, 225),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(2, 0, 4, 0)
+            };
+            if (System.IO.File.Exists(logoPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(logoPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnTopEnroll.Image = new Bitmap(orig, new Size(18, 18));
+                        btnTopEnroll.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnTopEnroll.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
+            btnTopEnroll.FlatAppearance.BorderSize = 0;
+            btnTopEnroll.Click += (s, e) => SwitchTab(1);
+            topFlowLeft.Controls.Add(btnTopEnroll);
+
+            // 6. PENGATURAN SENSOR
+            btnTopSettings = new Button {
+                Text = "  Pengaturan",
+                Width = 115,
+                Height = 36,
+                BackColor = Color.FromArgb(30, 41, 59),
+                ForeColor = Color.FromArgb(203, 213, 225),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(2, 0, 4, 0)
+            };
+            string gearPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "gear_logo.png");
+            if (System.IO.File.Exists(gearPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(gearPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnTopSettings.Image = new Bitmap(orig, new Size(18, 18));
+                        btnTopSettings.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnTopSettings.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
+            btnTopSettings.FlatAppearance.BorderSize = 0;
+            btnTopSettings.Click += (s, e) => SwitchTab(3);
+            topFlowLeft.Controls.Add(btnTopSettings);
+
+            // 7. SINKRONISASI
+            Button btnTopSync = new Button {
+                Text = "🔄",
+                Width = 42,
+                Height = 36,
+                BackColor = Color.FromArgb(30, 41, 59),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(2, 0, 4, 0)
+            };
+            btnTopSync.Click += (s, e) => {
+                btnTopSync.Text = "⏳";
+                btnTopSync.Enabled = false;
+                SyncDataFromApi();
+                Timer t = new Timer { Interval = 800 };
+                t.Tick += (ts, te) => {
+                    btnTopSync.Text = "🔄";
+                    btnTopSync.Enabled = true;
+                    t.Stop();
+                    t.Dispose();
+                };
+                t.Start();
+            };
+            topFlowLeft.Controls.Add(btnTopSync);
+
+            // 8. PORTAL ADMIN WEB
+            Button btnOpenPortalAdmin = new Button {
+                Text = "🌐 Admin",
+                Width = 85,
+                Height = 36,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(2, 0, 4, 0)
+            };
+            btnOpenPortalAdmin.Click += (s, e) => {
+                try {
+                    System.Diagnostics.Process.Start("http://uangpas.test");
+                } catch {
+                    try { System.Diagnostics.Process.Start("http://localhost:8000"); } catch { }
+                }
+            };
+            topFlowLeft.Controls.Add(btnOpenPortalAdmin);
 
             topBar.Controls.Add(topFlowLeft);
 
