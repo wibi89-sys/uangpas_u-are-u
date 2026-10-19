@@ -52,14 +52,13 @@ namespace UangPasDesktop
                 Dock = DockStyle.Top,
                 Height = 44,
                 RowCount = 1,
-                ColumnCount = 5,
+                ColumnCount = 4,
                 Padding = new Padding(0, 0, 0, 6)
             };
             searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130f));
             searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150f));
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160f));
             searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130f));
-            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120f));
 
             Label lblSearch = new Label { 
                 Text = "🔍 Cari / Barcode:", 
@@ -99,26 +98,8 @@ namespace UangPasDesktop
             cmbCategory.SelectedIndex = 0;
             cmbCategory.SelectedIndexChanged += (s, e) => RenderProductGrid();
 
-            btnToggleView = new Button {
-                Text = isCardViewMode ? "📋 Mode Tabel" : "📱 Mode Kartu",
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(14, 165, 233),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnToggleView.FlatAppearance.BorderSize = 0;
-            btnToggleView.Click += (s, e) => {
-                isCardViewMode = !isCardViewMode;
-                btnToggleView.Text = isCardViewMode ? "📋 Mode Tabel" : "📱 Mode Kartu";
-                if (flowProductCards != null) flowProductCards.Visible = isCardViewMode;
-                if (gridProducts != null) gridProducts.Visible = !isCardViewMode;
-                RenderProductGrid();
-            };
-
             Button btnRefresh = new Button {
-                Text = "🔄 Sinkron",
+                Text = "🔄 Sinkron Data",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(241, 245, 249),
                 FlatStyle = FlatStyle.Flat,
@@ -130,16 +111,15 @@ namespace UangPasDesktop
             searchTable.Controls.Add(lblSearch, 0, 0);
             searchTable.Controls.Add(txtSearchProduct, 1, 0);
             searchTable.Controls.Add(cmbCategory, 2, 0);
-            searchTable.Controls.Add(btnToggleView, 3, 0);
-            searchTable.Controls.Add(btnRefresh, 4, 0);
+            searchTable.Controls.Add(btnRefresh, 3, 0);
 
-            // Excel-style Products Grid with Modern Flat Table Styling
+            // Excel-style Products Grid with Modern Zebra Table Styling
             gridProducts = new DataGridView {
                 Dock = DockStyle.Fill,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
-                GridColor = Color.FromArgb(241, 245, 249),
+                GridColor = Color.FromArgb(226, 232, 240),
                 RowHeadersVisible = false,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
@@ -154,9 +134,9 @@ namespace UangPasDesktop
             gridProducts.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             gridProducts.ColumnHeadersHeight = 38;
             gridProducts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
-            gridProducts.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
+            gridProducts.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(15, 23, 42);
             gridProducts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            gridProducts.ColumnHeadersDefaultCellStyle.Padding = new Padding(4, 0, 4, 0);
+            gridProducts.ColumnHeadersDefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
 
             // Alternating Row Colors (Zebra Striping)
             gridProducts.RowsDefaultCellStyle.BackColor = Color.White;
@@ -165,10 +145,10 @@ namespace UangPasDesktop
             gridProducts.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(224, 242, 254);
             gridProducts.RowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(3, 105, 161);
 
-            gridProducts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+            gridProducts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
             gridProducts.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(224, 242, 254);
             gridProducts.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(3, 105, 161);
-            gridProducts.RowTemplate.Height = 38;
+            gridProducts.RowTemplate.Height = 40;
 
             gridProducts.Columns.Add("barcode", "Barcode / Kode");
             gridProducts.Columns["barcode"].MinimumWidth = 130;
@@ -231,37 +211,11 @@ namespace UangPasDesktop
                 }
             };
 
-            // FlowLayoutPanel for Modern POS Touch Cards
-            flowProductCards = new FlowLayoutPanel {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                BackColor = Color.FromArgb(248, 250, 252),
-                Padding = new Padding(6),
-                Visible = isCardViewMode
-            };
-            try {
-                typeof(Panel).InvokeMember("DoubleBuffered", 
-                    System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, 
-                    null, flowProductCards, new object[] { true });
-            } catch { }
-
             // Docking order
-            leftPanel.Controls.Add(flowProductCards);
             leftPanel.Controls.Add(gridProducts);
             leftPanel.Controls.Add(searchTable);
             searchTable.SendToBack();
-            if (isCardViewMode)
-            {
-                gridProducts.Visible = false;
-                flowProductCards.Visible = true;
-                flowProductCards.BringToFront();
-            }
-            else
-            {
-                flowProductCards.Visible = false;
-                gridProducts.Visible = true;
-                gridProducts.BringToFront();
-            }
+            gridProducts.BringToFront();
 
             splitKasir.Panel1.Controls.Add(leftPanel);
 
@@ -449,7 +403,7 @@ namespace UangPasDesktop
             btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
             
             btnCheckoutFingerprint = new Button {
-                Text = "👆 BAYAR SIDIK JARI WBP",
+                Text = "  BAYAR DENGAN SIDIK JARI WBP",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
@@ -457,6 +411,18 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
+            string fpLogoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
+            if (System.IO.File.Exists(fpLogoPath))
+            {
+                try {
+                    using (Bitmap orig = new Bitmap(fpLogoPath))
+                    {
+                        btnCheckoutFingerprint.Image = new Bitmap(orig, new Size(24, 24));
+                        btnCheckoutFingerprint.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnCheckoutFingerprint.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
             btnCheckoutFingerprint.FlatAppearance.BorderSize = 0;
             btnCheckoutFingerprint.Click += (s, e) => ProcessCheckoutFingerprint();
             btnTable.Controls.Add(btnCheckoutFingerprint, 0, 0);

@@ -277,14 +277,8 @@ namespace UangPasDesktop
 
         private void RenderProductGrid()
         {
-            if (gridProducts == null && flowProductCards == null) return;
-            
-            if (gridProducts != null) gridProducts.Rows.Clear();
-            if (flowProductCards != null)
-            {
-                flowProductCards.SuspendLayout();
-                flowProductCards.Controls.Clear();
-            }
+            if (gridProducts == null) return;
+            gridProducts.Rows.Clear();
 
             string keyword = (txtSearchProduct != null) ? txtSearchProduct.Text.Trim().ToLowerInvariant() : "";
             string selectedCat = (cmbCategory != null && cmbCategory.SelectedItem != null) ? cmbCategory.SelectedItem.ToString() : "Semua Kategori";
@@ -310,128 +304,22 @@ namespace UangPasDesktop
                     if (!match) continue;
                 }
 
-                // 1. Render Table Row (DataGridView)
-                if (gridProducts != null)
+                int rowIdx = gridProducts.Rows.Add(
+                    barcode,
+                    nama,
+                    kategori,
+                    "Rp " + harga.ToString("N0"),
+                    stok.ToString() + " pcs"
+                );
+
+                gridProducts.Rows[rowIdx].Tag = p;
+
+                if (stok <= 10)
                 {
-                    int rowIdx = gridProducts.Rows.Add(
-                        barcode,
-                        nama,
-                        kategori,
-                        "Rp " + harga.ToString("N0"),
-                        stok.ToString() + " pcs"
-                    );
-
-                    gridProducts.Rows[rowIdx].Tag = p;
-
-                    if (stok <= 10)
-                    {
-                        gridProducts.Rows[rowIdx].Cells["stok"].Style.ForeColor = Color.FromArgb(239, 68, 68);
-                        gridProducts.Rows[rowIdx].Cells["stok"].Style.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-                    }
-                }
-
-                // 2. Render Modern POS Touch Card (FlowLayoutPanel)
-                if (flowProductCards != null)
-                {
-                    Panel card = new Panel {
-                        Width = 175,
-                        Height = 125,
-                        BackColor = Color.White,
-                        BorderStyle = BorderStyle.FixedSingle,
-                        Margin = new Padding(6),
-                        Cursor = Cursors.Hand,
-                        Tag = p
-                    };
-
-                    Label lblCat = new Label {
-                        Text = kategori.ToUpper(),
-                        Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
-                        ForeColor = GetCategoryColor(kategori),
-                        BackColor = GetCategoryBgColor(kategori),
-                        Padding = new Padding(4, 2, 4, 2),
-                        AutoSize = true,
-                        Location = new Point(8, 8),
-                        Cursor = Cursors.Hand,
-                        Tag = p
-                    };
-                    card.Controls.Add(lblCat);
-
-                    Label lblName = new Label {
-                        Text = nama,
-                        Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                        ForeColor = Color.FromArgb(15, 23, 42),
-                        Location = new Point(8, 30),
-                        Size = new Size(158, 38),
-                        Cursor = Cursors.Hand,
-                        Tag = p
-                    };
-                    card.Controls.Add(lblName);
-
-                    Label lblPrice = new Label {
-                        Text = "Rp " + harga.ToString("N0"),
-                        Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-                        ForeColor = Color.FromArgb(2, 132, 199),
-                        Location = new Point(8, 72),
-                        AutoSize = true,
-                        Cursor = Cursors.Hand,
-                        Tag = p
-                    };
-                    card.Controls.Add(lblPrice);
-
-                    Label lblStok = new Label {
-                        Text = "Stok: " + stok,
-                        Font = new Font("Segoe UI", 8f),
-                        ForeColor = stok <= 10 ? Color.FromArgb(239, 68, 68) : Color.FromArgb(100, 116, 139),
-                        Location = new Point(8, 96),
-                        AutoSize = true,
-                        Cursor = Cursors.Hand,
-                        Tag = p
-                    };
-                    card.Controls.Add(lblStok);
-
-                    EventHandler onCardClick = (s, e) => {
-                        AddProductToCart(p);
-                    };
-
-                    card.Click += onCardClick;
-                    lblCat.Click += onCardClick;
-                    lblName.Click += onCardClick;
-                    lblPrice.Click += onCardClick;
-                    lblStok.Click += onCardClick;
-
-                    card.MouseEnter += (s, e) => { card.BackColor = Color.FromArgb(241, 245, 249); };
-                    card.MouseLeave += (s, e) => { card.BackColor = Color.White; };
-
-                    flowProductCards.Controls.Add(card);
+                    gridProducts.Rows[rowIdx].Cells["stok"].Style.ForeColor = Color.FromArgb(239, 68, 68);
+                    gridProducts.Rows[rowIdx].Cells["stok"].Style.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
                 }
             }
-
-            if (flowProductCards != null)
-            {
-                flowProductCards.ResumeLayout();
-            }
-        }
-
-        private Color GetCategoryColor(string cat)
-        {
-            if (string.IsNullOrEmpty(cat)) return Color.FromArgb(71, 85, 105);
-            string c = cat.ToLowerInvariant();
-            if (c.Contains("makan")) return Color.FromArgb(217, 119, 6);
-            if (c.Contains("minum")) return Color.FromArgb(2, 132, 199);
-            if (c.Contains("kebutuhan") || c.Contains("mandi")) return Color.FromArgb(124, 58, 237);
-            if (c.Contains("rokok")) return Color.FromArgb(220, 38, 38);
-            return Color.FromArgb(15, 118, 110);
-        }
-
-        private Color GetCategoryBgColor(string cat)
-        {
-            if (string.IsNullOrEmpty(cat)) return Color.FromArgb(241, 245, 249);
-            string c = cat.ToLowerInvariant();
-            if (c.Contains("makan")) return Color.FromArgb(254, 243, 199);
-            if (c.Contains("minum")) return Color.FromArgb(224, 242, 254);
-            if (c.Contains("kebutuhan") || c.Contains("mandi")) return Color.FromArgb(243, 232, 255);
-            if (c.Contains("rokok")) return Color.FromArgb(254, 226, 226);
-            return Color.FromArgb(204, 251, 241);
         }
 
         private void FilterProducts()

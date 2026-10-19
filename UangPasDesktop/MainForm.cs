@@ -23,9 +23,6 @@ namespace UangPasDesktop
 
         // UI Controls - Kasir
         private DataGridView gridProducts;
-        private FlowLayoutPanel flowProductCards;
-        private bool isCardViewMode = true;
-        private Button btnToggleView;
         private Label lblCartCountBadge;
         private DataGridView gridCart;
         private Label lblTotal;
@@ -181,23 +178,40 @@ namespace UangPasDesktop
             };
 
             Panel pnlBrand = new Panel {
-                AutoSize = true,
-                Margin = new Padding(4, 4, 14, 0),
+                Size = new Size(240, 48),
+                Margin = new Padding(4, 2, 14, 0),
                 BackColor = Color.Transparent
             };
+
+            PictureBox picBrandLogo = new PictureBox {
+                Size = new Size(38, 38),
+                Location = new Point(0, 4),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Color.Transparent
+            };
+            string logoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
+            if (System.IO.File.Exists(logoPath))
+            {
+                try {
+                    picBrandLogo.Image = Image.FromFile(logoPath);
+                    this.Icon = Icon.FromHandle(((Bitmap)picBrandLogo.Image).GetHicon());
+                } catch { }
+            }
+            pnlBrand.Controls.Add(picBrandLogo);
+
             Label lblBrand = new Label {
-                Text = "👆 UangPas Lapas",
+                Text = "UangPas Lapas",
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(0, 0)
+                Location = new Point(44, 4)
             };
             Label lblSubBrand = new Label {
                 Text = "POS KOPERASI & BIOMETRIK",
                 ForeColor = Color.FromArgb(56, 189, 248),
-                Font = new Font("Segoe UI", 7f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(2, 21)
+                Location = new Point(46, 26)
             };
             pnlBrand.Controls.Add(lblBrand);
             pnlBrand.Controls.Add(lblSubBrand);
@@ -220,7 +234,7 @@ namespace UangPasDesktop
             topFlowLeft.Controls.Add(btnTopKasir);
 
             btnTopEnroll = new Button {
-                Text = "👆 Rekam Jari",
+                Text = "⚡ Rekam Jari",
                 Width = 125,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),

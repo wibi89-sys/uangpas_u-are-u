@@ -64,6 +64,13 @@ namespace UangPasDesktop
                 BackColor = Color.FromArgb(30, 41, 59),
                 SizeMode = PictureBoxSizeMode.Zoom
             };
+            string logoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
+            if (System.IO.File.Exists(logoPath))
+            {
+                try {
+                    picPreview.Image = Image.FromFile(logoPath);
+                } catch { }
+            }
             pnlPreviewBorder.Controls.Add(picPreview);
             this.Controls.Add(pnlPreviewBorder);
 
