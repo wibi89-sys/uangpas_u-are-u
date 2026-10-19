@@ -574,6 +574,10 @@
                 <span class="nav-icon">🧾</span>
                 <span>Pengaturan Struk Kasir</span>
             </a>
+            <a href="{{ route('admin.settings.devices') }}" class="nav-item {{ request()->routeIs('admin.settings.devices*') ? 'active' : '' }}">
+                <span class="nav-icon">📡</span>
+                <span>Perangkat Biometrik IP</span>
+            </a>
             <div style="padding: 10px 14px; margin: 8px 12px; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 8px; font-size: 11px; color: #0369a1; line-height: 1.4;">
                 <div style="font-weight: 700; display: flex; align-items: center; gap: 5px; margin-bottom: 2px;">
                     <span>🖥️</span> Terminal Kasir Lapas
@@ -583,6 +587,10 @@
             <a href="{{ route('mobile.pos') }}" target="_blank" class="nav-item" style="color: #0369a1; background: #e0f2fe; margin: 4px 12px; border-radius: 8px;">
                 <span class="nav-icon">📱</span>
                 <span style="font-weight: 700;">Mobile POS (Tablet/HP) ↗</span>
+            </a>
+            <a href="{{ route('kiosk.index') }}" target="_blank" class="nav-item" style="color: #059669; background: #ecfdf5; margin: 4px 12px; border-radius: 8px;">
+                <span class="nav-icon">🔍</span>
+                <span style="font-weight: 700;">Kiosk Cek Saldo (TV/Tablet) ↗</span>
             </a>
 
             <div class="nav-label">Jaringan & Sinkronisasi</div>

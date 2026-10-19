@@ -86,3 +86,17 @@ Route::get('/mobile-pos', [InventoryController::class, 'mobilePos'])->name('mobi
 Route::post('/mobile-pos/checkout', [InventoryController::class, 'mobileCheckout'])->name('mobile.checkout');
 Route::redirect('/pos', '/mobile-pos')->name('pos.index');
 
+// Pengaturan Perangkat Biometrik & Hardware Integrasi (Solution X100C / ZKTeco)
+use App\Http\Controllers\Web\DeviceSettingController;
+Route::get('/settings/devices', [DeviceSettingController::class, 'index'])->name('admin.settings.devices');
+Route::post('/settings/devices', [DeviceSettingController::class, 'update'])->name('admin.settings.devices.update');
+Route::post('/settings/devices/test', [DeviceSettingController::class, 'testConnection'])->name('admin.settings.devices.test');
+Route::post('/settings/devices/sync-inmates', [DeviceSettingController::class, 'syncInmates'])->name('admin.settings.devices.sync');
+Route::post('/settings/devices/pull-logs', [DeviceSettingController::class, 'pullLogs'])->name('admin.settings.devices.pull_logs');
+
+// Layar Kiosk Cek Saldo Mandiri WBP (Tablet Android / TV Gantung / Touchscreen)
+use App\Http\Controllers\Web\KioskController;
+Route::get('/kiosk', [KioskController::class, 'index'])->name('kiosk.index');
+Route::get('/kiosk/lookup', [KioskController::class, 'lookup'])->name('kiosk.lookup');
+Route::get('/kiosk/poll', [KioskController::class, 'pollDevice'])->name('kiosk.poll');
+

@@ -15,6 +15,9 @@ class UptSetting extends Model
         'auto_sync' => 'boolean',
         'receipt_auto_print' => 'boolean',
         'receipt_show_inmate_balance' => 'boolean',
+        'solution_device_enabled' => 'boolean',
+        'solution_device_port' => 'integer',
+        'solution_comkey' => 'integer',
         'last_sync_at' => 'datetime',
         'last_backup_at' => 'datetime',
     ];

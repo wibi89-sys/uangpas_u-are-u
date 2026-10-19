@@ -17,6 +17,17 @@ Route::prefix('v1')->group(function () {
         Route::get('/inmates', [PosApiController::class, 'getInmates']);
         Route::get('/inmate/{identifier}', [PosApiController::class, 'lookupInmate']);
         Route::get('/receipt-settings', [\App\Http\Controllers\Web\ReceiptSettingController::class, 'apiSettings']);
+        Route::get('/device-settings', function() {
+            $s = \App\Models\UptSetting::current();
+            return response()->json([
+                'success' => true,
+                'solution_device_ip' => $s->solution_device_ip,
+                'solution_device_port' => $s->solution_device_port,
+                'solution_comkey' => $s->solution_comkey,
+                'solution_device_enabled' => $s->solution_device_enabled,
+                'solution_device_location' => $s->solution_device_location,
+            ]);
+        });
         Route::post('/checkout', [PosApiController::class, 'checkout']);
         Route::post('/inmate/{id}/save-fingerprint', [PosApiController::class, 'saveFingerprint']);
     });
