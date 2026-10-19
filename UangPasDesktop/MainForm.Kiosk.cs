@@ -139,16 +139,21 @@ namespace UangPasDesktop
                 ForeColor = Color.FromArgb(15, 23, 42),
                 Location = new Point(24, 150),
                 Width = 260,
-                Height = 420,
+                Height = 350,
                 BackColor = Color.White
             };
 
+            Panel pnlFingerBorder = new Panel {
+                Location = new Point(58, 25),
+                Width = 144,
+                Height = 164,
+                BackColor = Color.FromArgb(2, 132, 199),
+                Padding = new Padding(2)
+            };
+
             picKioskFinger = new PictureBox {
-                Location = new Point(24, 30),
-                Width = 210,
-                Height = 240,
+                Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(15, 23, 42),
-                BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
             string kioskFpPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
@@ -162,13 +167,14 @@ namespace UangPasDesktop
                     }
                 } catch { }
             }
-            grpSensor.Controls.Add(picKioskFinger);
+            pnlFingerBorder.Controls.Add(picKioskFinger);
+            grpSensor.Controls.Add(pnlFingerBorder);
 
             btnStartKioskScan = new Button {
                 Text = "  Scan Sidik Jari WBP",
-                Location = new Point(24, 282),
+                Location = new Point(24, 204),
                 Width = 210,
-                Height = 46,
+                Height = 44,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -196,7 +202,7 @@ namespace UangPasDesktop
                 Text = "Minta WBP menempelkan jari pada sensor untuk menampilkan saldo secara otomatis.",
                 Font = new Font("Segoe UI", 8.5f),
                 ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(24, 340),
+                Location = new Point(24, 258),
                 Width = 210,
                 Height = 65,
                 TextAlign = ContentAlignment.TopCenter
@@ -551,6 +557,11 @@ namespace UangPasDesktop
 
             if (lblKioskSaldo != null) lblKioskSaldo.Text = "Rp " + saldo.ToString("N0");
             if (lblKioskLimit != null) lblKioskLimit.Text = "Rp " + limit.ToString("N0");
+
+            if (customerDisplay != null && !customerDisplay.IsDisposed)
+            {
+                customerDisplay.ShowKioskCheckSaldo(nama, reg, kamar, saldo, limit);
+            }
 
             if (lblKioskStatusBadge != null && lblKioskSanctionWarning != null)
             {

@@ -29,6 +29,7 @@ Route::prefix('v1')->group(function () {
             ]);
         });
         Route::post('/checkout', [PosApiController::class, 'checkout']);
+        Route::post('/topup', [PosApiController::class, 'topup']);
         Route::post('/inmate/{id}/save-fingerprint', [PosApiController::class, 'saveFingerprint']);
     });
 

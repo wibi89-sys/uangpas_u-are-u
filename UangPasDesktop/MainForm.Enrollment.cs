@@ -171,13 +171,18 @@ namespace UangPasDesktop
             pnlSelectedInfo.Controls.Add(lblEnrollSelectedFpStatus);
             grpAction.Controls.Add(pnlSelectedInfo);
 
-            // Sensor Preview Box
+            // Sensor Preview Box (Compact & Sleek)
+            Panel pnlEnrollBorder = new Panel {
+                Location = new Point(20, 145),
+                Width = 134,
+                Height = 164,
+                BackColor = Color.FromArgb(2, 132, 199),
+                Padding = new Padding(2)
+            };
+
             picEnrollPreview = new PictureBox {
-                Location = new Point(16, 145),
-                Width = 160,
-                Height = 200,
+                Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(15, 23, 42),
-                BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
             string enrollFpPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
@@ -191,23 +196,24 @@ namespace UangPasDesktop
                     }
                 } catch { }
             }
-            grpAction.Controls.Add(picEnrollPreview);
+            pnlEnrollBorder.Controls.Add(picEnrollPreview);
+            grpAction.Controls.Add(pnlEnrollBorder);
 
             // Enrollment Status & Step Indicator
             lblEnrollStep = new Label {
                 Text = "Status: Pilih Warga Binaan pada daftar, lalu klik tombol Mulai Perekaman di bawah.",
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(2, 132, 199),
-                Location = new Point(190, 150),
-                Width = 280,
-                Height = 100
+                Location = new Point(170, 145),
+                Width = 300,
+                Height = 95
             };
             grpAction.Controls.Add(lblEnrollStep);
 
             btnStartEnroll = new Button {
                 Text = "  Mulai Perekaman 4x Sentuh Jari",
-                Location = new Point(190, 260),
-                Width = 280,
+                Location = new Point(170, 255),
+                Width = 300,
                 Height = 48,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,

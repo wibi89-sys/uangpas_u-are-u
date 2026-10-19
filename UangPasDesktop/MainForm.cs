@@ -68,8 +68,11 @@ namespace UangPasDesktop
         private Button btnTopKasir;
         private Button btnTopEnroll;
         private Button btnTopKiosk;
+        private Button btnTopTopup;
+        private Button btnTopDualScreen;
         private Button btnTopSettings;
         private Timer timerScannerPoll;
+        private CustomerDisplayForm customerDisplay;
 
         // UI Settings & Splitter Persistence
         private TabControl tabs;
@@ -370,6 +373,49 @@ namespace UangPasDesktop
             };
             topFlowLeft.Controls.Add(btnOpenPortalAdmin);
 
+            btnTopTopup = new Button {
+                Text = "  Top-Up Saldo",
+                Width = 140,
+                Height = 36,
+                BackColor = Color.FromArgb(6, 78, 59),
+                ForeColor = Color.FromArgb(167, 243, 208),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(2, 0, 4, 0)
+            };
+            if (System.IO.File.Exists(walletPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnTopTopup.Image = new Bitmap(orig, new Size(20, 20));
+                        btnTopTopup.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnTopTopup.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
+            btnTopTopup.FlatAppearance.BorderSize = 0;
+            btnTopTopup.Click += (s, e) => OpenTopupDialog();
+            topFlowLeft.Controls.Add(btnTopTopup);
+
+            btnTopDualScreen = new Button {
+                Text = "🖥️ Layar Pelanggan",
+                Width = 160,
+                Height = 36,
+                BackColor = Color.FromArgb(30, 41, 59),
+                ForeColor = Color.FromArgb(203, 213, 225),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(2, 0, 4, 0)
+            };
+            btnTopDualScreen.FlatAppearance.BorderSize = 0;
+            btnTopDualScreen.Click += (s, e) => ToggleCustomerDisplay();
+            topFlowLeft.Controls.Add(btnTopDualScreen);
+
             topBar.Controls.Add(topFlowLeft);
 
             // Tab Control (Flat mode without redundant tabs)
@@ -479,6 +525,43 @@ namespace UangPasDesktop
             {
                 btnTopSettings.BackColor = (selectedIndex == 3) ? Color.FromArgb(245, 158, 11) : dark;
                 btnTopSettings.ForeColor = (selectedIndex == 3) ? Color.White : textMuted;
+            }
+        }
+
+        public void ToggleCustomerDisplay()
+        {
+            if (customerDisplay == null || customerDisplay.IsDisposed)
+            {
+                customerDisplay = new CustomerDisplayForm();
+                customerDisplay.FormClosed += (s, e) => { customerDisplay = null; };
+                customerDisplay.Show();
+                if (cart != null && cart.Count > 0)
+                {
+                    decimal tot = 0;
+                    foreach (var it in cart) tot += (it.Harga * it.Qty);
+                    customerDisplay.UpdateCart(cart, tot);
+                }
+            }
+            else
+            {
+                if (customerDisplay.WindowState == FormWindowState.Minimized)
+                    customerDisplay.WindowState = FormWindowState.Normal;
+                customerDisplay.BringToFront();
+                customerDisplay.Focus();
+            }
+        }
+
+        public void OpenTopupDialog()
+        {
+            using (TopupSaldoForm topup = new TopupSaldoForm(this.currentReader, this.inmateList, this.apiUrl, (id, newSaldo) => {
+                var inmate = inmateList.Find(x => x.ContainsKey("id") && Convert.ToInt32(x["id"]) == id);
+                if (inmate != null)
+                {
+                    inmate["saldo"] = newSaldo;
+                }
+            }))
+            {
+                topup.ShowDialog(this);
             }
         }
     }

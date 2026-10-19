@@ -240,9 +240,11 @@ namespace UangPasDesktop
             flowShortcuts.Controls.Add(CreateShortcutChip("F4 / F12", "Bayar Jari", () => { SwitchTab(0); ProcessCheckoutFingerprint(); }));
             flowShortcuts.Controls.Add(CreateShortcutChip("F5", "Tahan Nota", () => HoldCurrentBill()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F6", "Panggil Nota", () => RecallBill()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F7", "Top-Up Saldo", () => OpenTopupDialog()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F8", "Cek Saldo WBP", () => QuickCheckSaldoWbp()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F9", "Batal", () => ClearCartConfirm()));
             flowShortcuts.Controls.Add(CreateShortcutChip("F10", "Manual", () => { SwitchTab(0); ProcessCheckoutManual(); }));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F11", "Rekap Shift", () => ShowShiftRekap()));
             flowShortcuts.Controls.Add(CreateShortcutChip("+ / -", "Ubah Jumlah", null));
             pnlShortcutBar.Controls.Add(flowShortcuts);
 
@@ -698,6 +700,11 @@ namespace UangPasDesktop
                 gridCart.Rows[targetIdx].Selected = true;
                 gridCart.CurrentCell = gridCart.Rows[targetIdx].Cells[0];
             }
+
+            if (customerDisplay != null && !customerDisplay.IsDisposed)
+            {
+                customerDisplay.UpdateCart(cart, total);
+            }
         }
 
         private void RecalculateCart()
@@ -721,6 +728,11 @@ namespace UangPasDesktop
             if (lblCartCountBadge != null)
             {
                 lblCartCountBadge.Text = "(" + totalItems + " item)";
+            }
+
+            if (customerDisplay != null && !customerDisplay.IsDisposed)
+            {
+                customerDisplay.UpdateCart(cart, total);
             }
         }
         #endregion
@@ -948,6 +960,11 @@ namespace UangPasDesktop
             string blokKamar = matchedInmate.ContainsKey("blok_kamar") ? matchedInmate["blok_kamar"].ToString() : "-";
             decimal remainingLimit = Math.Max(0, limit - totalAmount);
 
+            if (customerDisplay != null && !customerDisplay.IsDisposed)
+            {
+                customerDisplay.ShowSuccess(invNo, inmateNama, totalAmount, balanceAfter);
+            }
+
             using (TransactionSuccessDialog succDialog = new TransactionSuccessDialog(invNo, inmateNama, noReg, blokKamar, totalAmount, balanceAfter, remainingLimit))
             {
                 succDialog.ShowDialog(this);
@@ -1014,6 +1031,12 @@ namespace UangPasDesktop
                 RecallBill();
             }
             else if (e.KeyCode == Keys.F7)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                OpenTopupDialog();
+            }
+            else if (e.KeyCode == Keys.F11)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;

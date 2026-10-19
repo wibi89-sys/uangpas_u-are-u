@@ -346,7 +346,7 @@ namespace UangPasDesktop
 
             picDiagFinger = new PictureBox {
                 Dock = DockStyle.Top,
-                Height = 265,
+                Height = 175,
                 BackColor = Color.FromArgb(15, 23, 42),
                 BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom

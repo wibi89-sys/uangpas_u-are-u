@@ -265,4 +265,68 @@ class PosApiController extends Controller
             'message' => 'Template sidik jari WBP ' . $inmate->nama . ' berhasil disimpan di server.'
         ]);
     }
+
+    /**
+     * Process Top-Up saldo WBP from Desktop POS
+     */
+    public function topup(Request $request)
+    {
+        $request->validate([
+            'inmate_id' => 'required|exists:inmates,id',
+            'amount' => 'required|numeric|min:1000',
+            'cashier_name' => 'nullable|string',
+            'payment_method' => 'nullable|string',
+            'penyetor' => 'nullable|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        return DB::transaction(function () use ($request) {
+            $inmate = Inmate::lockForUpdate()->find($request->inmate_id);
+
+            $before = (float)$inmate->saldo;
+            $after = $before + (float)$request->amount;
+            $inmate->saldo = $after;
+            $inmate->save();
+
+            $cashierName = $request->cashier_name ?: 'Kasir POS';
+            $paymentMethod = $request->payment_method ?: 'cash_counter';
+            $invoiceNo = 'TOPUP-POS-' . date('YmdHis') . '-' . strtoupper(Str::random(4));
+
+            $notes = $request->notes;
+            if (empty($notes)) {
+                $notes = 'Setor tunai top-up saldo via Kasir POS' . ($request->penyetor ? ' oleh ' . $request->penyetor : '');
+            }
+
+            $transaction = Transaction::create([
+                'invoice_no' => $invoiceNo,
+                'inmate_id' => $inmate->id,
+                'type' => 'topup',
+                'amount' => $request->amount,
+                'balance_before' => $before,
+                'balance_after' => $after,
+                'payment_method' => $paymentMethod,
+                'reference_id' => 'POS-' . date('ymd') . '-' . rand(100, 999),
+                'status' => 'success',
+                'cashier_name' => $cashierName,
+                'notes' => $notes,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Top-up saldo berhasil sebesar Rp ' . number_format($request->amount, 0, ',', '.'),
+                'data' => [
+                    'invoice_no' => $invoiceNo,
+                    'inmate_id' => $inmate->id,
+                    'wbp_nama' => $inmate->nama,
+                    'no_registrasi' => $inmate->no_registrasi,
+                    'blok_kamar' => $inmate->blok_kamar,
+                    'amount' => (float)$request->amount,
+                    'balance_before' => $before,
+                    'balance_after' => $after,
+                    'created_at' => $transaction->created_at->format('d/m/Y H:i:s'),
+                    'cashier_name' => $cashierName
+                ]
+            ]);
+        });
+    }
 }
