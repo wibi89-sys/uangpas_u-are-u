@@ -320,15 +320,69 @@
             margin-bottom: 28px;
         }
 
+        /* Backdrop for Mobile Drawer */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 998;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
         @media (max-width: 1100px) {
             .grid-4 { grid-template-columns: repeat(2, 1fr); }
             .grid-2 { grid-template-columns: 1fr; }
         }
 
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            aside { width: 100%; height: auto; position: static; }
+        @media (max-width: 1024px) {
+            aside {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 280px !important;
+                height: 100vh;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 999;
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+            }
+            body.mobile-sidebar-open aside {
+                transform: translateX(0);
+            }
+            body.mobile-sidebar-open .sidebar-backdrop {
+                display: block;
+                opacity: 1;
+            }
+            body.mobile-sidebar-open {
+                overflow: hidden;
+            }
+            header {
+                padding: 12px 16px;
+            }
+            .content-wrapper {
+                padding: 16px 14px;
+            }
+        }
+
+        @media (max-width: 640px) {
             .grid-4 { grid-template-columns: 1fr; }
+            header {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+            .page-title h1 {
+                font-size: 17px;
+            }
         }
 
         .card {
@@ -511,8 +565,11 @@
     @yield('styles')
 </head>
 <body>
+    <!-- Mobile Sidebar Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileSidebar()"></div>
+
     <!-- Sidebar -->
-    <aside>
+    <aside id="mainSidebar">
         <div class="sidebar-brand">
             <div class="brand-logo">👆</div>
             <div class="brand-text">
@@ -521,25 +578,39 @@
             </div>
         </div>
 
+        @php
+            $activeUser = auth()->user() ?? \App\Models\User::first();
+        @endphp
+
         <nav class="nav-menu">
             <div class="nav-label">Menu Utama</div>
             <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                 <span class="nav-icon">📊</span>
                 <span>Dashboard Ringkasan</span>
             </a>
+
+            @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi', 'petugas_loket']))
             <a href="{{ route('admin.inmates') }}" class="nav-item {{ request()->routeIs('admin.inmates*') ? 'active' : '' }}">
                 <span class="nav-icon">👥</span>
                 <span>Data Warga Binaan</span>
             </a>
+            @endif
+
+            @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi', 'petugas_loket', 'kasir']))
             <a href="{{ route('admin.topup') }}" class="nav-item {{ request()->routeIs('admin.topup*') ? 'active' : '' }}">
                 <span class="nav-icon">💳</span>
                 <span>Loket Top-Up & Bank VA</span>
             </a>
+            @endif
+
+            @if($activeUser->hasRole(['kanwil_admin', 'kalapas']))
             <a href="{{ route('admin.users') }}" class="nav-item {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
                 <span class="nav-icon">🛡️</span>
                 <span>Petugas & Hak Akses</span>
             </a>
+            @endif
 
+            @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi']))
             <div class="nav-label">Koperasi & Inventori</div>
             <a href="{{ route('admin.products') }}" class="nav-item {{ request()->routeIs('admin.products*') ? 'active' : '' }}">
                 <span class="nav-icon">📦</span>
@@ -557,6 +628,9 @@
                 <span class="nav-icon">🏭</span>
                 <span>Supplier Rekanan</span>
             </a>
+            @endif
+
+            @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi', 'auditor']))
             <div class="nav-label">Keuangan & Audit Koperasi</div>
             <a href="{{ route('admin.reports.profit_loss') }}" class="nav-item {{ request()->routeIs('admin.reports.profit_loss*') ? 'active' : '' }}">
                 <span class="nav-icon">📈</span>
@@ -570,6 +644,10 @@
                 <span class="nav-icon">📑</span>
                 <span>Buku Transaksi Kasir</span>
             </a>
+            @endif
+
+            @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi']))
+            <div class="nav-label">Pengaturan & Perangkat</div>
             <a href="{{ route('admin.settings.receipt') }}" class="nav-item {{ request()->routeIs('admin.settings.receipt*') ? 'active' : '' }}">
                 <span class="nav-icon">🧾</span>
                 <span>Pengaturan Struk Kasir</span>
@@ -578,48 +656,42 @@
                 <span class="nav-icon">📡</span>
                 <span>Perangkat Biometrik IP</span>
             </a>
-            <div style="padding: 10px 14px; margin: 8px 12px; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 8px; font-size: 11px; color: #0369a1; line-height: 1.4;">
-                <div style="font-weight: 700; display: flex; align-items: center; gap: 5px; margin-bottom: 2px;">
-                    <span>🖥️</span> Terminal Kasir Lapas
-                </div>
-                Transaksi & sensor sidik jari aktif di <b>UangPasDesktop.exe</b>
-            </div>
-            <a href="{{ route('mobile.pos') }}" target="_blank" class="nav-item" style="color: #0369a1; background: #e0f2fe; margin: 4px 12px; border-radius: 8px;">
-                <span class="nav-icon">📱</span>
-                <span style="font-weight: 700;">Mobile POS (Tablet/HP) ↗</span>
-            </a>
-            <a href="{{ route('kiosk.index') }}" target="_blank" class="nav-item" style="color: #059669; background: #ecfdf5; margin: 4px 12px; border-radius: 8px;">
-                <span class="nav-icon">🔍</span>
-                <span style="font-weight: 700;">Kiosk Cek Saldo (TV/Tablet) ↗</span>
-            </a>
-
-            <div class="nav-label">Jaringan & Sinkronisasi</div>
             <a href="{{ route('admin.sync') }}" class="nav-item {{ request()->routeIs('admin.sync*') ? 'active' : '' }}">
                 <span class="nav-icon">🔄</span>
                 <span>Sinkron & Mutasi Antar-UPT</span>
             </a>
+            @endif
+
+            <div class="nav-label">Terminal POS & Kiosk</div>
+            @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi', 'kasir']))
+            <a href="{{ route('mobile.pos') }}" target="_blank" class="nav-item" style="color: #0369a1; background: #e0f2fe; margin: 4px 12px; border-radius: 8px;">
+                <span class="nav-icon">📱</span>
+                <span style="font-weight: 700;">Mobile POS (Tablet/HP) ↗</span>
+            </a>
+            @endif
+
+            <a href="{{ route('kiosk.index') }}" target="_blank" class="nav-item" style="color: #059669; background: #ecfdf5; margin: 4px 12px; border-radius: 8px;">
+                <span class="nav-icon">🔍</span>
+                <span style="font-weight: 700;">Kiosk Cek Saldo (TV/Tablet) ↗</span>
+            </a>
         </nav>
 
         <div class="sidebar-footer">
-            <div style="margin-bottom: 8px;">
+            <div style="margin-bottom: 6px;">
                 <span class="status-pill">
                     <span class="dot-green"></span> Sistem Aktif
                 </span>
             </div>
-            <p>Database: <strong>Hosting Terpusat</strong></p>
-            <p style="font-size: 11px; margin-top: 4px;">Biometrik POS Ready</p>
+            <p>UPT: <strong>{{ $activeUser->upt_code ?? 'LPS-01' }}</strong></p>
+            <p style="font-size: 11px; margin-top: 2px; color: #94a3b8;">Biometrik POS Ready</p>
         </div>
     </aside>
 
     <!-- Main Content -->
     <main>
-        @php
-            $activeUser = \App\Models\User::find(session('simulated_user_id', 1)) ?? \App\Models\User::first();
-            $allUsers = \App\Models\User::where('is_active', true)->get();
-        @endphp
         <header>
             <div style="display: flex; align-items: center; gap: 14px;">
-                <button type="button" id="btnToggleSidebar" class="btn-toggle-sidebar" title="Ciutkan / Lebarkan Menu Sidebar">
+                <button type="button" id="btnToggleSidebar" class="btn-toggle-sidebar" title="Ciutkan / Buka Menu Sidebar">
                     <span>☰</span>
                 </button>
                 <div class="page-title">
@@ -628,11 +700,13 @@
                 </div>
             </div>
             <div class="header-actions">
-                <!-- User Profile & Quick Role Switcher -->
-                <form action="{{ route('admin.users.switch_role') }}" method="POST" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                @if($activeUser->isKanwil())
+                @php $allUsers = \App\Models\User::where('is_active', true)->get(); @endphp
+                <!-- Superadmin Role Switcher -->
+                <form action="{{ route('admin.users.switch_role') }}" method="POST" style="display: flex; align-items: center; gap: 6px; margin: 0;">
                     @csrf
-                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Peran:</span>
-                    <select name="user_id" onchange="this.form.submit()" style="padding: 6px 10px; font-size: 12px; border-radius: 8px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; cursor: pointer; color: #0f172a; max-width: 260px;">
+                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Simulasi:</span>
+                    <select name="user_id" onchange="this.form.submit()" style="padding: 5px 8px; font-size: 11.5px; border-radius: 6px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; cursor: pointer; color: #0f172a; max-width: 200px;">
                         @foreach($allUsers as $u)
                             <option value="{{ $u->id }}" {{ $activeUser && $activeUser->id == $u->id ? 'selected' : '' }}>
                                 [{{ strtoupper(str_replace('_', ' ', $u->role)) }}] {{ $u->name }}
@@ -640,17 +714,39 @@
                         @endforeach
                     </select>
                 </form>
+                @endif
 
-                <div class="badge-live">
-                    <span>🏛️</span> {{ $activeUser->upt_code ?? 'LPS-01' }}
+                <!-- User Profile Badge -->
+                <div style="display: flex; align-items: center; gap: 10px; padding: 4px 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0284c7, #0ea5e9); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;">
+                        {{ strtoupper(substr($activeUser->name, 0, 1)) }}
+                    </div>
+                    <div style="text-align: left; line-height: 1.2;">
+                        <div style="font-size: 12.5px; font-weight: 700; color: #0f172a;">{{ $activeUser->name }}</div>
+                        <div style="font-size: 11px; color: #64748b; font-weight: 600;">{{ $activeUser->role_label }}</div>
+                    </div>
                 </div>
+
+                <!-- Logout Button -->
+                <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+                    @csrf
+                    <button type="submit" style="display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'" title="Keluar dari sistem">
+                        <span>🚪</span> Keluar
+                    </button>
+                </form>
             </div>
         </header>
 
         <div class="content-wrapper">
             @if(session('success'))
-                <div class="alert-success">
+                <div class="alert-success" style="padding: 12px 16px; border-radius: 10px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 13px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
                     <span>✅</span> {{ session('success') }}
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert-error" style="padding: 12px 16px; border-radius: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 13px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                    <span>⚠️</span> {{ session('error') }}
                 </div>
             @endif
 
@@ -661,17 +757,29 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const btnToggle = document.getElementById('btnToggleSidebar');
-            if (localStorage.getItem('uangpas_sidebar_collapsed') === 'true') {
+            
+            // Restore desktop collapse preference
+            if (window.innerWidth > 1024 && localStorage.getItem('uangpas_sidebar_collapsed') === 'true') {
                 document.body.classList.add('sidebar-collapsed');
             }
 
             if (btnToggle) {
                 btnToggle.addEventListener('click', function() {
-                    document.body.classList.toggle('sidebar-collapsed');
-                    localStorage.setItem('uangpas_sidebar_collapsed', document.body.classList.contains('sidebar-collapsed'));
+                    if (window.innerWidth <= 1024) {
+                        // Mobile/Tablet: toggle drawer
+                        document.body.classList.toggle('mobile-sidebar-open');
+                    } else {
+                        // Desktop: toggle compact
+                        document.body.classList.toggle('sidebar-collapsed');
+                        localStorage.setItem('uangpas_sidebar_collapsed', document.body.classList.contains('sidebar-collapsed'));
+                    }
                 });
             }
         });
+
+        function closeMobileSidebar() {
+            document.body.classList.remove('mobile-sidebar-open');
+        }
     </script>
 
     @yield('scripts')

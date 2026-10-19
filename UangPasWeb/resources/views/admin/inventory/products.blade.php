@@ -93,7 +93,10 @@
             @endif
         </form>
 
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{{ route('admin.products.print_barcodes') }}" target="_blank" class="btn btn-outline" style="border-color: #64748b; color: #334155;">
+                <span>🏷️</span> Cetak Label Rak
+            </a>
             <a href="{{ route('admin.inventory.restock') }}" class="btn btn-outline" style="border-color: #0284c7; color: #0284c7;">
                 <span>📥</span> Form Restock
             </a>
@@ -226,8 +229,11 @@
             @csrf
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                 <div class="form-group">
-                    <label>Barcode / Kode Produk *</label>
-                    <input type="text" name="barcode" placeholder="Scan barcode kemasan / kode unik" required autofocus>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label style="margin-bottom: 0;">Barcode / Kode Produk *</label>
+                        <button type="button" onclick="generateInternalBarcode()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; color: #0284c7; cursor: pointer;" title="Generate 13-digit retail barcode for unbarcoded items">⚡ Auto Barcode</button>
+                    </div>
+                    <input type="text" name="barcode" id="addBarcode" placeholder="Scan kemasan atau klik 'Auto Barcode'" required autofocus>
                 </div>
                 <div class="form-group">
                     <label>Kategori *</label>
@@ -428,5 +434,39 @@
         calcMargin('edit');
         openModal('modalEditProduct');
     }
+
+    function generateInternalBarcode() {
+        // EAN-13 style internal prefix '20' + 10 random digits + checksum
+        const prefix = '20';
+        let code = prefix;
+        for (let i = 0; i < 10; i++) {
+            code += Math.floor(Math.random() * 10);
+        }
+        // Compute EAN-13 check digit
+        let sum = 0;
+        for (let i = 0; i < 12; i++) {
+            let d = parseInt(code.charAt(i));
+            sum += (i % 2 === 0) ? d : d * 3;
+        }
+        let checkDigit = (10 - (sum % 10)) % 10;
+        let fullBarcode = code + checkDigit;
+        document.getElementById('addBarcode').value = fullBarcode;
+    }
+
+    // Auto-search on barcode scanner input (fast character sequence with Enter)
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.querySelector('input[name="search"]');
+        if (searchInput) {
+            let lastKeyTime = Date.now();
+            searchInput.addEventListener('keydown', function(e) {
+                const now = Date.now();
+                if (e.key === 'Enter') {
+                    // Let the form submit naturally
+                    this.form.submit();
+                }
+                lastKeyTime = now;
+            });
+        }
+    });
 </script>
 @endsection

@@ -28,6 +28,7 @@ Route::prefix('v1')->group(function () {
                 'solution_device_location' => $s->solution_device_location,
             ]);
         });
+        Route::post('/login', [PosApiController::class, 'login']);
         Route::post('/checkout', [PosApiController::class, 'checkout']);
         Route::post('/topup', [PosApiController::class, 'topup']);
         Route::post('/inmate/{id}/save-fingerprint', [PosApiController::class, 'saveFingerprint']);

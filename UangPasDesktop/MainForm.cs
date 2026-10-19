@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using DPUruNet;
+using UangPasDesktop.Models;
 
 namespace UangPasDesktop
 {
@@ -94,6 +95,7 @@ namespace UangPasDesktop
         private int shiftTrxCount = 0;
         private decimal shiftTotalOmset = 0;
         private ReceiptConfig receiptConfig = new ReceiptConfig();
+        public bool WantsLogoutAndRelogin { get; private set; }
 
         public MainForm()
         {
@@ -130,10 +132,10 @@ namespace UangPasDesktop
                 Padding = new Padding(12, 0, 12, 0) 
             };
             
-            // Right Status Indicators
+            // Right Status Indicators & Authenticated User Profile
             Panel topStatusRight = new Panel {
                 Dock = DockStyle.Right,
-                Width = 270,
+                Width = 490,
                 BackColor = Color.Transparent
             };
 
@@ -141,12 +143,12 @@ namespace UangPasDesktop
                 Text = "● Scanner: Memeriksa...",
                 ForeColor = Color.FromArgb(148, 163, 184),
                 BackColor = Color.FromArgb(30, 41, 59),
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
                 AutoSize = false,
-                Size = new Size(250, 22),
+                Size = new Size(200, 21),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(6, 0, 0, 0),
-                Location = new Point(10, 10),
+                Location = new Point(6, 10),
                 Cursor = Cursors.Hand
             };
             lblScannerStatus.Click += (s, e) => {
@@ -160,14 +162,83 @@ namespace UangPasDesktop
                 Text = "● Server: Online",
                 ForeColor = Color.FromArgb(52, 211, 153),
                 BackColor = Color.FromArgb(30, 41, 59),
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
                 AutoSize = false,
-                Size = new Size(250, 22),
+                Size = new Size(200, 21),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(6, 0, 0, 0),
-                Location = new Point(10, 34)
+                Location = new Point(6, 33)
             };
             topStatusRight.Controls.Add(lblApiStatus);
+
+            // User Profile Card & Ganti Shift / Logout Button
+            Panel pnlUserCard = new Panel {
+                Location = new Point(216, 8),
+                Size = new Size(268, 48),
+                BackColor = Color.FromArgb(30, 41, 59)
+            };
+
+            string initialLetter = (AuthSession.CurrentUser != null && !string.IsNullOrEmpty(AuthSession.CurrentUser.Name)) ? AuthSession.CurrentUser.Name.Substring(0, 1).ToUpper() : "P";
+            Label lblUserInitial = new Label {
+                Location = new Point(6, 7),
+                Size = new Size(34, 34),
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = initialLetter
+            };
+            pnlUserCard.Controls.Add(lblUserInitial);
+
+            string userNameStr = (AuthSession.CurrentUser != null) ? AuthSession.CurrentUser.Name : "Petugas Kasir";
+            Label lblUserName = new Label {
+                Location = new Point(44, 5),
+                Size = new Size(140, 18),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                AutoEllipsis = true,
+                Text = userNameStr
+            };
+            pnlUserCard.Controls.Add(lblUserName);
+
+            string roleLabelStr = (AuthSession.CurrentUser != null) ? AuthSession.CurrentUser.RoleLabel : "Kasir POS";
+            Label lblUserRole = new Label {
+                Location = new Point(44, 23),
+                Size = new Size(140, 16),
+                ForeColor = Color.FromArgb(56, 189, 248),
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Regular),
+                AutoEllipsis = true,
+                Text = roleLabelStr
+            };
+            pnlUserCard.Controls.Add(lblUserRole);
+
+            Button btnGantiShift = new Button {
+                Location = new Point(188, 7),
+                Size = new Size(74, 34),
+                BackColor = Color.FromArgb(239, 68, 68),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                Text = "Shift 🚪",
+                Cursor = Cursors.Hand
+            };
+            btnGantiShift.FlatAppearance.BorderSize = 0;
+            btnGantiShift.Click += (s, e) => {
+                DialogResult dr = MessageBox.Show(this, 
+                    "Apakah Anda yakin ingin mengakhiri shift dan mengganti akun petugas?", 
+                    "Ganti Shift / Logout", 
+                    MessageBoxButtons.YesNo, 
+                    MessageBoxIcon.Question);
+                if (dr == DialogResult.Yes)
+                {
+                    this.WantsLogoutAndRelogin = true;
+                    AuthSession.Clear();
+                    this.Close();
+                }
+            };
+            pnlUserCard.Controls.Add(btnGantiShift);
+
+            topStatusRight.Controls.Add(pnlUserCard);
             topBar.Controls.Add(topStatusRight);
 
             // Left Flow for Brand + Navigation
@@ -471,6 +542,7 @@ namespace UangPasDesktop
             tabs.BringToFront();
 
             UpdateNavButtonStyles(0);
+            ApplyUserPermissions();
 
             // Scanner Auto-Poller: Keep checking in background so status automatically turns green
             timerScannerPoll = new Timer { Interval = 2500 };
@@ -495,8 +567,69 @@ namespace UangPasDesktop
             timerScannerPoll.Start();
         }
 
+        private void ApplyUserPermissions()
+        {
+            if (AuthSession.CurrentUser == null)
+            {
+                AuthSession.CurrentUser = new AuthUser();
+            }
+
+            AuthUser user = AuthSession.CurrentUser;
+            this.cashierName = user.Name;
+
+            // Restrict buttons based on role permissions
+            if (btnTopKasir != null)
+            {
+                btnTopKasir.Visible = user.CanCheckout;
+            }
+            if (btnTopDualScreen != null)
+            {
+                btnTopDualScreen.Visible = user.CanCheckout;
+            }
+            if (btnTopTopup != null)
+            {
+                btnTopTopup.Visible = user.CanTopup;
+            }
+            if (btnTopEnroll != null)
+            {
+                btnTopEnroll.Visible = user.CanEnroll;
+            }
+            if (btnTopSettings != null)
+            {
+                btnTopSettings.Visible = user.CanSettings;
+            }
+
+            // Auto select suitable tab if Kasir POS is not allowed for this role
+            if (!user.CanCheckout)
+            {
+                if (user.CanEnroll) SwitchTab(1);
+                else if (user.CanTopup) SwitchTab(2);
+                else if (user.CanSettings) SwitchTab(3);
+                else SwitchTab(2);
+            }
+        }
+
         private void SwitchTab(int index)
         {
+            if (AuthSession.CurrentUser != null)
+            {
+                if (index == 0 && !AuthSession.CurrentUser.CanCheckout)
+                {
+                    MessageBox.Show(this, "Peran Anda (" + AuthSession.CurrentUser.RoleLabel + ") tidak memiliki hak akses transaksi Kasir POS.", "Akses Terbatas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                if (index == 1 && !AuthSession.CurrentUser.CanEnroll)
+                {
+                    MessageBox.Show(this, "Peran Anda (" + AuthSession.CurrentUser.RoleLabel + ") tidak memiliki hak akses Perekaman Biometrik.", "Akses Terbatas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                if (index == 3 && !AuthSession.CurrentUser.CanSettings)
+                {
+                    MessageBox.Show(this, "Peran Anda (" + AuthSession.CurrentUser.RoleLabel + ") tidak memiliki hak akses Pengaturan Sistem.", "Akses Terbatas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
             if (tabs != null && tabs.TabPages.Count > index)
             {
                 tabs.SelectedIndex = index;
@@ -560,6 +693,12 @@ namespace UangPasDesktop
 
         public void OpenTopupDialog()
         {
+            if (AuthSession.CurrentUser != null && !AuthSession.CurrentUser.CanTopup)
+            {
+                MessageBox.Show(this, "Peran Anda (" + AuthSession.CurrentUser.RoleLabel + ") tidak memiliki hak akses Top-Up Saldo.", "Akses Terbatas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             using (TopupSaldoForm topup = new TopupSaldoForm(this.currentReader, this.inmateList, this.apiUrl, (id, newSaldo) => {
                 var inmate = inmateList.Find(x => x.ContainsKey("id") && Convert.ToInt32(x["id"]) == id);
                 if (inmate != null)
@@ -573,3 +712,4 @@ namespace UangPasDesktop
         }
     }
 }
+

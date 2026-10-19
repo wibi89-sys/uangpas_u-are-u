@@ -1,6 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Web.Script.Serialization;
 using System.Windows.Forms;
+using UangPasDesktop.Forms;
+using UangPasDesktop.Models;
 
 namespace UangPasDesktop
 {
@@ -19,7 +24,49 @@ namespace UangPasDesktop
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+
+            while (true)
+            {
+                string apiUrl = LoadApiUrlFromSettings();
+                using (LoginForm loginForm = new LoginForm(apiUrl))
+                {
+                    if (loginForm.ShowDialog() != DialogResult.OK)
+                    {
+                        // User cancelled login or exited
+                        break;
+                    }
+                }
+
+                // Launch main form with authenticated session
+                MainForm mainForm = new MainForm();
+                Application.Run(mainForm);
+
+                if (!mainForm.WantsLogoutAndRelogin)
+                {
+                    break;
+                }
+            }
+        }
+
+        private static string LoadApiUrlFromSettings()
+        {
+            try
+            {
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+                if (File.Exists(path))
+                {
+                    string json = File.ReadAllText(path);
+                    JavaScriptSerializer js = new JavaScriptSerializer();
+                    Dictionary<string, object> dict = js.Deserialize<Dictionary<string, object>>(json);
+                    if (dict != null && dict.ContainsKey("api_url") && dict["api_url"] != null)
+                    {
+                        string url = dict["api_url"].ToString().Trim();
+                        if (!string.IsNullOrEmpty(url)) return url;
+                    }
+                }
+            }
+            catch { }
+            return "http://uangpas.test/api/v1";
         }
     }
 }

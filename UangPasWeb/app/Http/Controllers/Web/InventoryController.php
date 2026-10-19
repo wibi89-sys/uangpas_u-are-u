@@ -79,6 +79,27 @@ class InventoryController extends Controller
     }
 
     /**
+     * Cetak Label Stiker Barcode & Rak Barang
+     */
+    public function printBarcodes(Request $request)
+    {
+        $query = Product::where('is_active', true);
+
+        if ($request->filled('kategori')) {
+            $query->where('kategori', $request->kategori);
+        }
+
+        if ($request->filled('product_ids')) {
+            $ids = is_array($request->product_ids) ? $request->product_ids : explode(',', $request->product_ids);
+            $query->whereIn('id', $ids);
+        }
+
+        $products = $query->orderBy('kategori')->orderBy('nama_barang')->get();
+
+        return view('admin.inventory.print_barcodes', compact('products'));
+    }
+
+    /**
      * Tambah Barang Retail Baru
      */
     public function storeProduct(Request $request)

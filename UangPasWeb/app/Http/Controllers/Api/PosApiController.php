@@ -329,4 +329,65 @@ class PosApiController extends Controller
             ]);
         });
     }
+
+    /**
+     * Login Kasir/Petugas untuk Desktop POS Terminal
+     */
+    public function login(Request $request)
+    {
+        $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $loginId = trim($request->input('username'));
+        $password = $request->input('password');
+
+        $user = \App\Models\User::where('nip', $loginId)
+            ->orWhere('email', $loginId)
+            ->orWhere('name', $loginId)
+            ->first();
+
+        if (!$user || !\Illuminate\Support\Facades\Hash::check($password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'NIP / Username atau Password salah.'
+            ], 401);
+        }
+
+        if (!$user->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun petugas tidak aktif. Hubungi Administrator UPT.'
+            ], 403);
+        }
+
+        $allowedRoles = ['kasir', 'admin_koperasi', 'petugas_loket', 'kalapas', 'kanwil_admin'];
+        if (!in_array($user->role, $allowedRoles)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peran Anda (' . $user->role_label . ') tidak diizinkan membuka Terminal Kasir POS.'
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login berhasil. Selamat bertugas.',
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'nip' => $user->nip,
+                'email' => $user->email,
+                'role' => $user->role,
+                'role_label' => $user->role_label,
+                'upt_code' => $user->upt_code,
+                'permissions' => [
+                    'can_checkout' => in_array($user->role, ['kasir', 'admin_koperasi', 'kanwil_admin']),
+                    'can_topup' => in_array($user->role, ['kasir', 'admin_koperasi', 'petugas_loket', 'kanwil_admin']),
+                    'can_enroll' => in_array($user->role, ['admin_koperasi', 'petugas_loket', 'kanwil_admin']),
+                    'can_settings' => in_array($user->role, ['admin_koperasi', 'kanwil_admin']),
+                ]
+            ]
+        ]);
+    }
 }
