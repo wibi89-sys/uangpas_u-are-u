@@ -52,16 +52,17 @@ namespace UangPasDesktop
                 Dock = DockStyle.Top,
                 Height = 44,
                 RowCount = 1,
-                ColumnCount = 4,
+                ColumnCount = 5,
                 Padding = new Padding(0, 0, 0, 6)
             };
-            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140f));
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130f));
             searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150f));
             searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130f));
+            searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120f));
 
             Label lblSearch = new Label { 
-                Text = "Cari / Scan Barcode:", 
+                Text = "🔍 Cari / Barcode:", 
                 Dock = DockStyle.Fill, 
                 TextAlign = ContentAlignment.MiddleLeft, 
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) 
@@ -98,8 +99,26 @@ namespace UangPasDesktop
             cmbCategory.SelectedIndex = 0;
             cmbCategory.SelectedIndexChanged += (s, e) => RenderProductGrid();
 
+            btnToggleView = new Button {
+                Text = isCardViewMode ? "📋 Mode Tabel" : "📱 Mode Kartu",
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(14, 165, 233),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnToggleView.FlatAppearance.BorderSize = 0;
+            btnToggleView.Click += (s, e) => {
+                isCardViewMode = !isCardViewMode;
+                btnToggleView.Text = isCardViewMode ? "📋 Mode Tabel" : "📱 Mode Kartu";
+                if (flowProductCards != null) flowProductCards.Visible = isCardViewMode;
+                if (gridProducts != null) gridProducts.Visible = !isCardViewMode;
+                RenderProductGrid();
+            };
+
             Button btnRefresh = new Button {
-                Text = "🔄 Sinkron Data",
+                Text = "🔄 Sinkron",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(241, 245, 249),
                 FlatStyle = FlatStyle.Flat,
@@ -111,7 +130,8 @@ namespace UangPasDesktop
             searchTable.Controls.Add(lblSearch, 0, 0);
             searchTable.Controls.Add(txtSearchProduct, 1, 0);
             searchTable.Controls.Add(cmbCategory, 2, 0);
-            searchTable.Controls.Add(btnRefresh, 3, 0);
+            searchTable.Controls.Add(btnToggleView, 3, 0);
+            searchTable.Controls.Add(btnRefresh, 4, 0);
 
             // Excel-style Products Grid with Modern Flat Table Styling
             gridProducts = new DataGridView {
@@ -211,11 +231,37 @@ namespace UangPasDesktop
                 }
             };
 
-            // Docking order: add gridProducts then searchTable, then send searchTable back so gridProducts docks below it
+            // FlowLayoutPanel for Modern POS Touch Cards
+            flowProductCards = new FlowLayoutPanel {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = Color.FromArgb(248, 250, 252),
+                Padding = new Padding(6),
+                Visible = isCardViewMode
+            };
+            try {
+                typeof(Panel).InvokeMember("DoubleBuffered", 
+                    System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, 
+                    null, flowProductCards, new object[] { true });
+            } catch { }
+
+            // Docking order
+            leftPanel.Controls.Add(flowProductCards);
             leftPanel.Controls.Add(gridProducts);
             leftPanel.Controls.Add(searchTable);
             searchTable.SendToBack();
-            gridProducts.BringToFront();
+            if (isCardViewMode)
+            {
+                gridProducts.Visible = false;
+                flowProductCards.Visible = true;
+                flowProductCards.BringToFront();
+            }
+            else
+            {
+                flowProductCards.Visible = false;
+                gridProducts.Visible = true;
+                gridProducts.BringToFront();
+            }
 
             splitKasir.Panel1.Controls.Add(leftPanel);
 
@@ -236,13 +282,28 @@ namespace UangPasDesktop
             lblHoldStatus.Click += (s, e) => RecallBill();
             rightPanel.Controls.Add(lblHoldStatus);
 
-            Label lblCartTitle = new Label {
-                Text = "📋 Keranjang Belanja Koperasi",
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+            Panel pnlCartHeader = new Panel {
                 Dock = DockStyle.Top,
-                Height = 32
+                Height = 36,
+                BackColor = Color.Transparent
             };
-            rightPanel.Controls.Add(lblCartTitle);
+            Label lblCartTitle = new Label {
+                Text = "📋 Keranjang Belanja",
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Location = new Point(0, 6),
+                AutoSize = true
+            };
+            lblCartCountBadge = new Label {
+                Text = "(0 item)",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(170, 8),
+                AutoSize = true
+            };
+            pnlCartHeader.Controls.Add(lblCartTitle);
+            pnlCartHeader.Controls.Add(lblCartCountBadge);
+            rightPanel.Controls.Add(pnlCartHeader);
 
             // Barcode input box (Responsive Table)
             TableLayoutPanel barcodeTable = new TableLayoutPanel {
@@ -339,34 +400,53 @@ namespace UangPasDesktop
             };
             rightPanel.Controls.Add(gridCart);
 
-            // Bottom Summary & Checkout Button (2-Tier Layout: Row 1 = Biometric primary, Row 2 = Manual & Clear)
+            // Bottom Summary & Checkout Button
             Panel bottomPanel = new Panel { 
                 Dock = DockStyle.Bottom, 
-                Height = 165, 
+                Height = 185, 
                 BackColor = Color.FromArgb(248, 250, 252), 
-                Padding = new Padding(12, 8, 12, 10) 
+                Padding = new Padding(10, 8, 10, 8) 
             };
             
+            Panel pnlTotalCard = new Panel {
+                Dock = DockStyle.Top,
+                Height = 62,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(12, 6, 12, 6)
+            };
+
+            Label lblTotalTitle = new Label {
+                Text = "TOTAL TAGIHAN BELANJA",
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Location = new Point(10, 8),
+                AutoSize = true
+            };
             lblTotal = new Label {
-                Text = "TOTAL: Rp 0",
+                Text = "Rp 0",
                 Font = new Font("Segoe UI", 18f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(2, 132, 199),
-                Dock = DockStyle.Top,
-                Height = 40,
+                Dock = DockStyle.Bottom,
+                Height = 34,
                 TextAlign = ContentAlignment.MiddleRight
             };
-            bottomPanel.Controls.Add(lblTotal);
+            pnlTotalCard.Controls.Add(lblTotalTitle);
+            pnlTotalCard.Controls.Add(lblTotal);
+            bottomPanel.Controls.Add(pnlTotalCard);
 
             TableLayoutPanel btnTable = new TableLayoutPanel {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Bottom,
+                Height = 98,
                 RowCount = 2,
-                ColumnCount = 2,
+                ColumnCount = 3,
                 Padding = new Padding(0, 4, 0, 0)
             };
-            btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 50f));
+            btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 52f));
             btnTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 38f));
-            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 85f));
-            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
+            btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
             
             btnCheckoutFingerprint = new Button {
                 Text = "👆 BAYAR SIDIK JARI WBP",
@@ -374,13 +454,39 @@ namespace UangPasDesktop
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnCheckoutFingerprint.FlatAppearance.BorderSize = 0;
             btnCheckoutFingerprint.Click += (s, e) => ProcessCheckoutFingerprint();
             btnTable.Controls.Add(btnCheckoutFingerprint, 0, 0);
-            btnTable.SetColumnSpan(btnCheckoutFingerprint, 2);
+            btnTable.SetColumnSpan(btnCheckoutFingerprint, 3);
+
+            btnCheckoutManual = new Button {
+                Text = "👤 Manual",
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(2, 132, 199),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCheckoutManual.FlatAppearance.BorderSize = 0;
+            btnCheckoutManual.Click += (s, e) => ProcessCheckoutManual();
+            btnTable.Controls.Add(btnCheckoutManual, 0, 1);
+
+            Button btnHold = new Button {
+                Text = "⏸️ Tahan",
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(245, 158, 11),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnHold.FlatAppearance.BorderSize = 0;
+            btnHold.Click += (s, e) => HoldCurrentBill();
+            btnTable.Controls.Add(btnHold, 1, 1);
 
             Button btnClear = new Button {
                 Text = "🗑️ Batal",
@@ -393,20 +499,7 @@ namespace UangPasDesktop
             };
             btnClear.FlatAppearance.BorderSize = 0;
             btnClear.Click += (s, e) => { cart.Clear(); RefreshCartGrid(); };
-            btnTable.Controls.Add(btnClear, 0, 1);
-
-            btnCheckoutManual = new Button {
-                Text = "👤 Bayar Manual",
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(2, 132, 199),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnCheckoutManual.FlatAppearance.BorderSize = 0;
-            btnCheckoutManual.Click += (s, e) => ProcessCheckoutManual();
-            btnTable.Controls.Add(btnCheckoutManual, 1, 1);
+            btnTable.Controls.Add(btnClear, 2, 1);
 
             bottomPanel.Controls.Add(btnTable);
             btnTable.BringToFront();
@@ -459,18 +552,25 @@ namespace UangPasDesktop
         {
             gridCart.Rows.Clear();
             decimal total = 0;
+            int totalItems = 0;
             foreach (var it in cart)
             {
                 decimal subtotal = it.Harga * it.Qty;
                 total += subtotal;
+                totalItems += it.Qty;
                 gridCart.Rows.Add(it.Nama, "Rp " + it.Harga.ToString("N0"), it.Qty, "Rp " + subtotal.ToString("N0"));
             }
-            lblTotal.Text = "TOTAL: Rp " + total.ToString("N0");
+            lblTotal.Text = "Rp " + total.ToString("N0");
+            if (lblCartCountBadge != null)
+            {
+                lblCartCountBadge.Text = "(" + totalItems + " item)";
+            }
         }
 
         private void RecalculateCart()
         {
             decimal total = 0;
+            int totalItems = 0;
             for (int i = 0; i < gridCart.Rows.Count; i++)
             {
                 if (i < cart.Count)
@@ -481,9 +581,14 @@ namespace UangPasDesktop
                     decimal sub = cart[i].Harga * cart[i].Qty;
                     gridCart.Rows[i].Cells["subtotal"].Value = "Rp " + sub.ToString("N0");
                     total += sub;
+                    totalItems += cart[i].Qty;
                 }
             }
-            lblTotal.Text = "TOTAL: Rp " + total.ToString("N0");
+            lblTotal.Text = "Rp " + total.ToString("N0");
+            if (lblCartCountBadge != null)
+            {
+                lblCartCountBadge.Text = "(" + totalItems + " item)";
+            }
         }
         #endregion
 

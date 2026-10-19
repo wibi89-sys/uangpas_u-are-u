@@ -22,55 +22,75 @@ namespace UangPasDesktop
             this.promptText = prompt;
 
             this.Text = "Sentuh Sensor Sidik Jari";
-            this.Size = new Size(480, 380);
+            this.Size = new Size(500, 410);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.BackColor = Color.FromArgb(15, 23, 42);
 
+            Label lblTitle = new Label {
+                Text = "🔒 OTORISASI SIDIK JARI BIOMETRIK",
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Location = new Point(20, 18),
+                Width = 445,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            this.Controls.Add(lblTitle);
+
             Label lbl = new Label {
                 Text = prompt,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-                Location = new Point(24, 20),
-                Width = 420,
-                Height = 50,
+                ForeColor = Color.FromArgb(148, 163, 184),
+                Font = new Font("Segoe UI", 9.5f),
+                Location = new Point(20, 48),
+                Width = 445,
+                Height = 40,
                 TextAlign = ContentAlignment.TopCenter
             };
             this.Controls.Add(lbl);
 
+            Panel pnlPreviewBorder = new Panel {
+                Location = new Point(190, 95),
+                Width = 110,
+                Height = 140,
+                BackColor = Color.FromArgb(2, 132, 199),
+                Padding = new Padding(2)
+            };
+
             picPreview = new PictureBox {
-                Location = new Point(190, 75),
-                Width = 100,
-                Height = 130,
+                Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(30, 41, 59),
-                BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
-            this.Controls.Add(picPreview);
+            pnlPreviewBorder.Controls.Add(picPreview);
+            this.Controls.Add(pnlPreviewBorder);
 
             lblStatusText = new Label {
-                Text = "🔴 Sensor Siaga: Tempelkan jari Anda...",
+                Text = "● Sensor Siaga: Tempelkan jari Anda...",
                 ForeColor = Color.FromArgb(56, 189, 248),
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                Location = new Point(24, 220),
-                Width = 420,
-                Height = 32,
+                BackColor = Color.FromArgb(30, 41, 59),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Location = new Point(30, 250),
+                Width = 425,
+                Height = 36,
                 TextAlign = ContentAlignment.MiddleCenter
             };
             this.Controls.Add(lblStatusText);
 
             Button btnCancel = new Button {
-                Text = "Batal",
-                Location = new Point(190, 270),
+                Text = "Batal (Esc)",
+                Location = new Point(195, 305),
                 Width = 100,
                 Height = 38,
                 BackColor = Color.FromArgb(51, 65, 85),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnCancel.FlatAppearance.BorderSize = 0;
             btnCancel.Click += (s, e) => {
                 this.DialogResult = DialogResult.Cancel;
                 this.Close();

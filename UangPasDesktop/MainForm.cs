@@ -23,6 +23,10 @@ namespace UangPasDesktop
 
         // UI Controls - Kasir
         private DataGridView gridProducts;
+        private FlowLayoutPanel flowProductCards;
+        private bool isCardViewMode = true;
+        private Button btnToggleView;
+        private Label lblCartCountBadge;
         private DataGridView gridCart;
         private Label lblTotal;
         private Label lblScannerStatus;
@@ -129,31 +133,39 @@ namespace UangPasDesktop
             // Right Status Indicators
             Panel topStatusRight = new Panel {
                 Dock = DockStyle.Right,
-                Width = 240,
+                Width = 270,
                 BackColor = Color.Transparent
             };
 
             lblScannerStatus = new Label {
-                Text = "Scanner: Memeriksa...",
+                Text = "● Scanner: Memeriksa...",
                 ForeColor = Color.FromArgb(148, 163, 184),
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                AutoSize = true,
-                Location = new Point(12, 14),
+                BackColor = Color.FromArgb(30, 41, 59),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                AutoSize = false,
+                Size = new Size(250, 22),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(6, 0, 0, 0),
+                Location = new Point(10, 10),
                 Cursor = Cursors.Hand
             };
             lblScannerStatus.Click += (s, e) => {
-                lblScannerStatus.Text = "Scanner: Memeriksa...";
+                lblScannerStatus.Text = "● Scanner: Memeriksa...";
                 lblScannerStatus.ForeColor = Color.FromArgb(251, 191, 36);
                 InitializeBiometrics();
             };
             topStatusRight.Controls.Add(lblScannerStatus);
 
             lblApiStatus = new Label {
-                Text = "Server: Online",
+                Text = "● Server: Online",
                 ForeColor = Color.FromArgb(52, 211, 153),
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                AutoSize = true,
-                Location = new Point(12, 36)
+                BackColor = Color.FromArgb(30, 41, 59),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                AutoSize = false,
+                Size = new Size(250, 22),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(6, 0, 0, 0),
+                Location = new Point(10, 34)
             };
             topStatusRight.Controls.Add(lblApiStatus);
             topBar.Controls.Add(topStatusRight);
@@ -164,18 +176,32 @@ namespace UangPasDesktop
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 BackColor = Color.Transparent,
-                Padding = new Padding(2, 14, 2, 8),
+                Padding = new Padding(2, 12, 2, 8),
                 AutoScroll = false
             };
 
+            Panel pnlBrand = new Panel {
+                AutoSize = true,
+                Margin = new Padding(4, 4, 14, 0),
+                BackColor = Color.Transparent
+            };
             Label lblBrand = new Label {
                 Text = "👆 UangPas Lapas",
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
                 AutoSize = true,
-                Margin = new Padding(4, 5, 12, 0)
+                Location = new Point(0, 0)
             };
-            topFlowLeft.Controls.Add(lblBrand);
+            Label lblSubBrand = new Label {
+                Text = "POS KOPERASI & BIOMETRIK",
+                ForeColor = Color.FromArgb(56, 189, 248),
+                Font = new Font("Segoe UI", 7f, FontStyle.Bold),
+                AutoSize = true,
+                Location = new Point(2, 21)
+            };
+            pnlBrand.Controls.Add(lblBrand);
+            pnlBrand.Controls.Add(lblSubBrand);
+            topFlowLeft.Controls.Add(pnlBrand);
 
             // Fast Switch Buttons in Header
             btnTopKasir = new Button {
