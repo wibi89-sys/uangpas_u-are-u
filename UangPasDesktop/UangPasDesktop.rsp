@@ -1,0 +1,16 @@
+/target:winexe
+/out:UangPasDesktop.exe
+/r:DPUruNet.dll
+/r:System.Windows.Forms.dll
+/r:System.Drawing.dll
+/r:System.Web.Extensions.dll
+/recurse:Models\*.cs
+/recurse:Forms\*.cs
+Program.cs
+MainForm.cs
+MainForm.Kasir.cs
+MainForm.Enrollment.cs
+MainForm.Kiosk.cs
+MainForm.Settings.cs
+MainForm.Biometrics.cs
+MainForm.Sync.cs

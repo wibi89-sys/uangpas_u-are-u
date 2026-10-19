@@ -106,10 +106,11 @@ if %errorlevel% equ 0 (
 echo.
 echo [6/6] Memeriksa dan mengompilasi aplikasi Kasir Desktop C#...
 set CSC_PATH=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
+if not exist "%CSC_PATH%" set CSC_PATH=C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe
 
 if exist "%CSC_PATH%" (
     cd /d "%BASE_DIR%UangPasDesktop"
-    "%CSC_PATH%" /target:winexe /out:UangPasDesktop.exe /r:DPUruNet.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll Program.cs >nul 2>&1
+    "%CSC_PATH%" @UangPasDesktop.rsp >nul 2>&1
     echo       [OK] UangPasDesktop.exe berhasil dikompilasi.
 ) else (
     echo       [INFO] Menggunakan file binary yang sudah tersedia.
