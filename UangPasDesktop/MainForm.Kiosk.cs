@@ -103,7 +103,7 @@ namespace UangPasDesktop
             // LEFT COLUMN: SENSOR BIOMETRIK
             // ==========================================
             GroupBox grpSensor = new GroupBox {
-                Text = " 👆 Scan Sidik Jari Biometrik ",
+                Text = " Scan Sidik Jari Biometrik ",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
                 Location = new Point(24, 150),
@@ -120,10 +120,21 @@ namespace UangPasDesktop
                 BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
+            string kioskFpPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
+            if (System.IO.File.Exists(kioskFpPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(kioskFpPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    {
+                        picKioskFinger.Image = new Bitmap(ms);
+                    }
+                } catch { }
+            }
             grpSensor.Controls.Add(picKioskFinger);
 
             btnStartKioskScan = new Button {
-                Text = "👆 Scan Sidik Jari WBP",
+                Text = "  Scan Sidik Jari WBP",
                 Location = new Point(24, 282),
                 Width = 210,
                 Height = 46,
@@ -133,6 +144,19 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
+            if (System.IO.File.Exists(kioskFpPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(kioskFpPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnStartKioskScan.Image = new Bitmap(orig, new Size(22, 22));
+                        btnStartKioskScan.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnStartKioskScan.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
             btnStartKioskScan.FlatAppearance.BorderSize = 0;
             btnStartKioskScan.Click += (s, e) => DoKioskScan();
             grpSensor.Controls.Add(btnStartKioskScan);
@@ -512,7 +536,24 @@ namespace UangPasDesktop
                 txtKioskSearch.Clear();
                 txtKioskSearch.Focus();
             }
-            if (picKioskFinger != null) picKioskFinger.Image = null;
+            if (picKioskFinger != null)
+            {
+                string rstFpPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
+                if (System.IO.File.Exists(rstFpPath))
+                {
+                    try {
+                        byte[] bytes = System.IO.File.ReadAllBytes(rstFpPath);
+                        using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                        {
+                            picKioskFinger.Image = new Bitmap(ms);
+                        }
+                    } catch { picKioskFinger.Image = null; }
+                }
+                else
+                {
+                    picKioskFinger.Image = null;
+                }
+            }
             if (lblKioskNama != null) lblKioskNama.Text = "Nama WBP: -";
             if (lblKioskNoReg != null) lblKioskNoReg.Text = "No. Registrasi: -";
             if (lblKioskKamar != null) lblKioskKamar.Text = "Kamar / Blok: -";

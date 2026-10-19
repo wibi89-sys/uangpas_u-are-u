@@ -74,7 +74,7 @@ namespace UangPasDesktop
             pnlSearchRow.Controls.Add(txtSearch);
 
             Button btnScanFinger = new Button {
-                Text = "👆 Scan Sidik Jari",
+                Text = "  Scan Sidik Jari",
                 Location = new Point(348, 0),
                 Width = 156,
                 Height = 35,
@@ -84,6 +84,20 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
+            string qkFpPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
+            if (System.IO.File.Exists(qkFpPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(qkFpPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnScanFinger.Image = new Bitmap(orig, new Size(20, 20));
+                        btnScanFinger.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnScanFinger.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
             btnScanFinger.FlatAppearance.BorderSize = 0;
             btnScanFinger.Click += (s, e) => DoQuickFingerprintScan();
             pnlSearchRow.Controls.Add(btnScanFinger);

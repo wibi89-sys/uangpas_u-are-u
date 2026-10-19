@@ -14,7 +14,7 @@ namespace UangPasDesktop
             Panel panel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), AutoScroll = true, BackColor = Color.FromArgb(248, 250, 252) };
 
             Label lblTitle = new Label {
-                Text = "👆 Pendaftaran & Perekaman Biometrik Sidik Jari WBP (4-Touch Enrollment)",
+                Text = "Pendaftaran & Perekaman Biometrik Sidik Jari WBP (4-Touch Enrollment)",
                 Font = new Font("Segoe UI", 14f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
                 AutoSize = true,
@@ -121,7 +121,7 @@ namespace UangPasDesktop
 
             // RIGHT PANEL: Enrollment Action Card & Biometrics Preview
             GroupBox grpAction = new GroupBox {
-                Text = " 👆 Panel Perekaman Biometrik Sensor U.are.U ",
+                Text = " Panel Perekaman Biometrik Sensor U.are.U ",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
                 Location = new Point(510, 76),
@@ -180,6 +180,17 @@ namespace UangPasDesktop
                 BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
+            string enrollFpPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
+            if (System.IO.File.Exists(enrollFpPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(enrollFpPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    {
+                        picEnrollPreview.Image = new Bitmap(ms);
+                    }
+                } catch { }
+            }
             grpAction.Controls.Add(picEnrollPreview);
 
             // Enrollment Status & Step Indicator
@@ -194,7 +205,7 @@ namespace UangPasDesktop
             grpAction.Controls.Add(lblEnrollStep);
 
             btnStartEnroll = new Button {
-                Text = "▶️ Mulai Perekaman 4x Sentuh Jari",
+                Text = "  Mulai Perekaman 4x Sentuh Jari",
                 Location = new Point(190, 260),
                 Width = 280,
                 Height = 48,
@@ -204,6 +215,19 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
+            if (System.IO.File.Exists(enrollFpPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(enrollFpPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnStartEnroll.Image = new Bitmap(orig, new Size(22, 22));
+                        btnStartEnroll.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnStartEnroll.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
             btnStartEnroll.FlatAppearance.BorderSize = 0;
             btnStartEnroll.Click += (s, e) => StartEnrollmentSequence();
             grpAction.Controls.Add(btnStartEnroll);

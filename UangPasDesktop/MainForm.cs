@@ -239,8 +239,8 @@ namespace UangPasDesktop
             topFlowLeft.Controls.Add(btnTopKasir);
 
             btnTopEnroll = new Button {
-                Text = "⚡ Rekam Jari",
-                Width = 125,
+                Text = "  Rekam Sidik Jari",
+                Width = 155,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.FromArgb(203, 213, 225),
@@ -249,6 +249,19 @@ namespace UangPasDesktop
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2, 0, 4, 0)
             };
+            if (System.IO.File.Exists(logoPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(logoPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnTopEnroll.Image = new Bitmap(orig, new Size(20, 20));
+                        btnTopEnroll.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnTopEnroll.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
             btnTopEnroll.FlatAppearance.BorderSize = 0;
             btnTopEnroll.Click += (s, e) => SwitchTab(1);
             topFlowLeft.Controls.Add(btnTopEnroll);
@@ -269,7 +282,7 @@ namespace UangPasDesktop
             topFlowLeft.Controls.Add(btnTopKiosk);
 
             btnTopSettings = new Button {
-                Text = "⚙️ Pengaturan & Sensor",
+                Text = "  Pengaturan Sensor",
                 Width = 175,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
@@ -279,6 +292,20 @@ namespace UangPasDesktop
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2, 0, 6, 0)
             };
+            string gearPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "gear_logo.png");
+            if (System.IO.File.Exists(gearPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(gearPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnTopSettings.Image = new Bitmap(orig, new Size(20, 20));
+                        btnTopSettings.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnTopSettings.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
             btnTopSettings.FlatAppearance.BorderSize = 0;
             btnTopSettings.Click += (s, e) => SwitchTab(3);
             topFlowLeft.Controls.Add(btnTopSettings);
@@ -347,7 +374,7 @@ namespace UangPasDesktop
             tabs.TabPages.Add(tabKasir);
 
             // TAB 2: PENDAFTARAN SIDIK JARI (ENROLLMENT)
-            TabPage tabEnroll = new TabPage("👆 Rekam Sidik Jari WBP");
+            TabPage tabEnroll = new TabPage("Rekam Sidik Jari WBP");
             tabEnroll.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             BuildEnrollmentTab(tabEnroll);
             tabs.TabPages.Add(tabEnroll);
@@ -359,7 +386,7 @@ namespace UangPasDesktop
             tabs.TabPages.Add(tabKiosk);
 
             // TAB 4: PENGATURAN & SENSOR
-            TabPage tabSettings = new TabPage("⚙️ Pengaturan & Sensor");
+            TabPage tabSettings = new TabPage("Pengaturan & Sensor");
             tabSettings.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             BuildSettingsTab(tabSettings);
             tabs.TabPages.Add(tabSettings);
