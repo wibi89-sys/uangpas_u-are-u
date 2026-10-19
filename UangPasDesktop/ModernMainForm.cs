@@ -47,8 +47,29 @@ namespace UangPasDesktop
         {
             try
             {
-                // Ensure CoreWebView2 runtime is ready
-                await webView.EnsureCoreWebView2Async(null);
+                // Ensure CoreWebView2 runtime uses dedicated, writable User Data Folder
+                string baseDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UangPasLapas", "WebView2");
+                if (!Directory.Exists(baseDataFolder)) Directory.CreateDirectory(baseDataFolder);
+
+                Microsoft.Web.WebView2.Core.CoreWebView2Environment env = null;
+                bool needFallback = false;
+                try
+                {
+                    env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, baseDataFolder);
+                    await webView.EnsureCoreWebView2Async(env);
+                }
+                catch
+                {
+                    needFallback = true;
+                }
+
+                if (needFallback)
+                {
+                    string uniqueFolder = Path.Combine(Path.GetTempPath(), "UangPas_WV2_" + Guid.NewGuid().ToString().Substring(0, 8));
+                    if (!Directory.Exists(uniqueFolder)) Directory.CreateDirectory(uniqueFolder);
+                    env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, uniqueFolder);
+                    await webView.EnsureCoreWebView2Async(env);
+                }
 
                 webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
                 webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
