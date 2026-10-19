@@ -267,8 +267,8 @@ namespace UangPasDesktop
             topFlowLeft.Controls.Add(btnTopEnroll);
 
             btnTopKiosk = new Button {
-                Text = "🔍 Cek Saldo",
-                Width = 115,
+                Text = "  Cek Saldo",
+                Width = 125,
                 Height = 36,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.FromArgb(203, 213, 225),
@@ -277,6 +277,20 @@ namespace UangPasDesktop
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2, 0, 4, 0)
             };
+            string walletPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wallet_logo.png");
+            if (System.IO.File.Exists(walletPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnTopKiosk.Image = new Bitmap(orig, new Size(20, 20));
+                        btnTopKiosk.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnTopKiosk.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
             btnTopKiosk.FlatAppearance.BorderSize = 0;
             btnTopKiosk.Click += (s, e) => SwitchTab(2);
             topFlowLeft.Controls.Add(btnTopKiosk);
@@ -380,7 +394,7 @@ namespace UangPasDesktop
             tabs.TabPages.Add(tabEnroll);
 
             // TAB 3: CEK SALDO MANDIRI (KIOSK)
-            TabPage tabKiosk = new TabPage("🔍 Cek Saldo Mandiri WBP");
+            TabPage tabKiosk = new TabPage("Cek Saldo Mandiri WBP");
             tabKiosk.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             BuildKioskTab(tabKiosk);
             tabs.TabPages.Add(tabKiosk);

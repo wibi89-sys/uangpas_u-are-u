@@ -29,13 +29,26 @@ namespace UangPasDesktop
             this.inmateList = inmates;
             this.apiUrl = api;
 
-            this.Text = "🔍 Cek Saldo & Limit WBP Cepat (F8)";
+            this.Text = "Cek Saldo & Limit WBP Cepat (F8)";
             this.Size = new Size(560, 520);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.BackColor = Color.FromArgb(248, 250, 252);
+
+            string walletPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wallet_logo.png");
+            if (System.IO.File.Exists(walletPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        this.Icon = Icon.FromHandle(orig.GetHicon());
+                    }
+                } catch { }
+            }
 
             Panel top = new Panel {
                 Dock = DockStyle.Top,
@@ -155,6 +168,22 @@ namespace UangPasDesktop
                 Padding = new Padding(16, 12, 16, 12),
                 Margin = new Padding(0, 10, 0, 0)
             };
+            PictureBox picWalletSaldo = new PictureBox {
+                Dock = DockStyle.Right,
+                Width = 50,
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+            if (System.IO.File.Exists(walletPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    {
+                        picWalletSaldo.Image = new Bitmap(ms);
+                    }
+                } catch { }
+            }
+            saldoBox.Controls.Add(picWalletSaldo);
             Label lblSaldoTitle = new Label {
                 Text = "SISA SALDO DOMPET DIGITAL:",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),

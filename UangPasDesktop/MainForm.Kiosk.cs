@@ -13,13 +13,31 @@ namespace UangPasDesktop
         private void BuildKioskTab(TabPage page)
         {
             Panel p = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24), AutoScroll = true, BackColor = Color.FromArgb(248, 250, 252) };
+            string walletPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wallet_logo.png");
+
+            PictureBox picTitleWallet = new PictureBox {
+                Location = new Point(24, 16),
+                Size = new Size(26, 26),
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+            if (System.IO.File.Exists(walletPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    {
+                        picTitleWallet.Image = new Bitmap(ms);
+                    }
+                } catch { }
+            }
+            p.Controls.Add(picTitleWallet);
 
             Label lblTitle = new Label {
-                Text = "🔍 Kios Pengecekan Saldo & Status Dompet WBP (Self-Service)",
+                Text = "Kios Pengecekan Saldo & Status Dompet WBP (Self-Service)",
                 Font = new Font("Segoe UI", 14f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
                 AutoSize = true,
-                Location = new Point(24, 16)
+                Location = new Point(56, 16)
             };
             p.Controls.Add(lblTitle);
 
@@ -28,7 +46,7 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 9.5f),
                 ForeColor = Color.FromArgb(100, 116, 139),
                 AutoSize = true,
-                Location = new Point(24, 44)
+                Location = new Point(56, 44)
             };
             p.Controls.Add(lblSub);
 
@@ -69,9 +87,9 @@ namespace UangPasDesktop
             pnlSearch.Controls.Add(txtKioskSearch);
 
             btnKioskSearch = new Button {
-                Text = "🔍 Cek Saldo [Enter]",
+                Text = "  Cek Saldo [Enter]",
                 Location = new Point(552, 26),
-                Width = 160,
+                Width = 165,
                 Height = 32,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
@@ -79,6 +97,19 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
+            if (System.IO.File.Exists(walletPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    using (Bitmap orig = new Bitmap(ms))
+                    {
+                        btnKioskSearch.Image = new Bitmap(orig, new Size(18, 18));
+                        btnKioskSearch.ImageAlign = ContentAlignment.MiddleLeft;
+                        btnKioskSearch.TextImageRelation = TextImageRelation.ImageBeforeText;
+                    }
+                } catch { }
+            }
             btnKioskSearch.FlatAppearance.BorderSize = 0;
             btnKioskSearch.Click += (s, e) => DoKioskSearch(txtKioskSearch.Text.Trim());
             pnlSearch.Controls.Add(btnKioskSearch);
@@ -256,8 +287,25 @@ namespace UangPasDesktop
                 BorderStyle = BorderStyle.FixedSingle,
                 Padding = new Padding(16, 10, 16, 10)
             };
+            PictureBox picWalletSaldo = new PictureBox {
+                Location = new Point(538, 16),
+                Size = new Size(42, 42),
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+            if (System.IO.File.Exists(walletPath))
+            {
+                try {
+                    byte[] bytes = System.IO.File.ReadAllBytes(walletPath);
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
+                    {
+                        picWalletSaldo.Image = new Bitmap(ms);
+                    }
+                } catch { }
+            }
+            pnlSaldoBox.Controls.Add(picWalletSaldo);
+
             Label lblSaldoHeader = new Label {
-                Text = "💰 SISA SALDO DOMPET ELEKTRONIK:",
+                Text = "SISA SALDO DOMPET ELEKTRONIK:",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(4, 120, 87),
                 Location = new Point(14, 10),
@@ -271,7 +319,7 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 24f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(5, 150, 105),
                 Location = new Point(14, 34),
-                Width = 560,
+                Width = 510,
                 Height = 60,
                 TextAlign = ContentAlignment.MiddleLeft
             };
