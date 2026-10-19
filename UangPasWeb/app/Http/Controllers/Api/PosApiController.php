@@ -382,10 +382,10 @@ class PosApiController extends Controller
                 'role_label' => $user->role_label,
                 'upt_code' => $user->upt_code,
                 'permissions' => [
-                    'can_checkout' => in_array($user->role, ['kasir', 'admin_koperasi', 'kanwil_admin']),
-                    'can_topup' => in_array($user->role, ['kasir', 'admin_koperasi', 'petugas_loket', 'kanwil_admin']),
-                    'can_enroll' => in_array($user->role, ['admin_koperasi', 'petugas_loket', 'kanwil_admin']),
-                    'can_settings' => in_array($user->role, ['admin_koperasi', 'kanwil_admin']),
+                    'can_checkout' => $user->hasPermission('pos_checkout'),
+                    'can_topup' => $user->hasPermission('topup_manage'),
+                    'can_enroll' => $user->hasPermission('wbp_manage'),
+                    'can_settings' => $user->hasPermission('settings_app'),
                 ]
             ]
         ]);

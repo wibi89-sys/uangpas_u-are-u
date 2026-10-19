@@ -28,13 +28,36 @@ class RoleMiddleware
             return redirect()->route('login')->with('error', 'Akun Anda dinonaktifkan oleh Administrator. Hubungi pengawas UPT.');
         }
 
-        // Superadmin Kanwil has unrestricted access
-        if ($user->role === 'kanwil_admin') {
+        // Superadmin Kanwil and Kalapas have unrestricted access
+        if ($user->role === 'kanwil_admin' || $user->role === 'kalapas') {
             return $next($request);
         }
 
-        // Check if user's role is in allowed roles
-        if (!empty($roles) && !in_array($user->role, $roles)) {
+        // Check if user's role or permission is in allowed roles
+        $authorized = false;
+        foreach ($roles as $r) {
+            if (str_starts_with($r, 'perm:')) {
+                $permName = substr($r, 5);
+                if ($user->hasPermission($permName)) {
+                    $authorized = true;
+                    break;
+                }
+            } elseif ($user->role === $r) {
+                $authorized = true;
+                break;
+            }
+        }
+
+        // Mapping standard route roles to permissions
+        if (!$authorized) {
+            if (in_array('users', $roles) || in_array('admin_koperasi', $roles) || in_array('kalapas', $roles)) {
+                if ($user->hasPermission('users_manage')) {
+                    $authorized = true;
+                }
+            }
+        }
+
+        if (!empty($roles) && !$authorized) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,

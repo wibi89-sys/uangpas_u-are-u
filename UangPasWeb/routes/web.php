@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\FinancialReportController;
 use App\Http\Controllers\Web\ReceiptSettingController;
 use App\Http\Controllers\Web\SyncController;
 use App\Http\Controllers\Web\DeviceSettingController;
+use App\Http\Controllers\Web\GeneralSettingController;
 use App\Http\Controllers\Web\KioskController;
 use App\Http\Controllers\Api\PaymentGatewayController;
 
@@ -50,11 +51,12 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/inmates/{id}', [AdminController::class, 'destroyInmate'])->name('admin.inmates.destroy');
     });
 
-    // Manajemen Petugas & Hak Akses (Khusus Kanwil Admin & Kalapas)
-    Route::middleware(['role:kanwil_admin,kalapas'])->group(function () {
+    // Manajemen Petugas & Hak Akses (Kanwil Admin, Kalapas, Admin Utama UPT & Koperasi)
+    Route::middleware(['role:kanwil_admin,kalapas,admin_koperasi,perm:users_manage'])->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('admin.users');
         Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
         Route::put('/users/{id}', [UserController::class, 'update'])->name('admin.users.update');
+        Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('admin.users.destroy');
         Route::post('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.users.toggle_status');
         Route::post('/users/switch-role', [UserController::class, 'switchRole'])->name('admin.users.switch_role');
     });
@@ -84,6 +86,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/inventory/suppliers', [InventoryController::class, 'suppliers'])->name('admin.inventory.suppliers');
         Route::post('/inventory/suppliers', [InventoryController::class, 'storeSupplier'])->name('admin.inventory.suppliers.store');
         Route::put('/inventory/suppliers/{id}', [InventoryController::class, 'updateSupplier'])->name('admin.inventory.suppliers.update');
+
+        Route::get('/settings', [GeneralSettingController::class, 'index'])->name('admin.settings');
+        Route::get('/settings/general', [GeneralSettingController::class, 'index'])->name('admin.settings.general');
+        Route::post('/settings/general', [GeneralSettingController::class, 'update'])->name('admin.settings.general.update');
 
         Route::get('/settings/receipt', [ReceiptSettingController::class, 'index'])->name('admin.settings.receipt');
         Route::post('/settings/receipt', [ReceiptSettingController::class, 'update'])->name('admin.settings.receipt.update');

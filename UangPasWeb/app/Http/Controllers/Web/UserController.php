@@ -33,8 +33,9 @@ class UserController extends Controller
 
         $users = $query->orderBy('role')->orderBy('name')->paginate(15)->withQueryString();
         $upts = UptSetting::all();
+        $availablePermissions = User::availablePermissions();
 
-        return view('admin.users', compact('users', 'upts'));
+        return view('admin.users', compact('users', 'upts', 'availablePermissions'));
     }
 
     /**
@@ -52,6 +53,12 @@ class UserController extends Controller
             'password' => 'required|string|min:6',
         ]);
 
+        $permissionsInput = $request->input('permissions', []);
+        $cleanPerms = [];
+        foreach (User::availablePermissions() as $key => $meta) {
+            $cleanPerms[$key] = !empty($permissionsInput[$key]);
+        }
+
         User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -59,11 +66,12 @@ class UserController extends Controller
             'upt_code' => $request->upt_code,
             'nip' => $request->nip,
             'phone' => $request->phone,
+            'permissions' => $cleanPerms,
             'is_active' => true,
             'password' => Hash::make($request->password),
         ]);
 
-        return back()->with('success', 'Petugas baru berhasil didaftarkan dengan hak akses ' . strtoupper($request->role) . '.');
+        return back()->with('success', 'Petugas baru ' . $request->name . ' berhasil didaftarkan dengan hak akses khusus.');
     }
 
     /**
@@ -82,6 +90,12 @@ class UserController extends Controller
             'phone' => 'nullable|string',
         ]);
 
+        $permissionsInput = $request->input('permissions', []);
+        $cleanPerms = [];
+        foreach (User::availablePermissions() as $key => $meta) {
+            $cleanPerms[$key] = !empty($permissionsInput[$key]);
+        }
+
         $data = [
             'name' => $request->name,
             'email' => $request->email,
@@ -89,6 +103,7 @@ class UserController extends Controller
             'upt_code' => $request->upt_code,
             'nip' => $request->nip,
             'phone' => $request->phone,
+            'permissions' => $cleanPerms,
         ];
 
         if ($request->filled('password')) {
@@ -98,7 +113,7 @@ class UserController extends Controller
 
         $user->update($data);
 
-        return back()->with('success', 'Data petugas ' . $user->name . ' berhasil diperbarui.');
+        return back()->with('success', 'Data & hak akses petugas ' . $user->name . ' berhasil diperbarui.');
     }
 
     /**
@@ -107,11 +122,30 @@ class UserController extends Controller
     public function toggleStatus($id)
     {
         $user = User::findOrFail($id);
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Anda tidak dapat menonaktifkan akun Anda sendiri.');
+        }
         $user->is_active = !$user->is_active;
         $user->save();
 
         $statusStr = $user->is_active ? 'diaktifkan kembali' : 'dinonaktifkan';
         return back()->with('success', 'Akun petugas ' . $user->name . ' berhasil ' . $statusStr . '.');
+    }
+
+    /**
+     * Hapus Akun Petugas
+     */
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        return back()->with('success', 'Akun petugas ' . $name . ' berhasil dihapus dari sistem.');
     }
 
     /**

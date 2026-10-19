@@ -603,7 +603,7 @@
             </a>
             @endif
 
-            @if($activeUser->hasRole(['kanwil_admin', 'kalapas']))
+            @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi']) || $activeUser->hasPermission('users_manage'))
             <a href="{{ route('admin.users') }}" class="nav-item {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
                 <span class="nav-icon">🛡️</span>
                 <span>Petugas & Hak Akses</span>
@@ -646,8 +646,12 @@
             </a>
             @endif
 
-            @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi']))
+            @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi']) || $activeUser->hasPermission('settings_app'))
             <div class="nav-label">Pengaturan & Perangkat</div>
+            <a href="{{ route('admin.settings.general') }}" class="nav-item {{ request()->routeIs('admin.settings.general*') || request()->routeIs('admin.settings') ? 'active' : '' }}">
+                <span class="nav-icon">⚙️</span>
+                <span>Pengaturan Umum Aplikasi</span>
+            </a>
             <a href="{{ route('admin.settings.receipt') }}" class="nav-item {{ request()->routeIs('admin.settings.receipt*') ? 'active' : '' }}">
                 <span class="nav-icon">🧾</span>
                 <span>Pengaturan Struk Kasir</span>

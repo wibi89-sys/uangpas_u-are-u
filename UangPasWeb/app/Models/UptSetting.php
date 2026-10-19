@@ -18,6 +18,11 @@ class UptSetting extends Model
         'solution_device_enabled' => 'boolean',
         'solution_device_port' => 'integer',
         'solution_comkey' => 'integer',
+        'enable_biometric_mandatory' => 'boolean',
+        'kiosk_poll_interval' => 'integer',
+        'default_limit_harian' => 'float',
+        'min_topup_amount' => 'float',
+        'max_balance_limit' => 'float',
         'last_sync_at' => 'datetime',
         'last_backup_at' => 'datetime',
     ];
