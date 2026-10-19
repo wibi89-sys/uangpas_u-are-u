@@ -61,7 +61,7 @@ namespace UangPasDesktop
             searchTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130f));
 
             Label lblSearch = new Label { 
-                Text = "🔍 Cari / Barcode:", 
+                Text = "🔍 Cari / Barcode (F1):", 
                 Dock = DockStyle.Fill, 
                 TextAlign = ContentAlignment.MiddleLeft, 
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) 
@@ -84,6 +84,14 @@ namespace UangPasDesktop
                             AddProductToCart(found);
                             txtSearchProduct.Clear();
                         }
+                    }
+                }
+                else if (e.KeyCode == Keys.Down)
+                {
+                    if (gridProducts.Rows.Count > 0)
+                    {
+                        gridProducts.Focus();
+                        e.Handled = true;
                     }
                 }
             };
@@ -211,10 +219,39 @@ namespace UangPasDesktop
                 }
             };
 
+            // Shortcut ribbon bar at bottom of product table
+            Panel pnlShortcutBar = new Panel {
+                Dock = DockStyle.Bottom,
+                Height = 34,
+                BackColor = Color.FromArgb(248, 250, 252),
+                Padding = new Padding(2, 4, 2, 4)
+            };
+
+            FlowLayoutPanel flowShortcuts = new FlowLayoutPanel {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoScroll = true
+            };
+
+            flowShortcuts.Controls.Add(CreateShortcutChip("F1", "Cari Produk", () => FocusSearch()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F2", "Ubah Qty", () => EditSelectedCartQty()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F3", "Hapus Item", () => DeleteSelectedCartItem()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F4 / F12", "Bayar Jari", () => { SwitchTab(0); ProcessCheckoutFingerprint(); }));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F5", "Tahan Nota", () => HoldCurrentBill()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F6", "Panggil Nota", () => RecallBill()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F8", "Cek Saldo WBP", () => QuickCheckSaldoWbp()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F9", "Batal", () => ClearCartConfirm()));
+            flowShortcuts.Controls.Add(CreateShortcutChip("F10", "Manual", () => { SwitchTab(0); ProcessCheckoutManual(); }));
+            flowShortcuts.Controls.Add(CreateShortcutChip("+ / -", "Ubah Jumlah", null));
+            pnlShortcutBar.Controls.Add(flowShortcuts);
+
             // Docking order
             leftPanel.Controls.Add(gridProducts);
+            leftPanel.Controls.Add(pnlShortcutBar);
             leftPanel.Controls.Add(searchTable);
             searchTable.SendToBack();
+            pnlShortcutBar.SendToBack();
             gridProducts.BringToFront();
 
             splitKasir.Panel1.Controls.Add(leftPanel);
@@ -283,8 +320,20 @@ namespace UangPasDesktop
             txtBarcode.KeyDown += (s, e) => {
                 if (e.KeyCode == Keys.Enter)
                 {
-                    AddProductByBarcode(txtBarcode.Text.Trim());
-                    txtBarcode.Clear();
+                    string bc = txtBarcode.Text.Trim();
+                    if (string.IsNullOrEmpty(bc))
+                    {
+                        if (cart.Count > 0)
+                        {
+                            SwitchTab(0);
+                            ProcessCheckoutFingerprint();
+                        }
+                    }
+                    else
+                    {
+                        AddProductByBarcode(bc);
+                        txtBarcode.Clear();
+                    }
                     e.SuppressKeyPress = true;
                 }
             };
@@ -292,7 +341,7 @@ namespace UangPasDesktop
             barcodeTable.Controls.Add(txtBarcode, 1, 0);
             rightPanel.Controls.Add(barcodeTable);
 
-            // Grid Cart (Modern Flat Table Styling)
+            // Grid Cart (Modern Flat Table Styling with Interactive Action Buttons)
             gridCart = new DataGridView {
                 Dock = DockStyle.Fill,
                 BackgroundColor = Color.White,
@@ -311,27 +360,119 @@ namespace UangPasDesktop
             gridCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
             gridCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(30, 41, 59);
             gridCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
-            gridCart.RowTemplate.Height = 34;
+            gridCart.RowTemplate.Height = 36;
             gridCart.RowsDefaultCellStyle.Font = new Font("Segoe UI", 9f);
             gridCart.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+
             gridCart.Columns.Add("nama", "Barang");
+            gridCart.Columns["nama"].MinimumWidth = 70;
+            gridCart.Columns["nama"].FillWeight = 110;
+            gridCart.Columns["nama"].ReadOnly = true;
+
             gridCart.Columns.Add("harga", "Harga");
-            gridCart.Columns.Add("qty", "Qty");
-            gridCart.Columns.Add("subtotal", "Subtotal");
-            gridCart.Columns["nama"].MinimumWidth = 90;
-            gridCart.Columns["nama"].FillWeight = 135;
-            gridCart.Columns["harga"].MinimumWidth = 65;
-            gridCart.Columns["harga"].FillWeight = 75;
-            gridCart.Columns["qty"].MinimumWidth = 40;
-            gridCart.Columns["qty"].FillWeight = 45;
-            gridCart.Columns["subtotal"].MinimumWidth = 70;
-            gridCart.Columns["subtotal"].FillWeight = 80;
+            gridCart.Columns["harga"].MinimumWidth = 50;
+            gridCart.Columns["harga"].FillWeight = 65;
+            gridCart.Columns["harga"].ReadOnly = true;
             gridCart.Columns["harga"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+
+            DataGridViewButtonColumn colMin = new DataGridViewButtonColumn {
+                Name = "col_min",
+                HeaderText = "",
+                Text = "−",
+                UseColumnTextForButtonValue = true,
+                MinimumWidth = 24,
+                Width = 26,
+                FillWeight = 22,
+                FlatStyle = FlatStyle.Flat
+            };
+            colMin.SortMode = DataGridViewColumnSortMode.NotSortable;
+            colMin.DefaultCellStyle.BackColor = Color.FromArgb(241, 245, 249);
+            colMin.DefaultCellStyle.ForeColor = Color.FromArgb(71, 85, 105);
+            colMin.DefaultCellStyle.SelectionBackColor = Color.FromArgb(226, 232, 240);
+            colMin.DefaultCellStyle.SelectionForeColor = Color.FromArgb(15, 23, 42);
+            colMin.DefaultCellStyle.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
+            colMin.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            gridCart.Columns.Add(colMin);
+
+            gridCart.Columns.Add("qty", "Qty");
+            gridCart.Columns["qty"].MinimumWidth = 28;
+            gridCart.Columns["qty"].FillWeight = 32;
             gridCart.Columns["qty"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            gridCart.Columns["qty"].DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+
+            DataGridViewButtonColumn colPlus = new DataGridViewButtonColumn {
+                Name = "col_plus",
+                HeaderText = "",
+                Text = "+",
+                UseColumnTextForButtonValue = true,
+                MinimumWidth = 24,
+                Width = 26,
+                FillWeight = 22,
+                FlatStyle = FlatStyle.Flat
+            };
+            colPlus.SortMode = DataGridViewColumnSortMode.NotSortable;
+            colPlus.DefaultCellStyle.BackColor = Color.FromArgb(224, 242, 254);
+            colPlus.DefaultCellStyle.ForeColor = Color.FromArgb(2, 132, 199);
+            colPlus.DefaultCellStyle.SelectionBackColor = Color.FromArgb(186, 230, 253);
+            colPlus.DefaultCellStyle.SelectionForeColor = Color.FromArgb(3, 105, 161);
+            colPlus.DefaultCellStyle.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
+            colPlus.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            gridCart.Columns.Add(colPlus);
+
+            gridCart.Columns.Add("subtotal", "Subtotal");
+            gridCart.Columns["subtotal"].MinimumWidth = 55;
+            gridCart.Columns["subtotal"].FillWeight = 70;
+            gridCart.Columns["subtotal"].ReadOnly = true;
             gridCart.Columns["subtotal"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             gridCart.Columns["subtotal"].DefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
             gridCart.Columns["subtotal"].DefaultCellStyle.ForeColor = Color.FromArgb(2, 132, 199);
+
+            DataGridViewButtonColumn colDel = new DataGridViewButtonColumn {
+                Name = "col_del",
+                HeaderText = "",
+                Text = "✕",
+                UseColumnTextForButtonValue = true,
+                MinimumWidth = 24,
+                Width = 26,
+                FillWeight = 22,
+                FlatStyle = FlatStyle.Flat
+            };
+            colDel.SortMode = DataGridViewColumnSortMode.NotSortable;
+            colDel.DefaultCellStyle.BackColor = Color.FromArgb(254, 242, 242);
+            colDel.DefaultCellStyle.ForeColor = Color.FromArgb(239, 68, 68);
+            colDel.DefaultCellStyle.SelectionBackColor = Color.FromArgb(254, 202, 202);
+            colDel.DefaultCellStyle.SelectionForeColor = Color.FromArgb(185, 28, 28);
+            colDel.DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            colDel.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            gridCart.Columns.Add(colDel);
+
             gridCart.CellValueChanged += (s, e) => RecalculateCart();
+            gridCart.CellClick += (s, e) => {
+                if (e.RowIndex >= 0 && e.RowIndex < cart.Count)
+                {
+                    if (e.ColumnIndex == gridCart.Columns["col_min"].Index)
+                    {
+                        QuickIncrementCartQtyAt(e.RowIndex, -1);
+                    }
+                    else if (e.ColumnIndex == gridCart.Columns["col_plus"].Index)
+                    {
+                        QuickIncrementCartQtyAt(e.RowIndex, 1);
+                    }
+                    else if (e.ColumnIndex == gridCart.Columns["col_del"].Index)
+                    {
+                        DeleteCartItemAt(e.RowIndex);
+                    }
+                }
+            };
+            gridCart.CellDoubleClick += (s, e) => {
+                if (e.RowIndex >= 0 && e.RowIndex < cart.Count)
+                {
+                    if (e.ColumnIndex == gridCart.Columns["qty"].Index || e.ColumnIndex == gridCart.Columns["nama"].Index)
+                    {
+                        EditSelectedCartQty();
+                    }
+                }
+            };
             gridCart.KeyDown += (s, e) => {
                 if (e.KeyCode == Keys.Add || (e.KeyCode == Keys.Oemplus && e.Modifiers == Keys.None))
                 {
@@ -345,11 +486,18 @@ namespace UangPasDesktop
                     e.Handled = true;
                     e.SuppressKeyPress = true;
                 }
-                else if (e.KeyCode == Keys.Delete)
+                else if (e.KeyCode == Keys.Delete || e.KeyCode == Keys.Back)
                 {
                     DeleteSelectedCartItem();
                     e.Handled = true;
                     e.SuppressKeyPress = true;
+                }
+                else if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    SwitchTab(0);
+                    ProcessCheckoutFingerprint();
                 }
             };
             rightPanel.Controls.Add(gridCart);
@@ -403,12 +551,12 @@ namespace UangPasDesktop
             btnTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
             
             btnCheckoutFingerprint = new Button {
-                Text = "  Bayar dengan Sidik Jari",
+                Text = "  Bayar dengan Sidik Jari (F4 / F12)",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             string fpLogoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
@@ -431,7 +579,7 @@ namespace UangPasDesktop
             btnTable.SetColumnSpan(btnCheckoutFingerprint, 3);
 
             btnCheckoutManual = new Button {
-                Text = "👤 Manual",
+                Text = "👤 Manual (F10)",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(2, 132, 199),
                 ForeColor = Color.White,
@@ -444,7 +592,7 @@ namespace UangPasDesktop
             btnTable.Controls.Add(btnCheckoutManual, 0, 1);
 
             Button btnHold = new Button {
-                Text = "⏸️ Tahan",
+                Text = "⏸️ Tahan (F5)",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(245, 158, 11),
                 ForeColor = Color.White,
@@ -457,7 +605,7 @@ namespace UangPasDesktop
             btnTable.Controls.Add(btnHold, 1, 1);
 
             Button btnClear = new Button {
-                Text = "🗑️ Batal",
+                Text = "🗑️ Batal (F9)",
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White,
@@ -466,7 +614,7 @@ namespace UangPasDesktop
                 Cursor = Cursors.Hand
             };
             btnClear.FlatAppearance.BorderSize = 0;
-            btnClear.Click += (s, e) => { cart.Clear(); RefreshCartGrid(); };
+            btnClear.Click += (s, e) => ClearCartConfirm();
             btnTable.Controls.Add(btnClear, 2, 1);
 
             bottomPanel.Controls.Add(btnTable);
@@ -518,6 +666,7 @@ namespace UangPasDesktop
 
         private void RefreshCartGrid()
         {
+            int prevSelectedIdx = (gridCart.CurrentRow != null) ? gridCart.CurrentRow.Index : -1;
             gridCart.Rows.Clear();
             decimal total = 0;
             int totalItems = 0;
@@ -526,12 +675,28 @@ namespace UangPasDesktop
                 decimal subtotal = it.Harga * it.Qty;
                 total += subtotal;
                 totalItems += it.Qty;
-                gridCart.Rows.Add(it.Nama, "Rp " + it.Harga.ToString("N0"), it.Qty, "Rp " + subtotal.ToString("N0"));
+                gridCart.Rows.Add(
+                    it.Nama, 
+                    "Rp " + it.Harga.ToString("N0"), 
+                    "−", 
+                    it.Qty, 
+                    "+", 
+                    "Rp " + subtotal.ToString("N0"), 
+                    "✕"
+                );
             }
             lblTotal.Text = "Rp " + total.ToString("N0");
             if (lblCartCountBadge != null)
             {
                 lblCartCountBadge.Text = "(" + totalItems + " item)";
+            }
+
+            if (gridCart.Rows.Count > 0)
+            {
+                int targetIdx = Math.Min(Math.Max(0, prevSelectedIdx), gridCart.Rows.Count - 1);
+                gridCart.ClearSelection();
+                gridCart.Rows[targetIdx].Selected = true;
+                gridCart.CurrentCell = gridCart.Rows[targetIdx].Cells[0];
             }
         }
 
@@ -829,7 +994,7 @@ namespace UangPasDesktop
                 e.SuppressKeyPress = true;
                 DeleteSelectedCartItem();
             }
-            else if (e.KeyCode == Keys.F4)
+            else if (e.KeyCode == Keys.F4 || e.KeyCode == Keys.F12)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
@@ -873,35 +1038,30 @@ namespace UangPasDesktop
                 SwitchTab(0);
                 ProcessCheckoutManual();
             }
-            else if (e.KeyCode == Keys.F12)
-            {
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-                SwitchTab(0);
-                ProcessCheckoutFingerprint();
-            }
-            else if (e.KeyCode == Keys.Add && (ActiveControl != txtSearchProduct))
+            else if ((e.KeyCode == Keys.Add || (e.KeyCode == Keys.Oemplus && e.Modifiers == Keys.None)) && (ActiveControl != txtSearchProduct && ActiveControl != txtBarcode))
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
                 QuickIncrementCartQty(1);
             }
-            else if (e.KeyCode == Keys.Subtract && (ActiveControl != txtSearchProduct))
+            else if ((e.KeyCode == Keys.Subtract || (e.KeyCode == Keys.OemMinus && e.Modifiers == Keys.None)) && (ActiveControl != txtSearchProduct && ActiveControl != txtBarcode))
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
                 QuickIncrementCartQty(-1);
             }
+            else if (e.KeyCode == Keys.Delete && (ActiveControl != txtSearchProduct && ActiveControl != txtBarcode))
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                DeleteSelectedCartItem();
+            }
         }
 
-        private void QuickIncrementCartQty(int delta)
+        private void QuickIncrementCartQtyAt(int idx, int delta)
         {
             SwitchTab(0);
-            if (cart.Count == 0) return;
-
-            int idx = (gridCart.CurrentRow != null && gridCart.CurrentRow.Index >= 0 && gridCart.CurrentRow.Index < cart.Count) 
-                ? gridCart.CurrentRow.Index 
-                : cart.Count - 1;
+            if (idx < 0 || idx >= cart.Count) return;
 
             var item = cart[idx];
             if (delta > 0)
@@ -925,6 +1085,28 @@ namespace UangPasDesktop
                     RefreshCartGrid();
                 }
             }
+        }
+
+        private void DeleteCartItemAt(int idx)
+        {
+            SwitchTab(0);
+            if (idx < 0 || idx >= cart.Count) return;
+
+            cart.RemoveAt(idx);
+            SoundHelper.PlayTouch();
+            RefreshCartGrid();
+        }
+
+        private void QuickIncrementCartQty(int delta)
+        {
+            SwitchTab(0);
+            if (cart.Count == 0) return;
+
+            int idx = (gridCart.CurrentRow != null && gridCart.CurrentRow.Index >= 0 && gridCart.CurrentRow.Index < cart.Count) 
+                ? gridCart.CurrentRow.Index 
+                : cart.Count - 1;
+
+            QuickIncrementCartQtyAt(idx, delta);
         }
 
         private void FocusSearch()
@@ -1021,9 +1203,7 @@ namespace UangPasDesktop
                 ? gridCart.CurrentRow.Index 
                 : cart.Count - 1;
 
-            cart.RemoveAt(idx);
-            SoundHelper.PlayTouch();
-            RefreshCartGrid();
+            DeleteCartItemAt(idx);
         }
 
         private void HoldCurrentBill()
@@ -1211,6 +1391,71 @@ namespace UangPasDesktop
             {
                 f.ShowDialog(this);
             }
+        }
+
+        private Control CreateShortcutChip(string keyText, string actionText, Action onClick)
+        {
+            Panel pnl = new Panel {
+                AutoSize = true,
+                Height = 26,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 0, 6, 0),
+                Cursor = (onClick != null) ? Cursors.Hand : Cursors.Default
+            };
+
+            FlowLayoutPanel flow = new FlowLayoutPanel {
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Dock = DockStyle.Fill,
+                Padding = new Padding(2, 2, 4, 2),
+                Margin = new Padding(0)
+            };
+
+            Label lblKey = new Label {
+                Text = keyText,
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(30, 41, 59),
+                AutoSize = true,
+                Padding = new Padding(3, 1, 3, 1),
+                Margin = new Padding(0, 0, 4, 0),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            Label lblDesc = new Label {
+                Text = actionText,
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(51, 65, 85),
+                AutoSize = true,
+                Margin = new Padding(0, 1, 0, 0),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            flow.Controls.Add(lblKey);
+            flow.Controls.Add(lblDesc);
+            pnl.Controls.Add(flow);
+
+            if (onClick != null)
+            {
+                EventHandler handler = (s, e) => onClick();
+                pnl.Click += handler;
+                flow.Click += handler;
+                lblKey.Click += handler;
+                lblDesc.Click += handler;
+
+                pnl.MouseEnter += (s, e) => {
+                    pnl.BackColor = Color.FromArgb(240, 249, 255);
+                    lblDesc.ForeColor = Color.FromArgb(2, 132, 199);
+                };
+                pnl.MouseLeave += (s, e) => {
+                    pnl.BackColor = Color.White;
+                    lblDesc.ForeColor = Color.FromArgb(51, 65, 85);
+                };
+            }
+
+            return pnl;
         }
         #endregion
     }
