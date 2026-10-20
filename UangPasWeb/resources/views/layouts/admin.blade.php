@@ -741,6 +741,20 @@
                         @endforeach
                     </select>
                 </form>
+                <!-- Quick Mode Toggle (Wallet Only vs Full POS) -->
+                @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi']))
+                <form action="{{ route('admin.settings.toggle_mode') }}" method="POST" style="margin: 0;">
+                    @csrf
+                    @if(($appSetting->app_mode ?? 'wallet_only') === 'wallet_only')
+                        <button type="submit" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 700; border-radius: 8px; font-size: 11.5px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#bae6fd'" onmouseout="this.style.background='#e0f2fe'" title="Klik untuk beralih ke Mode POS Lengkap (Toko, Stok, Katalog)">
+                            <span>⭐ Mode: Dompet Saja ⇄</span>
+                        </button>
+                    @else
+                        <button type="submit" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700; border-radius: 8px; font-size: 11.5px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#fde68a'" onmouseout="this.style.background='#fef3c7'" title="Klik untuk beralih ke Mode Dompet Digital Saja">
+                            <span>🛒 Mode: POS Lengkap ⇄</span>
+                        </button>
+                    @endif
+                </form>
                 @endif
 
                 <!-- User Profile Badge -->

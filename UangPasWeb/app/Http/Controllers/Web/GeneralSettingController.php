@@ -84,4 +84,21 @@ class GeneralSettingController extends Controller
 
         return back()->with('success', 'Konfigurasi aplikasi & profil UPT ' . $setting->upt_name . ' berhasil diperbarui.');
     }
+
+    /**
+     * Beralih Cepat Antara Mode Dompet Digital (wallet_only) dan Mode Lengkap POS (full_pos)
+     */
+    public function toggleMode(Request $request)
+    {
+        $setting = UptSetting::current();
+        $newMode = ($setting->app_mode ?? 'wallet_only') === 'wallet_only' ? 'full_pos' : 'wallet_only';
+        
+        $setting->update(['app_mode' => $newMode]);
+
+        $modeLabel = $newMode === 'wallet_only' 
+            ? 'Dompet Digital & Register D Saja (Wallet Only)' 
+            : 'Mode Lengkap Terpadu (E-Wallet + Ritel POS & Gudang)';
+
+        return back()->with('success', "Mode aplikasi berhasil diubah ke: {$modeLabel}");
+    }
 }

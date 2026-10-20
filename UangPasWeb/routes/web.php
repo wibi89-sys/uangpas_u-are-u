@@ -104,6 +104,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/settings', [GeneralSettingController::class, 'index'])->name('admin.settings');
         Route::get('/settings/general', [GeneralSettingController::class, 'index'])->name('admin.settings.general');
         Route::post('/settings/general', [GeneralSettingController::class, 'update'])->name('admin.settings.general.update');
+        Route::post('/settings/toggle-mode', [GeneralSettingController::class, 'toggleMode'])->name('admin.settings.toggle_mode');
 
         Route::get('/settings/receipt', [ReceiptSettingController::class, 'index'])->name('admin.settings.receipt');
         Route::post('/settings/receipt', [ReceiptSettingController::class, 'update'])->name('admin.settings.receipt.update');
