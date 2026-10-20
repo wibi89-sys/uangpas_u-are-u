@@ -104,12 +104,18 @@ class AdminController extends Controller
         $request->validate([
             'nama' => 'required|string|max:255',
             'no_registrasi' => 'required|string|unique:inmates,no_registrasi',
+            'register_d_number' => 'nullable|string|max:50',
             'nik' => 'nullable|string|max:20',
             'blok_kamar' => 'required|string',
             'lapas_asal' => 'required|string',
             'limit_harian' => 'required|numeric|min:0',
             'saldo_awal' => 'nullable|numeric|min:0',
             'kontak_keluarga' => 'nullable|string',
+            'penjamin_nama' => 'nullable|string|max:255',
+            'penjamin_hubungan' => 'nullable|string|max:50',
+            'penjamin_nik' => 'nullable|string|max:20',
+            'penjamin_telepon' => 'nullable|string|max:30',
+            'penjamin_alamat' => 'nullable|string',
         ]);
 
         $vaNumber = '88001' . rand(100000000, 999999999);
@@ -117,11 +123,18 @@ class AdminController extends Controller
             $vaNumber = '88001' . rand(100000000, 999999999);
         }
 
+        $regDNumber = $request->register_d_number;
+        if (empty($regDNumber)) {
+            $nextId = (Inmate::max('id') ?? 0) + 1;
+            $regDNumber = 'REG-D/' . date('Y') . '/' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        }
+
         $saldoAwal = (float)($request->saldo_awal ?? 0);
 
-        DB::transaction(function () use ($request, $vaNumber, $saldoAwal) {
+        DB::transaction(function () use ($request, $vaNumber, $regDNumber, $saldoAwal) {
             $inmate = Inmate::create([
                 'no_registrasi' => $request->no_registrasi,
+                'register_d_number' => $regDNumber,
                 'nik' => $request->nik,
                 'nama' => $request->nama,
                 'blok_kamar' => $request->blok_kamar,
@@ -130,7 +143,12 @@ class AdminController extends Controller
                 'saldo' => $saldoAwal,
                 'va_number' => $vaNumber,
                 'limit_harian' => $request->limit_harian,
-                'kontak_keluarga' => $request->kontak_keluarga,
+                'kontak_keluarga' => $request->kontak_keluarga ?? $request->penjamin_telepon,
+                'penjamin_nama' => $request->penjamin_nama,
+                'penjamin_hubungan' => $request->penjamin_hubungan,
+                'penjamin_nik' => $request->penjamin_nik,
+                'penjamin_telepon' => $request->penjamin_telepon,
+                'penjamin_alamat' => $request->penjamin_alamat,
             ]);
 
             if ($saldoAwal > 0) {
@@ -142,15 +160,19 @@ class AdminController extends Controller
                     'balance_before' => 0,
                     'balance_after' => $saldoAwal,
                     'payment_method' => 'cash_counter',
+                    'sender_name' => $request->penjamin_nama ?? 'WBP Bersangkutan (Titipan Awal)',
+                    'sender_relation' => $request->penjamin_hubungan ?? 'Diri Sendiri / Keluarga',
+                    'category' => 'deposit_loket',
                     'reference_id' => 'SETORAN-AWAL',
                     'status' => 'success',
                     'cashier_name' => 'Petugas Registrasi Lapas',
-                    'notes' => 'Setoran saldo awal registrasi WBP',
+                    'officer_name' => auth()->user()->name ?? 'Petugas Register D',
+                    'notes' => 'Setoran saldo awal pembukaan rekening Buku Register D WBP',
                 ]);
             }
         });
 
-        return back()->with('success', 'Warga Binaan Pemasyarakatan berhasil didaftarkan. VA Pembayaran Keluarga: ' . $vaNumber);
+        return back()->with('success', 'Warga Binaan berhasil didaftarkan ke Buku Register D (' . $regDNumber . '). Nomor Virtual Account Bank: ' . $vaNumber);
     }
 
     /**
@@ -197,11 +219,17 @@ class AdminController extends Controller
         $request->validate([
             'nama' => 'required|string|max:255',
             'no_registrasi' => 'required|string|unique:inmates,no_registrasi,' . $inmate->id,
+            'register_d_number' => 'nullable|string|max:50',
             'nik' => 'nullable|string|max:20',
             'blok_kamar' => 'required|string',
             'lapas_asal' => 'required|string',
             'limit_harian' => 'required|numeric|min:0',
             'kontak_keluarga' => 'nullable|string',
+            'penjamin_nama' => 'nullable|string|max:255',
+            'penjamin_hubungan' => 'nullable|string|max:50',
+            'penjamin_nik' => 'nullable|string|max:20',
+            'penjamin_telepon' => 'nullable|string|max:30',
+            'penjamin_alamat' => 'nullable|string',
             'tanggal_masuk' => 'nullable|date',
             'tanggal_ekspirasi' => 'nullable|date',
         ]);
@@ -209,16 +237,22 @@ class AdminController extends Controller
         $inmate->update([
             'nama' => $request->nama,
             'no_registrasi' => $request->no_registrasi,
+            'register_d_number' => $request->register_d_number ?? $inmate->register_d_number,
             'nik' => $request->nik,
             'blok_kamar' => $request->blok_kamar,
             'lapas_asal' => $request->lapas_asal,
             'limit_harian' => $request->limit_harian,
-            'kontak_keluarga' => $request->kontak_keluarga,
+            'kontak_keluarga' => $request->kontak_keluarga ?? $request->penjamin_telepon,
+            'penjamin_nama' => $request->penjamin_nama,
+            'penjamin_hubungan' => $request->penjamin_hubungan,
+            'penjamin_nik' => $request->penjamin_nik,
+            'penjamin_telepon' => $request->penjamin_telepon,
+            'penjamin_alamat' => $request->penjamin_alamat,
             'tanggal_masuk' => $request->tanggal_masuk,
             'tanggal_ekspirasi' => $request->tanggal_ekspirasi,
         ]);
 
-        return back()->with('success', 'Data Warga Binaan ' . $inmate->nama . ' berhasil diperbarui.');
+        return back()->with('success', 'Data Warga Binaan & Buku Register D ' . $inmate->nama . ' berhasil diperbarui.');
     }
 
     /**
@@ -278,15 +312,18 @@ class AdminController extends Controller
                     'balance_before' => $sisaSaldo,
                     'balance_after' => 0,
                     'payment_method' => 'cash_counter',
+                    'category' => 'payout_release',
                     'reference_id' => 'PAYOUT-CASH',
                     'status' => 'success',
                     'cashier_name' => $officer,
-                    'notes' => 'Pencairan sisa saldo tunai saat pembebasan narapidana. Diserahkan kepada WBP bersangkutan.',
+                    'officer_name' => $officer,
+                    'notes' => 'Pencairan sisa uang titipan Register D tunai saat pembebasan narapidana. Diserahkan kepada WBP bersangkutan.',
                 ]);
             }
         });
 
-        return back()->with('success', "Warga Binaan {$inmate->nama} berhasil diproses BEBAS. Sisa saldo Rp " . number_format($sisaSaldo, 0, ',', '.') . " telah dicairkan tunai dan akun ditutup.");
+        return back()->with('success', "Warga Binaan {$inmate->nama} berhasil diproses BEBAS. Sisa saldo Rp " . number_format($sisaSaldo, 0, ',', '.') . " telah dicairkan tunai dan akun ditutup.")
+                     ->with('print_release_id', $inmate->id);
     }
 
     /**
@@ -354,10 +391,13 @@ class AdminController extends Controller
             'amount' => 'required|numeric|min:5000',
             'penyetor' => 'required|string',
             'hubungan' => 'nullable|string',
+            'penyetor_nik' => 'nullable|string|max:20',
+            'penyetor_telepon' => 'nullable|string|max:30',
+            'receipt_number' => 'nullable|string|max:50',
             'notes' => 'nullable|string',
         ]);
 
-        DB::transaction(function () use ($request) {
+        $createdTrx = DB::transaction(function () use ($request) {
             $inmate = Inmate::lockForUpdate()->find($request->inmate_id);
 
             $before = $inmate->saldo;
@@ -366,7 +406,9 @@ class AdminController extends Controller
             $inmate->save();
 
             $invoiceNo = 'TOPUP-LOKET-' . date('YmdHis') . '-' . strtoupper(Str::random(4));
-            Transaction::create([
+            $receiptNo = $request->receipt_number ?? ('KWT-' . date('ymd') . '-' . rand(1000, 9999));
+
+            return Transaction::create([
                 'invoice_no' => $invoiceNo,
                 'inmate_id' => $inmate->id,
                 'type' => 'topup',
@@ -375,13 +417,21 @@ class AdminController extends Controller
                 'balance_after' => $after,
                 'payment_method' => 'cash_counter',
                 'reference_id' => 'LOKET-' . date('ymd') . '-' . rand(100, 999),
+                'receipt_number' => $receiptNo,
+                'sender_name' => $request->penyetor,
+                'sender_nik' => $request->penyetor_nik,
+                'sender_phone' => $request->penyetor_telepon,
+                'sender_relation' => $request->hubungan ?? 'Keluarga Kandung',
+                'category' => 'deposit_loket',
                 'status' => 'success',
                 'cashier_name' => 'Petugas Loket Kunjungan',
+                'officer_name' => auth()->user()->name ?? 'Petugas Loket Register D',
                 'notes' => 'Setoran tunai kunjungan dari ' . $request->penyetor . ' (' . ($request->hubungan ?? 'Keluarga') . '). ' . ($request->notes ?? ''),
             ]);
         });
 
-        return back()->with('success', 'Setoran tunai sebesar Rp ' . number_format($request->amount, 0, ',', '.') . ' berhasil ditambahkan ke saldo WBP.');
+        return back()->with('success', 'Setoran tunai Rp ' . number_format($request->amount, 0, ',', '.') . ' berhasil dibukukan ke Buku Register D.')
+                     ->with('print_receipt_id', $createdTrx->id);
     }
 
     /**

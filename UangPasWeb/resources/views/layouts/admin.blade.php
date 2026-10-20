@@ -580,6 +580,7 @@
 
         @php
             $activeUser = auth()->user() ?? \App\Models\User::first();
+            $appSetting = \App\Models\UptSetting::current();
         @endphp
 
         <nav class="nav-menu">
@@ -588,6 +589,13 @@
                 <span class="nav-icon">📊</span>
                 <span>Dashboard Ringkasan</span>
             </a>
+
+            @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi', 'petugas_loket', 'auditor']))
+            <a href="{{ route('admin.register_d.index') }}" class="nav-item {{ request()->routeIs('admin.register_d*') ? 'active' : '' }}">
+                <span class="nav-icon">📖</span>
+                <span>Buku Register D</span>
+            </a>
+            @endif
 
             @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi', 'petugas_loket']))
             <a href="{{ route('admin.inmates') }}" class="nav-item {{ request()->routeIs('admin.inmates*') ? 'active' : '' }}">
@@ -599,7 +607,7 @@
             @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi', 'petugas_loket', 'kasir']))
             <a href="{{ route('admin.topup') }}" class="nav-item {{ request()->routeIs('admin.topup*') ? 'active' : '' }}">
                 <span class="nav-icon">💳</span>
-                <span>Loket Top-Up & Bank VA</span>
+                <span>Loket Setor Titipan & VA</span>
             </a>
             @endif
 
@@ -610,32 +618,36 @@
             </a>
             @endif
 
-            @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi']))
-            <div class="nav-label">Koperasi & Inventori</div>
-            <a href="{{ route('admin.products') }}" class="nav-item {{ request()->routeIs('admin.products*') ? 'active' : '' }}">
-                <span class="nav-icon">📦</span>
-                <span>Katalog & Kartu Stok</span>
-            </a>
-            <a href="{{ route('admin.inventory.restock') }}" class="nav-item {{ request()->routeIs('admin.inventory.restock*') ? 'active' : '' }}">
-                <span class="nav-icon">📥</span>
-                <span>Restock / Barang Masuk</span>
-            </a>
-            <a href="{{ route('admin.inventory.opname') }}" class="nav-item {{ request()->routeIs('admin.inventory.opname*') ? 'active' : '' }}">
-                <span class="nav-icon">📋</span>
-                <span>Stock Opname (Audit)</span>
-            </a>
-            <a href="{{ route('admin.inventory.suppliers') }}" class="nav-item {{ request()->routeIs('admin.inventory.suppliers*') ? 'active' : '' }}">
-                <span class="nav-icon">🏭</span>
-                <span>Supplier Rekanan</span>
-            </a>
+            @if(($appSetting->app_mode ?? 'wallet_only') !== 'wallet_only')
+                @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi']))
+                <div class="nav-label">Koperasi & Inventori</div>
+                <a href="{{ route('admin.products') }}" class="nav-item {{ request()->routeIs('admin.products*') ? 'active' : '' }}">
+                    <span class="nav-icon">📦</span>
+                    <span>Katalog & Kartu Stok</span>
+                </a>
+                <a href="{{ route('admin.inventory.restock') }}" class="nav-item {{ request()->routeIs('admin.inventory.restock*') ? 'active' : '' }}">
+                    <span class="nav-icon">📥</span>
+                    <span>Restock / Barang Masuk</span>
+                </a>
+                <a href="{{ route('admin.inventory.opname') }}" class="nav-item {{ request()->routeIs('admin.inventory.opname*') ? 'active' : '' }}">
+                    <span class="nav-icon">📋</span>
+                    <span>Stock Opname (Audit)</span>
+                </a>
+                <a href="{{ route('admin.inventory.suppliers') }}" class="nav-item {{ request()->routeIs('admin.inventory.suppliers*') ? 'active' : '' }}">
+                    <span class="nav-icon">🏭</span>
+                    <span>Supplier Rekanan</span>
+                </a>
+                @endif
             @endif
 
             @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi', 'auditor']))
-            <div class="nav-label">Keuangan & Audit Koperasi</div>
+            <div class="nav-label">Keuangan & Audit Dana</div>
+            @if(($appSetting->app_mode ?? 'wallet_only') !== 'wallet_only')
             <a href="{{ route('admin.reports.profit_loss') }}" class="nav-item {{ request()->routeIs('admin.reports.profit_loss*') ? 'active' : '' }}">
                 <span class="nav-icon">📈</span>
                 <span>Laba Rugi & Gross Margin</span>
             </a>
+            @endif
             <a href="{{ route('admin.reports.cashflow') }}" class="nav-item {{ request()->routeIs('admin.reports.cashflow*') ? 'active' : '' }}">
                 <span class="nav-icon">💰</span>
                 <span>Arus Kas & Titipan WBP</span>

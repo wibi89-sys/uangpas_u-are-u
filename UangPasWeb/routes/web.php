@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\DeviceSettingController;
 use App\Http\Controllers\Web\GeneralSettingController;
 use App\Http\Controllers\Web\KioskController;
 use App\Http\Controllers\Web\PosWebController;
+use App\Http\Controllers\Web\RegisterDController;
 use App\Http\Controllers\Api\PaymentGatewayController;
 
 /*
@@ -50,6 +51,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/inmates/{id}/reset-fingerprint', [AdminController::class, 'resetFingerprint'])->name('admin.inmates.reset_fingerprint');
         Route::post('/inmates/transfer', [AdminController::class, 'transferInmate'])->name('admin.inmates.transfer');
         Route::delete('/inmates/{id}', [AdminController::class, 'destroyInmate'])->name('admin.inmates.destroy');
+    });
+
+    // Modul Buku Register D & Mini Bank WBP (Kanwil, Kalapas, Admin Koperasi, Petugas Loket, Auditor)
+    Route::middleware(['role:kanwil_admin,kalapas,admin_koperasi,petugas_loket,auditor'])->group(function () {
+        Route::get('/register-d', [RegisterDController::class, 'index'])->name('admin.register_d.index');
+        Route::get('/register-d/{id}', [RegisterDController::class, 'show'])->name('admin.register_d.show');
+        Route::get('/register-d/{id}/statement', [RegisterDController::class, 'statementPrint'])->name('admin.register_d.statement');
+        Route::get('/register-d/{id}/passbook', [RegisterDController::class, 'passbookPrint'])->name('admin.register_d.passbook');
+        Route::get('/register-d/reports/ledger', [RegisterDController::class, 'ledgerPrint'])->name('admin.register_d.ledger');
+        Route::get('/register-d/receipt/{trxId}', [RegisterDController::class, 'receiptPrint'])->name('admin.register_d.receipt');
+        Route::get('/register-d/{id}/release-receipt', [RegisterDController::class, 'releaseReceiptPrint'])->name('admin.register_d.release_receipt');
     });
 
     // Manajemen Petugas & Hak Akses (Kanwil Admin, Kalapas, Admin Utama UPT & Koperasi)

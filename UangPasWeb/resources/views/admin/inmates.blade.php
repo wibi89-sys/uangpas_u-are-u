@@ -56,7 +56,9 @@
                             <div>
                                 <strong style="color: #0f172a; font-size: 14px;">{{ $wbp->nama }}</strong>
                                 <div style="font-size: 11.5px; color: var(--text-muted);">
-                                    <span style="font-family: monospace; font-weight: 700; color: #0284c7;">{{ $wbp->no_registrasi }}</span> &bull; NIK: {{ $wbp->nik ?? '-' }}
+                                    <span style="font-family: monospace; font-weight: 700; color: #0284c7;">{{ $wbp->no_registrasi }}</span>
+                                    &bull; Reg D: <strong style="color: #0369a1;">{{ $wbp->register_d_number ?? '-' }}</strong>
+                                    &bull; NIK: {{ $wbp->nik ?? '-' }}
                                 </div>
                             </div>
                         </div>
@@ -101,6 +103,9 @@
                     </td>
                     <td>
                         <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <a href="{{ route('admin.register_d.show', $wbp->id) }}" class="btn btn-outline" style="padding: 5px 8px; font-size: 11px; color: #0284c7; font-weight: 700;" title="Buka Buku Register D">
+                                📖 Reg D
+                            </a>
                             <a href="{{ route('admin.inmates.detail', $wbp->id) }}" class="btn btn-outline" style="padding: 5px 8px; font-size: 11px;">
                                 Detail
                             </a>
@@ -200,9 +205,26 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Kontak Keluarga (Penyetor)</label>
-                <input type="text" name="kontak_keluarga" placeholder="No. HP / Nama keluarga yang bisa dihubungi">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Nomor Buku Register D (Opsional)</label>
+                    <input type="text" name="register_d_number" placeholder="Otomatis jika dikosongkan">
+                </div>
+                <div class="form-group">
+                    <label>Nama Penjamin / Keluarga Terdekat</label>
+                    <input type="text" name="penjamin_nama" placeholder="Nama keluarga penjamin">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Hubungan Penjamin</label>
+                    <input type="text" name="penjamin_hubungan" placeholder="Istri, Ibu, Anak...">
+                </div>
+                <div class="form-group">
+                    <label>No. HP / WA Penjamin</label>
+                    <input type="text" name="penjamin_telepon" placeholder="Contoh: 08123456789">
+                </div>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
@@ -250,6 +272,28 @@
                 <div class="form-group">
                     <label>Penempatan Kamar/Blok *</label>
                     <input type="text" id="edit_blok_kamar" name="blok_kamar" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Nomor Buku Register D</label>
+                    <input type="text" id="edit_register_d_number" name="register_d_number">
+                </div>
+                <div class="form-group">
+                    <label>Nama Penjamin / Keluarga</label>
+                    <input type="text" id="edit_penjamin_nama" name="penjamin_nama">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Hubungan Penjamin</label>
+                    <input type="text" id="edit_penjamin_hubungan" name="penjamin_hubungan">
+                </div>
+                <div class="form-group">
+                    <label>No. HP / WA Penjamin</label>
+                    <input type="text" id="edit_penjamin_telepon" name="penjamin_telepon">
                 </div>
             </div>
 
@@ -497,8 +541,12 @@
     function openEditModal(wbp) {
         document.getElementById('formEditWbp').action = "/inmates/" + wbp.id;
         document.getElementById('edit_no_registrasi').value = wbp.no_registrasi || '';
+        document.getElementById('edit_register_d_number').value = wbp.register_d_number || '';
         document.getElementById('edit_nik').value = wbp.nik || '';
         document.getElementById('edit_nama').value = wbp.nama || '';
+        document.getElementById('edit_penjamin_nama').value = wbp.penjamin_nama || '';
+        document.getElementById('edit_penjamin_hubungan').value = wbp.penjamin_hubungan || '';
+        document.getElementById('edit_penjamin_telepon').value = wbp.penjamin_telepon || '';
         document.getElementById('edit_lapas_asal').value = wbp.lapas_asal || '';
         document.getElementById('edit_blok_kamar').value = wbp.blok_kamar || '';
         document.getElementById('edit_limit_harian').value = wbp.limit_harian || 100000;

@@ -5,6 +5,28 @@
 @section('page_desc', 'Setoran Tunai Keluarga di Loket Kunjungan & Integrasi Virtual Account Bank')
 
 @section('content')
+@if(session('print_receipt_id'))
+    <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px 22px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #22c55e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                🧾
+            </div>
+            <div>
+                <div style="font-weight: 800; color: #166534; font-size: 14.5px;">Setoran Uang Titipan Berhasil Dibukukan ke Buku Register D!</div>
+                <div style="font-size: 12.5px; color: #15803d; margin-top: 3px;">Kuitansi resmi tanda terima telah siap dicetak untuk diserahkan kepada pembesuk / keluarga.</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a href="{{ route('admin.register_d.receipt', session('print_receipt_id')) }}" target="_blank" class="btn btn-primary" style="background: #16a34a; border-color: #16a34a; font-weight: 700; padding: 9px 18px;">
+                <span>🖨️</span> Cetak Kuitansi Slip (A5)
+            </a>
+            <a href="{{ route('admin.register_d.index') }}" class="btn btn-outline" style="font-weight: 700;">
+                <span>📖</span> Buka Register D
+            </a>
+        </div>
+    </div>
+@endif
+
 <div class="grid-2">
     <!-- Form 1: Loket Setor Tunai Kunjungan -->
     <div class="card">
@@ -13,7 +35,7 @@
                 🏢
             </div>
             <div>
-                <h2 style="font-size: 16px; font-weight: 700;">Loket Setor Tunai (Kunjungan Lapas)</h2>
+                <h2 style="font-size: 16px; font-weight: 700;">Loket Setor Tunai (Buku Register D)</h2>
                 <p style="font-size: 12px; color: var(--text-muted);">Pencatatan uang titipan fisik dari keluarga saat membesuk WBP</p>
             </div>
         </div>
@@ -26,7 +48,7 @@
                     <option value="">-- Pilih WBP --</option>
                     @foreach($inmates as $wbp)
                         <option value="{{ $wbp->id }}">
-                            {{ $wbp->nama }} ({{ $wbp->no_registrasi }}) &bull; Saldo: Rp {{ number_format($wbp->saldo, 0, ',', '.') }}
+                            {{ $wbp->nama }} (Reg D: {{ $wbp->register_d_number ?? $wbp->no_registrasi }}) &bull; Saldo: Rp {{ number_format($wbp->saldo, 0, ',', '.') }}
                         </option>
                     @endforeach
                 </select>
@@ -46,21 +68,41 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                 <div class="form-group">
                     <label>Nama Keluarga Penyetor *</label>
-                    <input type="text" name="penyetor" placeholder="Nama keluarga" required>
+                    <input type="text" name="penyetor" placeholder="Nama lengkap pembesuk" required>
                 </div>
                 <div class="form-group">
-                    <label>Hubungan Keluarga</label>
-                    <input type="text" name="hubungan" placeholder="Istri, Ibu, Ayah, Anak...">
+                    <label>Hubungan Keluarga *</label>
+                    <select name="hubungan" required>
+                        <option value="Istri">Istri</option>
+                        <option value="Suami">Suami</option>
+                        <option value="Ibu Kandung">Ibu Kandung</option>
+                        <option value="Ayah Kandung">Ayah Kandung</option>
+                        <option value="Anak">Anak</option>
+                        <option value="Saudara Kandung">Saudara Kandung</option>
+                        <option value="Kuasa Hukum">Kuasa Hukum / Pengacara</option>
+                        <option value="Kerabat / Lainnya">Kerabat / Lainnya</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                    <label>Nomor NIK KTP Penyetor</label>
+                    <input type="text" name="penyetor_nik" placeholder="16 digit NIK KTP">
+                </div>
+                <div class="form-group">
+                    <label>No. HP / WhatsApp Penyetor</label>
+                    <input type="text" name="penyetor_telepon" placeholder="Contoh: 08123456789">
                 </div>
             </div>
 
             <div class="form-group">
-                <label>Catatan Tambahan</label>
-                <input type="text" name="notes" placeholder="No. identitas KTP pembesuk / titipan pesan">
+                <label>Catatan Tambahan & Pesan Keluarga</label>
+                <input type="text" name="notes" placeholder="Titipan pesan untuk WBP / keperluan khusus">
             </div>
 
-            <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; justify-content: center; font-size: 14px;">
-                <span>📥</span> Simpan Setoran Loket & Cetak Tanda Terima
+            <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; justify-content: center; font-size: 14px; font-weight: 700;">
+                <span>📥</span> Simpan Setoran Loket & Terbitkan Kuitansi
             </button>
         </form>
     </div>

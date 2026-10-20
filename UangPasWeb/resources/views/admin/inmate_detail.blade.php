@@ -47,21 +47,48 @@
         <!-- Detail Data -->
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13.5px;">
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Nomor Buku Register D</span>
+                <span style="font-family: monospace; font-weight: 800; color: #0284c7; font-size: 14px;">
+                    {{ $inmate->register_d_number ?? ('REG-D/' . date('Y') . '/' . str_pad($inmate->id, 4, '0', STR_PAD_LEFT)) }}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
                 <span style="color: var(--text-muted);">Nomor Induk Kependudukan (NIK)</span>
                 <strong>{{ $inmate->nik ?? 'Tidak Ada' }}</strong>
             </div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
-                <span style="color: var(--text-muted);">Virtual Account Keluarga (Top-Up)</span>
+                <span style="color: var(--text-muted);">Virtual Account Bank (Top-Up)</span>
                 <span style="font-family: monospace; font-weight: 700; color: #0284c7; font-size: 14px;">{{ $inmate->va_number }}</span>
             </div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
-                <span style="color: var(--text-muted);">Kontak Keluarga</span>
-                <strong>{{ $inmate->kontak_keluarga ?? '-' }}</strong>
+                <span style="color: var(--text-muted);">Penjamin / Keluarga Terdekat</span>
+                <strong>{{ $inmate->penjamin_nama ?? ($inmate->kontak_keluarga ?? '-') }}</strong>
             </div>
+            @if($inmate->penjamin_hubungan || $inmate->penjamin_telepon)
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Hubungan & Telp Penjamin</span>
+                <span>{{ $inmate->penjamin_hubungan ?? 'Keluarga' }} &bull; {{ $inmate->penjamin_telepon ?? '-' }}</span>
+            </div>
+            @endif
             <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
                 <span style="color: var(--text-muted);">Tanggal Registrasi</span>
                 <strong>{{ $inmate->created_at->format('d F Y') }}</strong>
             </div>
+        </div>
+
+        <!-- Quick Register D Action Buttons -->
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--card-border); display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="{{ route('admin.register_d.show', $inmate->id) }}" class="btn btn-primary" style="font-size: 12px; font-weight: 700;">
+                <span>📖</span> Buka Buku Register D
+            </a>
+            <a href="{{ route('admin.register_d.statement', $inmate->id) }}" target="_blank" class="btn btn-outline" style="font-size: 12px; font-weight: 700;">
+                <span>📄</span> Cetak Rekening Koran
+            </a>
+            @if($inmate->status === 'bebas' || session('print_release_id'))
+            <a href="{{ route('admin.register_d.release_receipt', $inmate->id) }}" target="_blank" class="btn btn-outline" style="border-color: #ef4444; color: #ef4444; font-size: 12px; font-weight: 700;">
+                <span>📜</span> Berita Acara Bebas
+            </a>
+            @endif
         </div>
     </div>
 

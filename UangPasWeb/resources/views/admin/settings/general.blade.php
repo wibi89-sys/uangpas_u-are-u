@@ -14,6 +14,41 @@
         </button>
     </div>
 
+    <!-- Section 0: Mode Fokus Aplikasi (E-Wallet vs Full POS) -->
+    <div class="card" style="margin-bottom: 24px; border: 2px solid #0284c7;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(2, 132, 199, 0.15); color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                🎯
+            </div>
+            <div>
+                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a;">Mode Fokus Aplikasi (Feature Mode)</h3>
+                <span style="font-size: 12px; color: var(--text-muted);">Pilih fokus operasional sistem di Lapas saat ini</span>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <label style="border: 2px solid {{ ($setting->app_mode ?? 'wallet_only') === 'wallet_only' ? '#0284c7' : '#e2e8f0' }}; background: {{ ($setting->app_mode ?? 'wallet_only') === 'wallet_only' ? '#f0f9ff' : '#fff' }}; border-radius: 12px; padding: 18px; cursor: pointer; display: flex; gap: 14px; align-items: flex-start;">
+                <input type="radio" name="app_mode" value="wallet_only" {{ ($setting->app_mode ?? 'wallet_only') === 'wallet_only' ? 'checked' : '' }} style="width: auto; margin-top: 4px;">
+                <div>
+                    <strong style="font-size: 14.5px; color: #0284c7; display: block;">⭐ Mode Dompet Digital & Buku Register D (Direkomendasikan)</strong>
+                    <p style="font-size: 12px; color: #475569; margin-top: 4px; line-height: 1.4;">
+                        Fokus pada penghapusan uang tunai (Zero Halinar), Buku Register D Digital, Loket Top-Up titipan keluarga, dan Terminal EDC potong saldo biometrik. Menu ritel toko (katalog stok/opname) disembunyikan karena kantin sudah memakai program POS sendiri.
+                    </p>
+                </div>
+            </label>
+
+            <label style="border: 2px solid {{ ($setting->app_mode ?? 'wallet_only') === 'full_pos' ? '#0284c7' : '#e2e8f0' }}; background: {{ ($setting->app_mode ?? 'wallet_only') === 'full_pos' ? '#f0f9ff' : '#fff' }}; border-radius: 12px; padding: 18px; cursor: pointer; display: flex; gap: 14px; align-items: flex-start;">
+                <input type="radio" name="app_mode" value="full_pos" {{ ($setting->app_mode ?? 'wallet_only') === 'full_pos' ? 'checked' : '' }} style="width: auto; margin-top: 4px;">
+                <div>
+                    <strong style="font-size: 14.5px; color: #0f172a; display: block;">Mode Lengkap (E-Wallet + Ritel Kasir POS Terpadu)</strong>
+                    <p style="font-size: 12px; color: #475569; margin-top: 4px; line-height: 1.4;">
+                        Menampilkan seluruh modul termasuk manajemen stok barang, barcode produk, pembelian restock supplier, dan kasir penjualan barang koperasi terpadu.
+                    </p>
+                </div>
+            </label>
+        </div>
+    </div>
+
     <!-- Section 1: Identitas UPT & Satker -->
     <div class="card" style="margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
@@ -117,6 +152,45 @@
             <div class="form-group">
                 <label>Polling Cek Saldo Kiosk (Detik)</label>
                 <input type="number" name="kiosk_poll_interval" value="{{ old('kiosk_poll_interval', $setting->kiosk_poll_interval) }}" min="1" max="60" required style="text-align: center; font-weight: 700;">
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 16px;">
+            <h4 style="font-size: 14px; font-weight: 800; color: #0284c7; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <span>📖</span> Pengelola Buku Register D & Rekening Titipan Lapas (Escrow)
+            </h4>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Nama Petugas Pengelola Register D</label>
+                    <input type="text" name="register_d_officer_name" value="{{ old('register_d_officer_name', $setting->register_d_officer_name) }}" placeholder="Nama Petugas Pengelola Register D">
+                </div>
+                <div class="form-group">
+                    <label>NIP Petugas Pengelola Register D</label>
+                    <input type="text" name="register_d_officer_nip" value="{{ old('register_d_officer_nip', $setting->register_d_officer_nip) }}" placeholder="1988xxxxxxxxxxxx">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Nama Ka. KPLP / Penanggung Jawab Keamanan</label>
+                    <input type="text" name="kplp_nama" value="{{ old('kplp_nama', $setting->kplp_nama) }}" placeholder="Nama Lengkap Ka. KPLP">
+                </div>
+                <div class="form-group">
+                    <label>NIP Ka. KPLP</label>
+                    <input type="text" name="kplp_nip" value="{{ old('kplp_nip', $setting->kplp_nip) }}" placeholder="1982xxxxxxxxxxxx">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Nama Bank Penampung Uang Titipan (Rekening Giro UPT)</label>
+                    <input type="text" name="bank_name_escrow" value="{{ old('bank_name_escrow', $setting->bank_name_escrow) }}" placeholder="Contoh: Bank BNI - Rekening Giro Titipan Uang Lapas">
+                </div>
+                <div class="form-group">
+                    <label>Nomor Rekening Giro Titipan</label>
+                    <input type="text" name="bank_account_escrow" value="{{ old('bank_account_escrow', $setting->bank_account_escrow) }}" placeholder="Contoh: 0123-4567-8901" style="font-family: monospace; font-weight: 700;">
+                </div>
             </div>
         </div>
 
