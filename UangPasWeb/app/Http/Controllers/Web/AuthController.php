@@ -19,12 +19,7 @@ class AuthController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        $sampleUsers = User::where('is_active', true)
-            ->select('id', 'name', 'email', 'nip', 'role')
-            ->orderBy('id')
-            ->get();
-
-        return view('auth.login', compact('sampleUsers'));
+        return view('auth.login');
     }
 
     /**

@@ -13,7 +13,11 @@ namespace UangPasDesktop
         private Timer autoResetTimer;
         private Label lblClock;
 
-        // Container Panels
+        // Top & Body Container Panels
+        private Panel pnlTopHeader;
+        private Panel pnlBody;
+
+        // State Container Panels
         private Panel pnlIdle;
         private Panel pnlCart;
         private Panel pnlVerify;
@@ -24,6 +28,7 @@ namespace UangPasDesktop
         private DataGridView gridCart;
         private Label lblCartTotal;
         private Label lblCartCount;
+        private Label lblCartListCountBadge;
 
         // Verify Mode Controls
         private Label lblVerifyNama;
@@ -45,6 +50,12 @@ namespace UangPasDesktop
         private Label lblKioskSaldo;
         private Label lblKioskLimit;
 
+        // Cards
+        private Panel idleCard;
+        private Panel verifyCard;
+        private Panel successCard;
+        private Panel saldoCard;
+
         public CustomerDisplayForm()
         {
             this.Text = "Layar Pelanggan / Layar Kedua (Customer Facing Display)";
@@ -56,22 +67,28 @@ namespace UangPasDesktop
             {
                 Screen second = Screen.AllScreens[1];
                 this.StartPosition = FormStartPosition.Manual;
-                this.Location = second.Bounds.Location;
-                this.Size = second.Bounds.Size;
+                this.Bounds = second.Bounds;
                 this.FormBorderStyle = FormBorderStyle.None;
-                this.WindowState = FormWindowState.Maximized;
+                this.WindowState = FormWindowState.Normal;
             }
             else
             {
                 this.StartPosition = FormStartPosition.CenterScreen;
-                this.Size = new Size(880, 640);
+                this.Size = new Size(960, 680);
                 this.FormBorderStyle = FormBorderStyle.Sizable;
-                this.MinimumSize = new Size(760, 500);
+                this.MinimumSize = new Size(800, 520);
                 this.TopMost = true; // Stays on top during single monitor testing
             }
 
-            BuildHeader();
             BuildPanels();
+            BuildHeader();
+
+            // CRITICAL FOR WINFORMS DOCKING:
+            // Controls added with DockStyle.Fill must be docked LAST (have lower z-index / brought to front)
+            // so they fill only the remaining space below DockStyle.Top controls without being covered!
+            this.Controls.Add(pnlBody);
+            this.Controls.Add(pnlTopHeader);
+            pnlBody.BringToFront();
 
             // Clock Timer
             clockTimer = new Timer { Interval = 1000 };
@@ -96,6 +113,17 @@ namespace UangPasDesktop
             };
 
             this.Shown += (s, e) => {
+                if (Screen.AllScreens.Length > 1)
+                {
+                    this.Bounds = Screen.AllScreens[1].Bounds;
+                }
+                CenterCard(idleCard, pnlIdle);
+                CenterCard(verifyCard, pnlVerify);
+                CenterCard(successCard, pnlSuccess);
+                CenterCard(saldoCard, pnlCekSaldo);
+            };
+
+            this.Resize += (s, e) => {
                 CenterCard(idleCard, pnlIdle);
                 CenterCard(verifyCard, pnlVerify);
                 CenterCard(successCard, pnlSuccess);
@@ -107,16 +135,16 @@ namespace UangPasDesktop
 
         private void BuildHeader()
         {
-            Panel top = new Panel {
+            pnlTopHeader = new Panel {
                 Dock = DockStyle.Top,
-                Height = 72,
+                Height = 64,
                 BackColor = Color.FromArgb(10, 15, 30),
-                Padding = new Padding(24, 12, 24, 12)
+                Padding = new Padding(20, 10, 20, 10)
             };
 
             PictureBox picLogo = new PictureBox {
                 Dock = DockStyle.Left,
-                Width = 48,
+                Width = 44,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
             string walletPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wallet_logo.png");
@@ -132,50 +160,43 @@ namespace UangPasDesktop
                 }
                 catch { }
             }
-            top.Controls.Add(picLogo);
-
-            Panel pnlTitle = new Panel {
-                Dock = DockStyle.Left,
-                Width = 450,
-                Padding = new Padding(14, 2, 0, 0)
-            };
-            Label lblTitle = new Label {
-                Text = "KOPERASI PENGAYOMAN LAPAS",
-                Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
-                ForeColor = Color.White,
-                Dock = DockStyle.Top,
-                Height = 24
-            };
-            pnlTitle.Controls.Add(lblTitle);
-
-            Label lblSub = new Label {
-                Text = "Sistem Transaksi Dompet Digital & Biometrik Warga Binaan",
-                Font = new Font("Segoe UI", 9f),
-                ForeColor = Color.FromArgb(148, 163, 184),
-                Dock = DockStyle.Top,
-                Height = 20
-            };
-            pnlTitle.Controls.Add(lblSub);
-            top.Controls.Add(pnlTitle);
 
             lblClock = new Label {
                 Text = DateTime.Now.ToString("HH:mm:ss") + " WIB • " + DateTime.Now.ToString("dd MMM yyyy"),
                 Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(56, 189, 248),
                 Dock = DockStyle.Right,
-                Width = 300,
+                Width = 260,
                 TextAlign = ContentAlignment.MiddleRight
             };
-            top.Controls.Add(lblClock);
 
-            this.Controls.Add(top);
+            Panel pnlTitle = new Panel {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(12, 1, 8, 0)
+            };
+            Label lblTitle = new Label {
+                Text = "KOPERASI PENGAYOMAN LAPAS",
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                ForeColor = Color.White,
+                Dock = DockStyle.Top,
+                Height = 22
+            };
+            Label lblSub = new Label {
+                Text = "Sistem Transaksi Dompet Digital & Biometrik Warga Binaan",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(148, 163, 184),
+                Dock = DockStyle.Top,
+                Height = 18
+            };
+            // In DockStyle.Top, adding bottom control first keeps top control on top
+            pnlTitle.Controls.Add(lblSub);
+            pnlTitle.Controls.Add(lblTitle);
+
+            // Adding in Fill, Right, Left order
+            pnlTopHeader.Controls.Add(pnlTitle);
+            pnlTopHeader.Controls.Add(lblClock);
+            pnlTopHeader.Controls.Add(picLogo);
         }
-
-        // Cards
-        private Panel idleCard;
-        private Panel verifyCard;
-        private Panel successCard;
-        private Panel saldoCard;
 
         private void CenterCard(Control card, Control parent)
         {
@@ -187,9 +208,9 @@ namespace UangPasDesktop
 
         private void BuildPanels()
         {
-            Panel body = new Panel {
+            pnlBody = new Panel {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(24),
+                Padding = new Padding(16, 12, 16, 12),
                 BackColor = Color.FromArgb(15, 23, 42)
             };
 
@@ -271,30 +292,59 @@ namespace UangPasDesktop
 
             pnlIdle.Controls.Add(idleCard);
             pnlIdle.Resize += (s, e) => CenterCard(idleCard, pnlIdle);
-            body.Controls.Add(pnlIdle);
+            pnlBody.Controls.Add(pnlIdle);
 
             // 2. ACTIVE CART PANEL (LIVE MIRROR)
             pnlCart = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(15, 23, 42) };
             
-            // Left: Grid
+            // Left: Grid Holder
             Panel pnlGridHolder = new Panel {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(0, 0, 16, 0)
+                Padding = new Padding(0, 0, 14, 0)
             };
+
+            // Dedicated List Header to ensure crystal clear demarcation
+            Panel pnlCartListHeader = new Panel {
+                Dock = DockStyle.Top,
+                Height = 42,
+                BackColor = Color.FromArgb(30, 41, 59),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(12, 10, 12, 8)
+            };
+            Label lblCartListTitle = new Label {
+                Text = "🛒 DAFTAR BARANG BELANJAAN",
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(56, 189, 248),
+                Dock = DockStyle.Left,
+                AutoSize = true
+            };
+            lblCartListCountBadge = new Label {
+                Text = "0 Item",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(203, 213, 225),
+                Dock = DockStyle.Right,
+                AutoSize = true
+            };
+            pnlCartListHeader.Controls.Add(lblCartListTitle);
+            pnlCartListHeader.Controls.Add(lblCartListCountBadge);
 
             gridCart = new DataGridView {
                 Dock = DockStyle.Fill,
                 BackgroundColor = Color.FromArgb(30, 41, 59),
-                BorderStyle = BorderStyle.None,
+                BorderStyle = BorderStyle.FixedSingle,
                 RowHeadersVisible = false,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                EnableHeadersVisualStyles = false,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
+                ColumnHeadersHeight = 38,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                GridColor = Color.FromArgb(51, 65, 85)
             };
-            gridCart.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            gridCart.ColumnHeadersHeight = 38;
             gridCart.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(51, 65, 85);
             gridCart.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             gridCart.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
@@ -302,31 +352,42 @@ namespace UangPasDesktop
             gridCart.RowsDefaultCellStyle.Font = new Font("Segoe UI", 10f);
             gridCart.RowsDefaultCellStyle.BackColor = Color.FromArgb(30, 41, 59);
             gridCart.RowsDefaultCellStyle.ForeColor = Color.White;
+            gridCart.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(14, 116, 144);
+            gridCart.RowsDefaultCellStyle.SelectionForeColor = Color.White;
             gridCart.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(41, 53, 72);
+            gridCart.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(14, 116, 144);
+            gridCart.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.White;
 
             gridCart.Columns.Add("no", "#");
-            gridCart.Columns["no"].FillWeight = 15;
+            gridCart.Columns["no"].FillWeight = 12;
+            gridCart.Columns["no"].MinimumWidth = 35;
             gridCart.Columns["no"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
 
             gridCart.Columns.Add("nama", "Nama Barang");
-            gridCart.Columns["nama"].FillWeight = 48;
+            gridCart.Columns["nama"].FillWeight = 50;
+            gridCart.Columns["nama"].MinimumWidth = 140;
 
             gridCart.Columns.Add("qty", "Qty");
-            gridCart.Columns["qty"].FillWeight = 15;
+            gridCart.Columns["qty"].FillWeight = 14;
+            gridCart.Columns["qty"].MinimumWidth = 45;
             gridCart.Columns["qty"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             gridCart.Columns["qty"].DefaultCellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
 
             gridCart.Columns.Add("harga", "Harga");
-            gridCart.Columns["harga"].FillWeight = 26;
+            gridCart.Columns["harga"].FillWeight = 24;
+            gridCart.Columns["harga"].MinimumWidth = 80;
             gridCart.Columns["harga"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
 
             gridCart.Columns.Add("subtotal", "Subtotal");
-            gridCart.Columns["subtotal"].FillWeight = 30;
+            gridCart.Columns["subtotal"].FillWeight = 28;
+            gridCart.Columns["subtotal"].MinimumWidth = 90;
             gridCart.Columns["subtotal"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             gridCart.Columns["subtotal"].DefaultCellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
             gridCart.Columns["subtotal"].DefaultCellStyle.ForeColor = Color.FromArgb(56, 189, 248);
 
+            // In WinForms Docking: add Fill first, Top second so Top sits above Fill properly
             pnlGridHolder.Controls.Add(gridCart);
+            pnlGridHolder.Controls.Add(pnlCartListHeader);
             pnlCart.Controls.Add(pnlGridHolder);
 
             // Right: Grand Total Card
@@ -335,40 +396,37 @@ namespace UangPasDesktop
                 Width = 320,
                 BackColor = Color.FromArgb(30, 41, 59),
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(20)
+                Padding = new Padding(18)
             };
 
             Label lblTotalCaption = new Label {
                 Text = "TOTAL PEMBELIAN:",
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Dock = DockStyle.Top,
-                Height = 24
+                Height = 22
             };
-            pnlCartRight.Controls.Add(lblTotalCaption);
 
             lblCartTotal = new Label {
                 Text = "Rp 0",
                 Font = new Font("Segoe UI", 26f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(52, 211, 153),
                 Dock = DockStyle.Top,
-                Height = 65,
+                Height = 60,
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            pnlCartRight.Controls.Add(lblCartTotal);
 
             lblCartCount = new Label {
                 Text = "0 Barang Belanjaan",
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(203, 213, 225),
                 Dock = DockStyle.Top,
-                Height = 30
+                Height = 28
             };
-            pnlCartRight.Controls.Add(lblCartCount);
 
             Panel pnlPayInstruction = new Panel {
                 Dock = DockStyle.Bottom,
-                Height = 160,
+                Height = 150,
                 BackColor = Color.FromArgb(15, 23, 42),
                 Padding = new Padding(14)
             };
@@ -377,10 +435,8 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(56, 189, 248),
                 Dock = DockStyle.Top,
-                Height = 24
+                Height = 26
             };
-            pnlPayInstruction.Controls.Add(lblPayTitle);
-
             Label lblPayDesc = new Label {
                 Text = "Saat kasir siap melakukan checkout, silakan tempelkan jari Anda pada sensor sidik jari.",
                 Font = new Font("Segoe UI", 9.5f),
@@ -388,10 +444,16 @@ namespace UangPasDesktop
                 Dock = DockStyle.Fill
             };
             pnlPayInstruction.Controls.Add(lblPayDesc);
+            pnlPayInstruction.Controls.Add(lblPayTitle);
+
+            // Add Top controls in reverse so order is: lblTotalCaption, lblCartTotal, lblCartCount
             pnlCartRight.Controls.Add(pnlPayInstruction);
+            pnlCartRight.Controls.Add(lblCartCount);
+            pnlCartRight.Controls.Add(lblCartTotal);
+            pnlCartRight.Controls.Add(lblTotalCaption);
 
             pnlCart.Controls.Add(pnlCartRight);
-            body.Controls.Add(pnlCart);
+            pnlBody.Controls.Add(pnlCart);
 
             // 3. BIOMETRIC VERIFICATION & SALDO CHECK PANEL
             pnlVerify = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(15, 23, 42) };
@@ -438,8 +500,8 @@ namespace UangPasDesktop
 
             // Calculation Box
             Panel pnlCalc = new Panel {
-                Location = new Point(30, 120),
-                Width = 560,
+                Location = new Point(30, 118),
+                Width = 580,
                 Height = 180,
                 BackColor = Color.FromArgb(15, 23, 42),
                 Padding = new Padding(20, 14, 20, 14)
@@ -450,7 +512,7 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 11f),
                 ForeColor = Color.FromArgb(203, 213, 225),
                 Location = new Point(14, 12),
-                Width = 530,
+                Width = 550,
                 Height = 26
             };
             pnlCalc.Controls.Add(lblVerifySaldoBefore);
@@ -460,7 +522,7 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 12f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(248, 113, 113),
                 Location = new Point(14, 42),
-                Width = 530,
+                Width = 550,
                 Height = 28
             };
             pnlCalc.Controls.Add(lblVerifyTotal);
@@ -468,7 +530,7 @@ namespace UangPasDesktop
             Label lblDivider = new Label {
                 BackColor = Color.FromArgb(51, 65, 85),
                 Location = new Point(14, 76),
-                Width = 530,
+                Width = 550,
                 Height = 2
             };
             pnlCalc.Controls.Add(lblDivider);
@@ -478,7 +540,7 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 16f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(52, 211, 153),
                 Location = new Point(14, 88),
-                Width = 530,
+                Width = 550,
                 Height = 40
             };
             pnlCalc.Controls.Add(lblVerifySaldoAfter);
@@ -488,7 +550,7 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 10f),
                 ForeColor = Color.FromArgb(56, 189, 248),
                 Location = new Point(14, 136),
-                Width = 530,
+                Width = 550,
                 Height = 26
             };
             pnlCalc.Controls.Add(lblVerifyQuota);
@@ -499,8 +561,8 @@ namespace UangPasDesktop
                 Text = "✓ Saldo dompet mencukupi untuk pembayaran transaksi ini.",
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(52, 211, 153),
-                Location = new Point(20, 320),
-                Width = 580,
+                Location = new Point(20, 316),
+                Width = 600,
                 Height = 30,
                 TextAlign = ContentAlignment.MiddleCenter
             };
@@ -508,7 +570,7 @@ namespace UangPasDesktop
 
             pnlVerify.Controls.Add(verifyCard);
             pnlVerify.Resize += (s, e) => CenterCard(verifyCard, pnlVerify);
-            body.Controls.Add(pnlVerify);
+            pnlBody.Controls.Add(pnlVerify);
 
             // 4. TRANSACTION SUCCESS PANEL
             pnlSuccess = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(15, 23, 42) };
@@ -599,7 +661,7 @@ namespace UangPasDesktop
 
             pnlSuccess.Controls.Add(successCard);
             pnlSuccess.Resize += (s, e) => CenterCard(successCard, pnlSuccess);
-            body.Controls.Add(pnlSuccess);
+            pnlBody.Controls.Add(pnlSuccess);
 
             // 5. SELF-SERVICE CEK SALDO PANEL
             pnlCekSaldo = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(15, 23, 42) };
@@ -646,7 +708,7 @@ namespace UangPasDesktop
 
             Panel saldoBox = new Panel {
                 Location = new Point(40, 120),
-                Width = 540,
+                Width = 560,
                 Height = 110,
                 BackColor = Color.FromArgb(6, 78, 59),
                 Padding = new Padding(16)
@@ -658,8 +720,6 @@ namespace UangPasDesktop
                 Dock = DockStyle.Top,
                 Height = 22
             };
-            saldoBox.Controls.Add(lblSaldoCaption);
-
             lblKioskSaldo = new Label {
                 Text = "Rp 0",
                 Font = new Font("Segoe UI", 26f, FontStyle.Bold),
@@ -668,13 +728,14 @@ namespace UangPasDesktop
                 TextAlign = ContentAlignment.MiddleLeft
             };
             saldoBox.Controls.Add(lblKioskSaldo);
+            saldoBox.Controls.Add(lblSaldoCaption);
             saldoCard.Controls.Add(saldoBox);
 
             lblKioskLimit = new Label {
                 Text = "Sisa Kuota Belanja Hari Ini: Rp 0",
                 Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(56, 189, 248),
-                Location = new Point(20, 250),
+                Location = new Point(20, 246),
                 Width = 580,
                 Height = 30,
                 TextAlign = ContentAlignment.MiddleCenter
@@ -683,9 +744,7 @@ namespace UangPasDesktop
 
             pnlCekSaldo.Controls.Add(saldoCard);
             pnlCekSaldo.Resize += (s, e) => CenterCard(saldoCard, pnlCekSaldo);
-            body.Controls.Add(pnlCekSaldo);
-
-            this.Controls.Add(body);
+            pnlBody.Controls.Add(pnlCekSaldo);
         }
 
         // ==========================================
@@ -706,6 +765,10 @@ namespace UangPasDesktop
             pnlVerify.Visible = false;
             pnlSuccess.Visible = false;
             pnlCekSaldo.Visible = false;
+            if (lblCartListCountBadge != null)
+            {
+                lblCartListCountBadge.Text = "0 Item";
+            }
         }
 
         public void UpdateCart(List<CartItem> items, decimal total)
@@ -747,6 +810,20 @@ namespace UangPasDesktop
 
             lblCartTotal.Text = "Rp " + total.ToString("N0");
             lblCartCount.Text = totalItems + " Barang Belanjaan";
+            if (lblCartListCountBadge != null)
+            {
+                lblCartListCountBadge.Text = totalItems + " item • " + items.Count + " produk";
+            }
+
+            if (gridCart.Rows.Count > 0)
+            {
+                gridCart.ClearSelection();
+                try
+                {
+                    gridCart.FirstDisplayedScrollingRowIndex = Math.Max(0, gridCart.Rows.Count - 1);
+                }
+                catch { }
+            }
         }
 
         public void ShowBiometricVerification(string nama, string noReg, string blok, decimal before, decimal total, decimal after, decimal quota)

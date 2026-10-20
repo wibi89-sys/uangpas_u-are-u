@@ -276,6 +276,11 @@ namespace UangPasDesktop
                     }
                 } catch { }
             }
+            string icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+            if (System.IO.File.Exists(icoPath))
+            {
+                try { this.Icon = new Icon(icoPath); } catch { }
+            }
             pnlBrand.Controls.Add(picBrandLogo);
 
             Label lblBrand = new Label {

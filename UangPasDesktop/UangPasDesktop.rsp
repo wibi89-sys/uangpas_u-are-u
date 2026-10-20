@@ -1,5 +1,6 @@
 /target:winexe
 /out:UangPasDesktop.exe
+/win32icon:app.ico
 /r:DPUruNet.dll
 /r:System.Windows.Forms.dll
 /r:System.Drawing.dll

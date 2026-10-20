@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\SyncController;
 use App\Http\Controllers\Web\DeviceSettingController;
 use App\Http\Controllers\Web\GeneralSettingController;
 use App\Http\Controllers\Web\KioskController;
+use App\Http\Controllers\Web\PosWebController;
 use App\Http\Controllers\Api\PaymentGatewayController;
 
 /*
@@ -116,10 +117,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports/profit-loss/export-excel', [FinancialReportController::class, 'exportExcel'])->name('admin.reports.export_excel');
     });
 
-    // Terminal Kasir Mobile & Tablet POS (Kanwil, Admin Koperasi, Kasir)
+    // Terminal Kasir Web POS Desktop & Mobile POS (Kanwil, Admin Koperasi, Kasir)
     Route::middleware(['role:kanwil_admin,admin_koperasi,kasir'])->group(function () {
+        Route::get('/pos', [PosWebController::class, 'index'])->name('pos.index');
+        Route::post('/pos/checkout', [PosWebController::class, 'checkout'])->name('pos.checkout');
         Route::get('/mobile-pos', [InventoryController::class, 'mobilePos'])->name('mobile.pos');
         Route::post('/mobile-pos/checkout', [InventoryController::class, 'mobileCheckout'])->name('mobile.checkout');
-        Route::redirect('/pos', '/mobile-pos')->name('pos.index');
     });
 });

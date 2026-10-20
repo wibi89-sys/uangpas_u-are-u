@@ -5,7 +5,7 @@
 @section('page_desc', 'Monitoring Saldo Terhimpun, Transaksi Koperasi, dan Mutasi Narapidana')
 
 @section('content')
-@if(session('user_role') === 'kanwil_admin')
+@if(auth()->user()?->isKanwil())
 <!-- Kanwil Regional Multi-UPT Monitoring Banner -->
 <div class="card" style="margin-bottom: 24px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; padding: 22px 28px; border: 1px solid #334155;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">

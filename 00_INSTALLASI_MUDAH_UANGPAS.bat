@@ -111,9 +111,15 @@ if not exist "%CSC_PATH%" set CSC_PATH=C:\Windows\Microsoft.NET\Framework\v4.0.3
 if exist "%CSC_PATH%" (
     cd /d "%BASE_DIR%UangPasDesktop"
     "%CSC_PATH%" @UangPasDesktop.rsp >nul 2>&1
-    echo       [OK] UangPasDesktop.exe berhasil dikompilasi.
+    echo       [OK] UangPasDesktop.exe berhasil dikompilasi dengan icon sidik jari.
 ) else (
     echo       [INFO] Menggunakan file binary yang sudah tersedia.
+)
+
+:: Buat Shortcut Desktop Berlogo Sidik Jari
+if exist "%BASE_DIR%Buat_Shortcut_Desktop.bat" (
+    call "%BASE_DIR%Buat_Shortcut_Desktop.bat" /silent >nul 2>&1
+    echo       [OK] Shortcut Desktop berlogo sidik jari berhasil dipasang.
 )
 
 cd /d "%BASE_DIR%"

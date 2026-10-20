@@ -17,10 +17,11 @@
             --primary-gradient: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             --accent: #10b981;
             --bg-dark: #090d16;
-            --card-bg: rgba(15, 23, 42, 0.75);
+            --card-bg: rgba(15, 23, 42, 0.78);
             --card-border: rgba(255, 255, 255, 0.1);
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --danger: #ef4444;
         }
 
         * {
@@ -33,9 +34,9 @@
         body {
             background-color: var(--bg-dark);
             background-image: 
-                radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.25) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.2) 0px, transparent 50%),
-                radial-gradient(at 50% 50%, rgba(30, 41, 59, 0.5) 0px, transparent 100%);
+                radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.22) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.18) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(30, 41, 59, 0.45) 0px, transparent 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -46,7 +47,7 @@
 
         .login-container {
             width: 100%;
-            max-width: 480px;
+            max-width: 460px;
             animation: fadeIn 0.4s ease-out;
         }
 
@@ -58,11 +59,11 @@
         .login-card {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 20px;
-            padding: 36px 32px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            padding: 38px 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
         }
 
         .brand-header {
@@ -70,22 +71,46 @@
             margin-bottom: 28px;
         }
 
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(2, 132, 199, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            color: #38bdf8;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+        }
+
+        .brand-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #38bdf8;
+            box-shadow: 0 0 8px #38bdf8;
+        }
+
         .brand-logo {
-            width: 72px;
-            height: 72px;
+            width: 70px;
+            height: 70px;
             border-radius: 18px;
-            background: linear-gradient(135deg, rgba(2, 132, 199, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%);
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.25) 0%, rgba(16, 185, 129, 0.2) 100%);
             border: 1px solid rgba(255, 255, 255, 0.15);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-size: 32px;
-            margin-bottom: 16px;
-            box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.3);
+            margin-bottom: 14px;
+            box-shadow: 0 12px 24px -6px rgba(2, 132, 199, 0.35);
         }
 
         .brand-title {
-            font-size: 22px;
+            font-size: 21px;
             font-weight: 800;
             letter-spacing: -0.5px;
             color: #ffffff;
@@ -93,9 +118,9 @@
         }
 
         .brand-subtitle {
-            font-size: 13px;
+            font-size: 12.5px;
             color: var(--text-muted);
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         .alert {
@@ -145,13 +170,16 @@
             font-size: 16px;
             color: var(--text-muted);
             pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .form-input {
             width: 100%;
-            height: 46px;
-            padding: 0 16px 0 42px;
-            background: rgba(15, 23, 42, 0.6);
+            height: 48px;
+            padding: 0 16px 0 44px;
+            background: rgba(15, 23, 42, 0.65);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 12px;
             color: #ffffff;
@@ -162,23 +190,46 @@
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
-            background: rgba(15, 23, 42, 0.9);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.28);
+            background: rgba(15, 23, 42, 0.92);
         }
 
         .form-input::placeholder {
             color: #64748b;
+            font-size: 13.5px;
+        }
+
+        .input-error {
+            border-color: rgba(239, 68, 68, 0.6) !important;
         }
 
         .btn-toggle-pass {
             position: absolute;
-            right: 12px;
+            right: 10px;
             background: transparent;
             border: none;
             color: var(--text-muted);
             cursor: pointer;
-            font-size: 16px;
-            padding: 6px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: color 0.15s ease;
+        }
+
+        .btn-toggle-pass:hover {
+            color: #f8fafc;
+        }
+
+        .btn-toggle-pass svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         .form-options {
@@ -195,6 +246,7 @@
             gap: 8px;
             cursor: pointer;
             color: #cbd5e1;
+            user-select: none;
         }
 
         .remember-label input[type="checkbox"] {
@@ -204,6 +256,17 @@
             cursor: pointer;
         }
 
+        .help-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 12.5px;
+            transition: color 0.15s;
+        }
+
+        .help-link:hover {
+            color: #38bdf8;
+        }
+
         .btn-submit {
             width: 100%;
             height: 48px;
@@ -211,7 +274,7 @@
             border: none;
             border-radius: 12px;
             color: #ffffff;
-            font-size: 15px;
+            font-size: 14.5px;
             font-weight: 700;
             letter-spacing: 0.3px;
             cursor: pointer;
@@ -226,61 +289,58 @@
         .btn-submit:hover {
             transform: translateY(-1px);
             box-shadow: 0 14px 25px -5px rgba(2, 132, 199, 0.5);
-            filter: brightness(1.05);
+            filter: brightness(1.06);
         }
 
         .btn-submit:active {
             transform: translateY(0);
         }
 
-        /* Quick Test Login Chips */
-        .quick-section {
-            margin-top: 28px;
-            padding-top: 20px;
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .portal-links {
+            margin-top: 24px;
+            padding-top: 18px;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .quick-title {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            text-align: center;
-        }
-
-        .quick-chips {
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
+            align-items: center;
             justify-content: center;
+            gap: 16px;
+            font-size: 12px;
         }
 
-        .chip {
-            background: rgba(30, 41, 59, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            padding: 5px 10px;
-            font-size: 11px;
+        .portal-link {
+            color: #94a3b8;
+            text-decoration: none;
             font-weight: 600;
-            color: #cbd5e1;
-            cursor: pointer;
-            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s;
         }
 
-        .chip:hover {
-            background: rgba(2, 132, 199, 0.2);
-            border-color: rgba(2, 132, 199, 0.4);
+        .portal-link:hover {
             color: #38bdf8;
-            transform: translateY(-1px);
         }
 
         .security-footer {
             text-align: center;
-            margin-top: 24px;
-            font-size: 12px;
+            margin-top: 22px;
+            font-size: 11.5px;
             color: #64748b;
+            line-height: 1.5;
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 4px;
+            color: #94a3b8;
         }
     </style>
 </head>
@@ -289,9 +349,18 @@
 <div class="login-container">
     <div class="login-card">
         <div class="brand-header">
-            <div class="brand-logo">🏛️</div>
+            <div class="brand-badge">
+                <span class="dot"></span>
+                <span>Kemenkumham &bull; Ditjen Pemasyarakatan</span>
+            </div>
+            <div>
+                <div class="brand-logo">🏛️</div>
+            </div>
             <h1 class="brand-title">PORTAL UANGPAS LAPAS</h1>
-            <p class="brand-subtitle">Sistem Dompet Digital & Biometrik Warga Binaan<br>Koperasi Pengayoman UPT Pemasyarakatan</p>
+            <p class="brand-subtitle">
+                Sistem Dompet Digital Non-Tunai &amp; Biometrik Warga Binaan<br>
+                Koperasi Pengayoman UPT Pemasyarakatan
+            </p>
         </div>
 
         @if(session('error'))
@@ -315,7 +384,14 @@
             </div>
         @endif
 
-        <form action="{{ route('login.post') }}" method="POST" id="formLogin">
+        @if($errors->has('password') && !$errors->has('login_id'))
+            <div class="alert alert-error">
+                <span>⚠️</span>
+                <div>{{ $errors->first('password') }}</div>
+            </div>
+        @endif
+
+        <form action="{{ route('login.post') }}" method="POST" id="formLogin" onsubmit="handleSubmit(event)">
             @csrf
 
             <div class="form-group">
@@ -326,10 +402,11 @@
                         type="text" 
                         id="login_id" 
                         name="login_id" 
-                        class="form-input" 
-                        placeholder="Contoh: 199511112019031005 atau kasir@lapas.go.id" 
+                        class="form-input @if($errors->has('login_id')) input-error @endif" 
+                        placeholder="Masukkan NIP (18 digit) atau email dinas" 
                         value="{{ old('login_id') }}" 
                         required 
+                        autocomplete="username"
                         autofocus
                     >
                 </div>
@@ -343,55 +420,54 @@
                         type="password" 
                         id="password" 
                         name="password" 
-                        class="form-input" 
-                        placeholder="Masukkan password akun Anda" 
+                        class="form-input @if($errors->has('password')) input-error @endif" 
+                        placeholder="Masukkan kata sandi akun Anda" 
                         required
+                        autocomplete="current-password"
                     >
-                    <button type="button" class="btn-toggle-pass" onclick="togglePassVisibility()" title="Lihat Password">
-                        👁️
+                    <button type="button" class="btn-toggle-pass" onclick="togglePassVisibility()" id="btnTogglePass" title="Lihat Password" aria-label="Lihat Password">
+                        <svg id="eyeIcon" viewBox="0 0 24 24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
                     </button>
                 </div>
             </div>
 
             <div class="form-options">
                 <label class="remember-label">
-                    <input type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }}>
-                    <span>Ingat saya di perangkat ini</span>
+                    <input type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
+                    <span>Ingat sesi di perangkat ini</span>
                 </label>
+                <a href="javascript:void(0)" onclick="alert('Untuk perubahan kata sandi atau reset akun, silakan hubungi Administrator SIMKOP / IT UPT Pemasyarakatan setempat.')" class="help-link">
+                    Bantuan Akun?
+                </a>
             </div>
 
-            <button type="submit" class="btn-submit">
-                <span>Masuk ke Sistem</span> ➔
+            <button type="submit" class="btn-submit" id="btnSubmit">
+                <span id="btnSubmitText">Masuk ke Portal Petugas</span>
+                <span id="btnSubmitArrow">➔</span>
             </button>
         </form>
 
-        <!-- Quick Credentials Chip for Development & Testing -->
-        <div class="quick-section">
-            <div class="quick-title">⚡ Akun Uji Coba Cepat (Pilih Peran):</div>
-            <div class="quick-chips">
-                <button type="button" class="chip" onclick="fillCredential('kanwil@lapas.go.id', 'password')">
-                    👑 Kanwil Admin
-                </button>
-                <button type="button" class="chip" onclick="fillCredential('kalapas@lapas.go.id', 'password')">
-                    🎖️ Kalapas
-                </button>
-                <button type="button" class="chip" onclick="fillCredential('gudang@lapas.go.id', 'password')">
-                    📦 Admin Koperasi
-                </button>
-                <button type="button" class="chip" onclick="fillCredential('loket@lapas.go.id', 'password')">
-                    🏢 Petugas Loket
-                </button>
-                <button type="button" class="chip" onclick="fillCredential('kasir@lapas.go.id', 'password')">
-                    🛒 Kasir POS
-                </button>
-                <button type="button" class="chip" onclick="fillCredential('auditor@lapas.go.id', 'password')">
-                    🔍 Auditor
-                </button>
-            </div>
+        <div class="portal-links">
+            <a href="{{ route('kiosk.index') }}" target="_blank" class="portal-link">
+                <span>🖥️</span>
+                <span>Kiosk Cek Saldo WBP ↗</span>
+            </a>
+            <span style="color: #334155;">&bull;</span>
+            <a href="{{ route('mobile.pos') }}" target="_blank" class="portal-link">
+                <span>📱</span>
+                <span>Mobile POS Tablet ↗</span>
+            </a>
         </div>
 
         <div class="security-footer">
-            🔒 Terenkripsi & Dilindungi Otorisasi Hak Akses Berjenjang (RBAC)
+            <div class="security-badge">
+                <span>🔒</span>
+                <span>Terenkripsi TLS 1.3 &bull; Otorisasi Hak Akses Berjenjang (RBAC)</span>
+            </div>
+            <div>&copy; {{ date('Y') }} UangPas Lapas &bull; Koperasi Pengayoman UPT Pemasyarakatan</div>
         </div>
     </div>
 </div>
@@ -399,17 +475,33 @@
 <script>
     function togglePassVisibility() {
         const pass = document.getElementById('password');
+        const eyeIcon = document.getElementById('eyeIcon');
         if (pass.type === 'password') {
             pass.type = 'text';
+            eyeIcon.innerHTML = `
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+            `;
         } else {
             pass.type = 'password';
+            eyeIcon.innerHTML = `
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            `;
         }
     }
 
-    function fillCredential(id, pass) {
-        document.getElementById('login_id').value = id;
-        document.getElementById('password').value = pass;
-        document.getElementById('formLogin').submit();
+    function handleSubmit(e) {
+        const btn = document.getElementById('btnSubmit');
+        const text = document.getElementById('btnSubmitText');
+        const arrow = document.getElementById('btnSubmitArrow');
+        
+        btn.disabled = true;
+        text.innerText = 'Memverifikasi Akses...';
+        arrow.innerText = '⏳';
+        
+        // Form will naturally submit
+        return true;
     }
 </script>
 

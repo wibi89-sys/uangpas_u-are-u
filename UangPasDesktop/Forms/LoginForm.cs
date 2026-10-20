@@ -16,7 +16,6 @@ namespace UangPasDesktop.Forms
         private TextBox txtUsername;
         private TextBox txtPassword;
         private CheckBox chkShowPassword;
-        private ComboBox cmbQuickDemo;
         private Label lblError;
         private Button btnLogin;
         private Button btnCancel;
@@ -35,7 +34,7 @@ namespace UangPasDesktop.Forms
         private void InitializeComponent()
         {
             this.Text = "Login Petugas - Terminal Kasir POS UangPas";
-            this.ClientSize = new Size(500, 460);
+            this.ClientSize = new Size(500, 395);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -73,6 +72,11 @@ namespace UangPasDesktop.Forms
                     }
                 }
                 catch { }
+            }
+            string icoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+            if (File.Exists(icoPath))
+            {
+                try { this.Icon = new Icon(icoPath); } catch { }
             }
             pnlHeader.Controls.Add(picLogo);
 
@@ -117,57 +121,25 @@ namespace UangPasDesktop.Forms
 
             int startX = 35;
             int inputWidth = 430;
-            int curY = 16;
-
-            // Quick Role Demo Picker
-            Label lblDemo = new Label
-            {
-                Text = "Pilih Akun Cepat (Mode Uji Coba Role):",
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(startX, curY),
-                Size = new Size(inputWidth, 18)
-            };
-            pnlBody.Controls.Add(lblDemo);
-            curY += 20;
-
-            cmbQuickDemo = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                Location = new Point(startX, curY),
-                Size = new Size(inputWidth, 28),
-                BackColor = Color.White
-            };
-            cmbQuickDemo.Items.Add("-- Masukkan NIP / Password Manual --");
-            cmbQuickDemo.Items.Add("[KASIR] Petugas Kasir Toko (199511112019031005)");
-            cmbQuickDemo.Items.Add("[LOKET] Petugas Loket & Registrasi (199208082015021004)");
-            cmbQuickDemo.Items.Add("[GUDANG] Pengelola Koperasi & Gudang (198705052010011003)");
-            cmbQuickDemo.Items.Add("[KALAPAS] Kepala Lapas Kelas I (198002022005011002)");
-            cmbQuickDemo.Items.Add("[SUPERADMIN] Kakanwil / Kadivpas (197501011999031001)");
-            cmbQuickDemo.SelectedIndex = 1; // Default to Kasir
-            cmbQuickDemo.SelectedIndexChanged += CmbQuickDemo_SelectedIndexChanged;
-            pnlBody.Controls.Add(cmbQuickDemo);
-            curY += 38;
+            int curY = 20;
 
             // Username / NIP Field
             Label lblUsername = new Label
             {
-                Text = "NIP / Username / Email Petugas:",
+                Text = "NIP Kedinasan atau Username Petugas:",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
                 Location = new Point(startX, curY),
                 Size = new Size(inputWidth, 18)
             };
             pnlBody.Controls.Add(lblUsername);
-            curY += 20;
+            curY += 22;
 
             txtUsername = new TextBox
             {
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Regular),
                 Location = new Point(startX, curY),
-                Size = new Size(inputWidth, 28),
-                Text = "199511112019031005"
+                Size = new Size(inputWidth, 28)
             };
             pnlBody.Controls.Add(txtUsername);
             curY += 38;
@@ -175,22 +147,21 @@ namespace UangPasDesktop.Forms
             // Password Field
             Label lblPassword = new Label
             {
-                Text = "Password / PIN Petugas:",
+                Text = "Kata Sandi (Password / PIN):",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
                 Location = new Point(startX, curY),
                 Size = new Size(inputWidth, 18)
             };
             pnlBody.Controls.Add(lblPassword);
-            curY += 20;
+            curY += 22;
 
             txtPassword = new TextBox
             {
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Regular),
                 Location = new Point(startX, curY),
                 Size = new Size(inputWidth, 28),
-                UseSystemPasswordChar = true,
-                Text = "password"
+                UseSystemPasswordChar = true
             };
             txtPassword.KeyDown += (s, e) => {
                 if (e.KeyCode == Keys.Enter)
@@ -216,7 +187,7 @@ namespace UangPasDesktop.Forms
                 txtPassword.UseSystemPasswordChar = !chkShowPassword.Checked;
             };
             pnlBody.Controls.Add(chkShowPassword);
-            curY += 28;
+            curY += 26;
 
             // Error / Feedback message
             lblError = new Label
@@ -225,17 +196,17 @@ namespace UangPasDesktop.Forms
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(239, 68, 68),
                 Location = new Point(startX, curY),
-                Size = new Size(inputWidth, 30),
+                Size = new Size(inputWidth, 26),
                 TextAlign = ContentAlignment.MiddleLeft
             };
             pnlBody.Controls.Add(lblError);
-            curY += 34;
+            curY += 32;
 
             // Buttons: Login and Cancel
             btnLogin = new Button
             {
-                Text = "🔑 Masuk Terminal",
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                Text = "Masuk ke Terminal Kasir POS",
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(2, 132, 199),
                 FlatStyle = FlatStyle.Flat,
@@ -268,34 +239,6 @@ namespace UangPasDesktop.Forms
             this.Controls.Add(pnlBody);
             pnlBody.BringToFront();
             this.AcceptButton = btnLogin;
-        }
-
-        private void CmbQuickDemo_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            switch (cmbQuickDemo.SelectedIndex)
-            {
-                case 1: // Kasir
-                    txtUsername.Text = "199511112019031005";
-                    txtPassword.Text = "password";
-                    break;
-                case 2: // Loket
-                    txtUsername.Text = "199208082015021004";
-                    txtPassword.Text = "password";
-                    break;
-                case 3: // Gudang
-                    txtUsername.Text = "198705052010011003";
-                    txtPassword.Text = "password";
-                    break;
-                case 4: // Kalapas
-                    txtUsername.Text = "198002022005011002";
-                    txtPassword.Text = "password";
-                    break;
-                case 5: // Superadmin Kanwil
-                    txtUsername.Text = "197501011999031001";
-                    txtPassword.Text = "password";
-                    break;
-            }
-            lblError.Text = "";
         }
 
         private void DoLogin()

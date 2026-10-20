@@ -130,7 +130,7 @@ namespace UangPasDesktop
             grpSearch.Controls.Add(txtSearch);
 
             Button btnScanFinger = new Button {
-                Text = "  👆 Scan Jari WBP",
+                Text = "Scan Sidik Jari",
                 Location = new Point(366, 20),
                 Width = 175,
                 Height = 32,
@@ -140,22 +140,6 @@ namespace UangPasDesktop
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            string qkFpPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fingerprint_logo.png");
-            if (System.IO.File.Exists(qkFpPath))
-            {
-                try
-                {
-                    byte[] bytes = System.IO.File.ReadAllBytes(qkFpPath);
-                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
-                    using (Bitmap orig = new Bitmap(ms))
-                    {
-                        btnScanFinger.Image = new Bitmap(orig, new Size(16, 16));
-                        btnScanFinger.ImageAlign = ContentAlignment.MiddleLeft;
-                        btnScanFinger.TextImageRelation = TextImageRelation.ImageBeforeText;
-                    }
-                }
-                catch { }
-            }
             btnScanFinger.FlatAppearance.BorderSize = 0;
             btnScanFinger.Click += (s, e) => DoQuickFingerprintScan();
             grpSearch.Controls.Add(btnScanFinger);
@@ -364,7 +348,7 @@ namespace UangPasDesktop
             bottom.Controls.Add(btnCancel);
 
             btnFingerAuth = new Button {
-                Text = "  🔒 Otorisasi Sidik Jari & Setor",
+                Text = "🔒 Otorisasi Sidik Jari & Setor",
                 Dock = DockStyle.Right,
                 Width = 245,
                 BackColor = Color.FromArgb(5, 150, 105),
@@ -374,21 +358,6 @@ namespace UangPasDesktop
                 Cursor = Cursors.Hand
             };
             btnFingerAuth.FlatAppearance.BorderSize = 0;
-            if (System.IO.File.Exists(qkFpPath))
-            {
-                try
-                {
-                    byte[] bytes = System.IO.File.ReadAllBytes(qkFpPath);
-                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
-                    using (Bitmap orig = new Bitmap(ms))
-                    {
-                        btnFingerAuth.Image = new Bitmap(orig, new Size(16, 16));
-                        btnFingerAuth.ImageAlign = ContentAlignment.MiddleLeft;
-                        btnFingerAuth.TextImageRelation = TextImageRelation.ImageBeforeText;
-                    }
-                }
-                catch { }
-            }
             btnFingerAuth.Click += (s, e) => ProcessTopupWithFingerprint();
             bottom.Controls.Add(btnFingerAuth);
 
