@@ -597,6 +597,13 @@
             </a>
             @endif
 
+            @if($activeUser->hasRole(['kanwil_admin', 'admin_koperasi', 'kasir']))
+            <a href="{{ route('admin.edc.index') }}" class="nav-item {{ request()->routeIs('admin.edc*') ? 'active' : '' }}">
+                <span class="nav-icon">⚡</span>
+                <span>Terminal EDC Cepat</span>
+            </a>
+            @endif
+
             @if($activeUser->hasRole(['kanwil_admin', 'kalapas', 'admin_koperasi', 'petugas_loket']))
             <a href="{{ route('admin.inmates') }}" class="nav-item {{ request()->routeIs('admin.inmates*') ? 'active' : '' }}">
                 <span class="nav-icon">👥</span>

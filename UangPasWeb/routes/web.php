@@ -13,6 +13,7 @@ use App\Http\Controllers\Web\GeneralSettingController;
 use App\Http\Controllers\Web\KioskController;
 use App\Http\Controllers\Web\PosWebController;
 use App\Http\Controllers\Web\RegisterDController;
+use App\Http\Controllers\Web\EdcTerminalController;
 use App\Http\Controllers\Api\PaymentGatewayController;
 
 /*
@@ -131,6 +132,12 @@ Route::middleware(['auth'])->group(function () {
 
     // Terminal Kasir Web POS Desktop & Mobile POS (Kanwil, Admin Koperasi, Kasir)
     Route::middleware(['role:kanwil_admin,admin_koperasi,kasir'])->group(function () {
+        // Mode EDC Debit Cepat (Untuk kantin yang sudah punya POS sendiri)
+        Route::get('/edc', [EdcTerminalController::class, 'index'])->name('admin.edc.index');
+        Route::post('/edc/charge', [EdcTerminalController::class, 'charge'])->name('admin.edc.charge');
+        Route::get('/edc/receipt/{id}', [EdcTerminalController::class, 'receipt'])->name('admin.edc.receipt');
+
+        // Mode POS Toko Retail Bawaan
         Route::get('/pos', [PosWebController::class, 'index'])->name('pos.index');
         Route::post('/pos/checkout', [PosWebController::class, 'checkout'])->name('pos.checkout');
         Route::get('/mobile-pos', [InventoryController::class, 'mobilePos'])->name('mobile.pos');

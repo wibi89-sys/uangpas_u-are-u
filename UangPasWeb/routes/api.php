@@ -34,6 +34,13 @@ Route::prefix('v1')->group(function () {
         Route::post('/inmate/{id}/save-fingerprint', [PosApiController::class, 'saveFingerprint']);
     });
 
+    // Standalone EDC Debit & Open Gateway (Untuk Kasir Kantin Mandiri & POS Pihak Ketiga)
+    Route::prefix('edc')->group(function () {
+        Route::get('/inmates', [PosApiController::class, 'getInmates']);
+        Route::get('/inmate/{identifier}', [PosApiController::class, 'lookupInmate']);
+        Route::post('/charge', [\App\Http\Controllers\Web\EdcTerminalController::class, 'charge']);
+    });
+
     // Bank Payment Gateway Webhook (Virtual Account / QRIS)
     Route::post('/webhook/payment-gateway', [PaymentGatewayController::class, 'handleWebhook']);
 
