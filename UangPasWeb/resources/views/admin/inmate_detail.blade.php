@@ -5,9 +5,12 @@
 @section('page_desc', 'Informasi Saldo, Rekam Biometrik, dan Riwayat Mutasi ' . $inmate->nama)
 
 @section('content')
-<div style="margin-bottom: 20px;">
+<div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
     <a href="{{ route('admin.inmates') }}" style="color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 700;">
         &larr; Kembali ke Daftar Warga Binaan
+    </a>
+    <a href="{{ route('admin.register_d.show', $inmate->id) }}" class="btn btn-outline" style="border-color: #0284c7; color: #0284c7; font-weight: 700;">
+        <span>📖</span> Buka Buku Register D & Mutasi
     </a>
 </div>
 

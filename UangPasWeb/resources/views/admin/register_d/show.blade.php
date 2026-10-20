@@ -10,7 +10,7 @@
         &larr; Kembali ke Buku Besar Register D
     </a>
 
-    <div style="display: flex; gap: 8px;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <a href="{{ route('admin.register_d.statement', ['id' => $inmate->id, 'start_date' => $startDate->format('Y-m-d'), 'end_date' => $endDate->format('Y-m-d')]) }}" target="_blank" class="btn btn-outline" style="border-color: #0284c7; color: #0284c7; font-weight: 700;">
             <span>🖨️</span> Cetak Rekening Koran Resmi (PDF)
         </a>
@@ -21,9 +21,31 @@
             <a href="{{ route('admin.topup') }}" class="btn btn-success" style="font-weight: 700;">
                 <span>📥</span> Setor Titipan Loket
             </a>
+            <button type="button" class="btn btn-outline" style="border-color: #ef4444; color: #ef4444; font-weight: 700;" onclick="openReleaseModal()">
+                <span>💸</span> Cairkan Saldo (Bebas)
+            </button>
+        @elseif($inmate->status === 'bebas')
+            <a href="{{ route('admin.register_d.release_receipt', $inmate->id) }}" target="_blank" class="btn btn-outline" style="border-color: #ef4444; color: #ef4444; font-weight: 700;">
+                <span>📄</span> Cetak Kwitansi Bebas
+            </a>
         @endif
     </div>
 </div>
+
+@if(session('print_release_id'))
+    <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">📄</span>
+            <div>
+                <strong style="color: #1e40af; font-size: 14px;">Warga Binaan Berhasil Diproses Bebas!</strong>
+                <div style="font-size: 12.5px; color: #3b82f6;">Silakan cetak Berita Acara dan Kwitansi Pengeluaran Sisa Uang Titipan Register D.</div>
+            </div>
+        </div>
+        <a href="{{ route('admin.register_d.release_receipt', session('print_release_id')) }}" target="_blank" class="btn btn-primary" style="background: #1d4ed8; border-color: #1d4ed8;">
+            🖨️ Cetak Kwitansi Bebas Sekarang
+        </a>
+    </div>
+@endif
 
 <div class="grid-2" style="margin-bottom: 24px;">
     <!-- Profil Nasabah Card -->
@@ -228,4 +250,41 @@
         </table>
     </div>
 </div>
+
+@if($inmate->status === 'aktif')
+<!-- Modal Cairkan Saldo Bebas -->
+<div id="modalRelease" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #fff; border-radius: 16px; max-width: 480px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);">
+        <h3 style="font-size: 17px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">💸 Pencairan Sisa Saldo & Pembebasan WBP</h3>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
+            Sisa saldo titipan WBP <strong>{{ $inmate->nama }}</strong> sebesar <strong style="color: #0284c7;">Rp {{ number_format($inmate->saldo, 0, ',', '.') }}</strong> akan dicairkan secara tunai/transfer, akun ditutup, dan status diubah menjadi <strong>BEBAS</strong>.
+        </p>
+        <form action="{{ route('admin.inmates.release', $inmate->id) }}" method="POST">
+            @csrf
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Nama Petugas Pembebasan / Loket:</label>
+                <input type="text" name="petugas_bebas" value="{{ auth()->user()->name ?? 'Petugas Registrasi' }}" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Dasar / Catatan Pembebasan:</label>
+                <input type="text" name="catatan_bebas" placeholder="Contoh: SK Pembebasan Bersyarat No. W10.PAS..." style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;" required>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-outline" onclick="closeReleaseModal()" style="padding: 8px 16px;">Batal</button>
+                <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626; padding: 8px 16px;">
+                    Konfirmasi Pencairan Dana
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    function openReleaseModal() {
+        document.getElementById('modalRelease').style.display = 'flex';
+    }
+    function closeReleaseModal() {
+        document.getElementById('modalRelease').style.display = 'none';
+    }
+</script>
+@endif
 @endsection
