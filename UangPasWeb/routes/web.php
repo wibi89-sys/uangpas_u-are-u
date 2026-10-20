@@ -126,6 +126,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/transactions/{id}/receipt', [ReceiptSettingController::class, 'printReceipt'])->name('admin.transactions.receipt');
         Route::get('/reports/profit-loss', [FinancialReportController::class, 'profitLoss'])->name('admin.reports.profit_loss');
         Route::get('/reports/cashflow', [FinancialReportController::class, 'cashflow'])->name('admin.reports.cashflow');
+        Route::get('/reports/settlement', [FinancialReportController::class, 'settlement'])->name('admin.reports.settlement');
+        Route::get('/reports/settlement/print', [FinancialReportController::class, 'printSettlement'])->name('admin.reports.settlement.print');
         Route::get('/reports/profit-loss/print', [FinancialReportController::class, 'printProfitLoss'])->name('admin.reports.print');
         Route::get('/reports/profit-loss/export-excel', [FinancialReportController::class, 'exportExcel'])->name('admin.reports.export_excel');
     });

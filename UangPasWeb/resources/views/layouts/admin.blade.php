@@ -659,6 +659,10 @@
                 <span class="nav-icon">💰</span>
                 <span>Arus Kas & Titipan WBP</span>
             </a>
+            <a href="{{ route('admin.reports.settlement') }}" class="nav-item {{ request()->routeIs('admin.reports.settlement*') ? 'active' : '' }}">
+                <span class="nav-icon">⚖️</span>
+                <span>Rekonsiliasi & Settlement Kantin</span>
+            </a>
             <a href="{{ route('admin.transactions') }}" class="nav-item {{ request()->routeIs('admin.transactions*') ? 'active' : '' }}">
                 <span class="nav-icon">📑</span>
                 <span>Buku Transaksi Kasir</span>

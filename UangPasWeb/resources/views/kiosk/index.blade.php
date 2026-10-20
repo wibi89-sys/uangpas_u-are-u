@@ -557,10 +557,11 @@
                         <div class="inmate-avatar">👤</div>
                         <div class="inmate-details">
                             <h2 id="resNama">-</h2>
-                            <div class="inmate-meta">
+                            <div class="inmate-meta" style="flex-wrap: wrap;">
+                                <span class="meta-pill" id="resRegisterD" style="color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.1);">📖 Reg D: -</span>
                                 <span class="meta-pill" id="resNoReg">No. Reg: -</span>
                                 <span class="meta-pill" id="resKamar">Kamar: -</span>
-                                <span class="meta-pill" style="color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">🔒 Terverifikasi Biometrik</span>
+                                <span class="meta-pill" style="color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">🔒 Biometrik Terverifikasi</span>
                             </div>
                         </div>
                     </div>
@@ -647,6 +648,7 @@
         function displayResult(data) {
             const inm = data.inmate;
             document.getElementById('resNama').textContent = inm.nama;
+            document.getElementById('resRegisterD').textContent = '📖 Reg D: ' + (inm.register_d_number || inm.no_registrasi);
             document.getElementById('resNoReg').textContent = 'No. Reg: ' + inm.no_registrasi;
             document.getElementById('resKamar').textContent = 'Kamar: ' + inm.blok_kamar;
             document.getElementById('resSaldo').textContent = inm.saldo_formatted;

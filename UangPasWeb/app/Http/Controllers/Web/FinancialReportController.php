@@ -484,6 +484,118 @@ class FinancialReportController extends Controller
     }
 
     /**
+     * Laporan Rekonsiliasi & Settlement Kantin / Merchant EDC
+     */
+    public function settlement(Request $request)
+    {
+        $dateFilter = $this->resolveDateRange($request);
+        $startDate = $dateFilter['start'];
+        $endDate = $dateFilter['end'];
+        $periodLabel = $dateFilter['label'];
+
+        $merchantFilter = $request->merchant;
+
+        $trxQuery = Transaction::with('inmate')
+            ->where('type', 'purchase')
+            ->where('status', 'success')
+            ->whereBetween('created_at', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()]);
+
+        if (!empty($merchantFilter)) {
+            $trxQuery->where(function($q) use ($merchantFilter) {
+                $q->where('notes', 'like', "%{$merchantFilter}%")
+                  ->orWhere('reference_id', 'like', "%{$merchantFilter}%");
+            });
+        }
+
+        $transactions = (clone $trxQuery)->latest()->paginate(25)->withQueryString();
+        $totalNominal = (float)(clone $trxQuery)->sum('amount');
+        $totalTrx = (clone $trxQuery)->count();
+
+        // Rekapitulasi Per Titik Merchant
+        $merchantList = [
+            'Kantin Koperasi Utama',
+            'Kantin Blok A',
+            'Kantin Blok B',
+            'Kantin Blok C',
+            'Wartelsuspas (Telepon)',
+            'Layanan Laundry',
+            'Toko Roti & Bimker'
+        ];
+
+        $merchantSummary = [];
+        foreach ($merchantList as $m) {
+            $mTrx = Transaction::where('type', 'purchase')
+                ->where('status', 'success')
+                ->whereBetween('created_at', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
+                ->where('notes', 'like', "%{$m}%");
+
+            $cnt = $mTrx->count();
+            $sum = (float)$mTrx->sum('amount');
+            if ($cnt > 0 || empty($merchantFilter)) {
+                $merchantSummary[] = [
+                    'name' => $m,
+                    'count' => $cnt,
+                    'total' => $sum,
+                    'avg' => $cnt > 0 ? ($sum / $cnt) : 0,
+                ];
+            }
+        }
+
+        $setting = UptSetting::current();
+
+        return view('admin.reports.settlement', compact(
+            'startDate',
+            'endDate',
+            'periodLabel',
+            'merchantFilter',
+            'merchantList',
+            'merchantSummary',
+            'transactions',
+            'totalNominal',
+            'totalTrx',
+            'setting'
+        ));
+    }
+
+    /**
+     * Cetak Berita Acara Rekonsiliasi & Settlement Kantin (A4 Ready)
+     */
+    public function printSettlement(Request $request)
+    {
+        $dateFilter = $this->resolveDateRange($request);
+        $startDate = $dateFilter['start'];
+        $endDate = $dateFilter['end'];
+        $periodLabel = $dateFilter['label'];
+        $merchantFilter = $request->merchant;
+
+        $trxQuery = Transaction::with('inmate')
+            ->where('type', 'purchase')
+            ->where('status', 'success')
+            ->whereBetween('created_at', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()]);
+
+        if (!empty($merchantFilter)) {
+            $trxQuery->where('notes', 'like', "%{$merchantFilter}%");
+        }
+
+        $transactions = $trxQuery->latest()->get();
+        $totalNominal = (float)$transactions->sum('amount');
+        $totalTrx = $transactions->count();
+
+        $setting = UptSetting::current();
+
+        return view('admin.reports.settlement_print', compact(
+            'startDate',
+            'endDate',
+            'periodLabel',
+            'merchantFilter',
+            'transactions',
+            'totalNominal',
+            'totalTrx',
+            'setting'
+        ));
+    }
+
+    /**
      * Helper Resolving Date Range Filter
      */
     private function resolveDateRange(Request $request): array

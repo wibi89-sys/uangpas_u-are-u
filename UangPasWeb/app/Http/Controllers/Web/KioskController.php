@@ -98,6 +98,7 @@ class KioskController extends Controller
                 'id' => $inmate->id,
                 'nama' => $inmate->nama,
                 'no_registrasi' => $inmate->no_registrasi,
+                'register_d_number' => $inmate->register_d_number ?: ('REG-D/' . date('Y') . '/' . str_pad($inmate->id, 5, '0', STR_PAD_LEFT)),
                 'blok_kamar' => $inmate->blok_kamar ?: 'Blok Umum',
                 'lapas_asal' => $inmate->lapas_asal ?: 'Lapas Pemasyarakatan',
                 'saldo' => (float)$inmate->saldo,
